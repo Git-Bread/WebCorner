@@ -1,30 +1,52 @@
-import { initializeApp, type FirebaseOptions } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, connectAuthEmulator, setPersistence, browserLocalPersistence, type Auth } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
 
-//Nuxt 3 Firebase Plugin
-export default defineNuxtPlugin(nuxtApp =>{    
+// Define a type for the injected properties
+type FirebaseInjections = {
+  firebase: FirebaseApp;
+  auth: Auth;
+  firestore: Firestore;
+}
 
-    const config = useRuntimeConfig();
-    const firebaseConfig = config.public.firebaseConfig as FirebaseOptions;
-    const isDevelopment = config.public.isDevelopment || false;
+// Nuxt 3 Firebase Plugin
+export default defineNuxtPlugin<FirebaseInjections>(() => {    
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app)
-    const firestore = getFirestore(app)
+    try {
+        const config = useRuntimeConfig();
+        const firebaseConfig = config.public.firebaseConfig;
+        const isDevelopment = config.public.isDevelopment || false;
 
-    // Connect to emulators in development mode
-    if (isDevelopment) {
-        connectFirestoreEmulator(firestore, 'localhost', 8080);
-        connectAuthEmulator(auth, 'http://localhost:9099');
-        console.log('Using Firebase emulators');
-    }
-    
-    return {
-        provide: {
-            firebase: app,
-            auth: auth,
-            firestore: firestore
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const firestore = getFirestore(app);
+
+        // Setup persistence for authentication
+        setPersistence(auth, browserLocalPersistence)
+            .catch(error => console.error('Auth persistence error:', error));
+
+        // Connect to emulators in development mode
+        if (isDevelopment) {
+            connectFirestoreEmulator(firestore, 'localhost', 8080);
+            connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+            console.log('Using Firebase emulators');
         }
-    };
-})
+        
+        return {
+            provide: {
+                firebase: app,
+                auth: auth,
+                firestore: firestore
+            }
+        };
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        return {
+            provide: {
+                firebase: { name: 'mock-app' } as unknown as FirebaseApp,
+                auth: { currentUser: null } as unknown as Auth,
+                firestore: {} as unknown as Firestore
+            }
+        };
+    }
+});

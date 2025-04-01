@@ -4,7 +4,9 @@
         <div class="flex items-center justify-between h-16">
           <!-- Site Title on the left -->
           <div class="flex items-center">
-            <h1 class="text-3xl font-bold">WebCorner</h1>
+            <NuxtLink to="/">
+              <h1 class="text-3xl font-bold">WebCorner</h1>
+            </NuxtLink>
           </div>
       
           <!-- Empty space in the middle -->

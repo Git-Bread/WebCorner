@@ -1,9 +1,13 @@
 <template>
-    <div class="default-layout min-h-screen flex flex-col">
-      <headers-StandardHeader />
-      <main class="flex-grow">
-        <slot />
-      </main>
-      <StandardFooter />
-    </div>
+  <div class="default-layout min-h-screen flex flex-col">
+    <HeadersStandardHeader />
+    <main class="flex-grow">      
+      <slot />
+    </main>
+    <StandardFooter />
+  </div>
 </template>
+
+<script setup>
+
+</script>

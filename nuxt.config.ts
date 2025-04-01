@@ -6,6 +6,13 @@ export default defineNuxtConfig({
     exposeConfig: false,
     viewer: true,
   },
+  // Disable server-side rendering for specific routes
+  // This is useful and standard for routes that are purely client-side, like authentication pages
+  // since the transitions and authentication shenanigans generate alot of hydration errors and its not needed for SEO
+  routeRules: {
+    '/login': { ssr: false },
+    '/register': { ssr: false }
+  },
 
   // Add Firebase configuration
   runtimeConfig: {
