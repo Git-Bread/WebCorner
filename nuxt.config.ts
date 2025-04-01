@@ -1,6 +1,11 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
+  modules: ['@nuxtjs/tailwindcss'],
+  tailwindcss: {
+    exposeConfig: false,
+    viewer: true,
+  },
 
   // Add Firebase configuration
   runtimeConfig: {
@@ -17,5 +22,5 @@ export default defineNuxtConfig({
         measurementId: process.env.FIREBASE_MEASUREMENT_ID,
       }
     }
-  }
+  },
 })

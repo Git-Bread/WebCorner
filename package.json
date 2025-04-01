@@ -11,6 +11,7 @@
     "emulate": "firebase emulators:start"
   },
   "dependencies": {
+    "@nuxtjs/tailwindcss": "^6.13.2",
     "firebase": "^11.5.0",
     "nuxt": "^3.16.1",
     "vue": "^3.5.13",

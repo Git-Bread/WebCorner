@@ -8,7 +8,6 @@ export const serverMemberSchema = z.object({
     joinedAt: z.date(),
     groupIds: z.array(z.string()).default([]),
 });
-
 export type ServerMember = z.infer<typeof serverMemberSchema>;
 
 // Schema for member groups
@@ -28,8 +27,37 @@ export const serverGroupSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
 });
-
 export type ServerGroup = z.infer<typeof serverGroupSchema>;
+
+// Schema for server news/announcements
+export const serverNewsSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1).max(100),
+  content: z.string().max(2000),
+  authorId: z.string(), // ID of the user who created the news
+  
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  
+  attachments: z.array(z.object({
+      url: z.string().url(),
+      type: z.enum(['image', 'video', 'document', 'other']),
+      name: z.string().optional(),
+  })).default([]),
+  
+  tags: z.array(z.string()).default([]),
+});
+export type ServerNews = z.infer<typeof serverNewsSchema>;
+
+// Function to validate news
+export const validateServerNews = (data: unknown): ServerNews | null => {
+  try {
+    return serverNewsSchema.parse(data);
+  } catch (error) {
+    console.error('Server news validation error:', error);
+    return null;
+  }
+};
 
 // Define the server schema
 export const serverSchema = z.object({
@@ -49,8 +77,6 @@ export const serverSchema = z.object({
     settings: z.record(z.string(), z.unknown()).default({}),
     components: z.record(z.string(), z.boolean()).default({}),
 });
-
-// Create TypeScript type from the schema
 export type Server = z.infer<typeof serverSchema>;
 
 // Function to validate server data
