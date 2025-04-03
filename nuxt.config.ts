@@ -29,6 +29,9 @@ export default defineNuxtConfig({
         'CheckCircle',
         'InfoCircle',
         'ExclamationTriangle',
+        'Server',
+        'UsersGear',
+        'Sliders',
       ],
       brands: [
         'Github', 
