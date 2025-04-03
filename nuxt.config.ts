@@ -1,7 +1,45 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
-  modules: ['@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/tailwindcss', '@vesp/nuxt-fontawesome'],
+
+  // fontawesome configuration
+  fontawesome: {
+    component: 'fa',
+    icons: {
+      // fontawsome icons, only the free tiers sadly, can use pro but it requires a license
+      solid: [
+        'Users', 
+        'Code', 
+        'Share', 
+        'LaptopCode', 
+        'Rocket',
+        'Palette',
+        'Globe',
+        'ArrowRight',
+        'Envelope',
+        'Lock',
+        'User',
+        'UserPlus',
+        'CircleExclamation',
+        'Spinner',
+        'Shield', 
+        'ShieldAlt', 
+        'RightToBracket',
+        'CheckCircle',
+        'InfoCircle',
+        'ExclamationTriangle',
+      ],
+      brands: [
+        'Github', 
+        'Twitter'
+      ]
+    }
+  },
+  css: [
+    '@/assets/css/colors.css',
+    '@/assets/css/animations.css'
+  ],
   tailwindcss: {
     exposeConfig: false,
     viewer: true,

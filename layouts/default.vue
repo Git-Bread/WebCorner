@@ -1,6 +1,6 @@
 <template>
   <div class="default-layout min-h-screen flex flex-col">
-    <HeadersStandardHeader />
+    <HeadersNonAuthedHeader />
     <main class="flex-grow">      
       <slot />
     </main>

@@ -1,72 +1,82 @@
 <template>
   <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 pb-12">
-      <h2 class="mt-6 text-3xl font-extrabold text-center">Create your account</h2>
-      
-      <form class="mt-8 space-y-6" @submit.prevent="handleRegister">
+
+    <div class="max-w-md w-full space-y-8 pb-12 z-10">
+      <h2 class="mt-6 text-3xl font-extrabold text-center text-heading">Create your account</h2>
+      <form class="mt-8 space-y-4" @submit.prevent="handleRegister">
         <!-- Email field -->
         <div>
-          <label for="email-address" class="block text-sm font-medium">Email address</label>
-          <input id="email-address" name="email" type="email" autocomplete="email" required 
-            placeholder="Email address" v-model="formData.email" 
-            @input="validateField('email')" @blur="validateField('email')"
-            :class="[baseInputClass, errors.email ? errorClass : normalClass]"/>
-          <p v-if="errors.email" class="mt-1 text-sm text-red-600">{{ errors.email }}</p>
+          <label for="email-address" class="block text-sm font-medium text-text">Email address</label>
+          <div class="flex items-center relative">
+            <fa :icon="['fas', 'envelope']" class="text-text-light absolute left-3 z-20" />
+            <input id="email-address" name="email" type="email" autocomplete="email" required 
+              placeholder="Email address" v-model="formData.email" 
+              @input="validateField('email')" @blur="validateField('email')"
+              class="pl-10"
+              :class="[baseInputClass, errors.email ? errorClass : normalClass]"/>
+          </div>
+          <p v-if="errors.email" class="mt-1 text-sm text-error">{{ errors.email }}</p>
         </div>
         
         <!-- Username field -->
-        <div>
-          <label for="username" class="block text-sm font-medium">Username</label>
-          <input id="username" name="username" type="text" autocomplete="username" required
-            placeholder="Username (3-30 characters)" v-model="formData.username"
-            @input="validateField('username')" @blur="validateField('username')"
-            :class="[baseInputClass, errors.username ? errorClass : normalClass]"/>
-          <p v-if="errors.username" class="mt-1 text-sm text-red-600">{{ errors.username }}</p>
+        <div class="pt-px">
+          <label for="username" class="block text-sm font-medium text-text">Username</label>
+          <div class="flex items-center relative">
+            <fa :icon="['fas', 'user']" class="text-text-light absolute left-3 z-20" />
+            <input id="username" name="username" type="text" autocomplete="username" required
+              placeholder="Username (3-30 characters)" v-model="formData.username"
+              @input="validateField('username')" @blur="validateField('username')"
+              class="pl-10"
+              :class="[baseInputClass, errors.username ? errorClass : normalClass]"/>
+          </div>
+          <p v-if="errors.username" class="mt-1 text-sm text-error">{{ errors.username }}</p>
         </div>
         
         <!-- Password field -->
         <div>
-          <label for="password" class="block text-sm font-medium">Password</label>
-          <input id="password" name="password" type="password" autocomplete="new-password" required
-            placeholder="Password" v-model="formData.password"
-            @input="validateField('password')" @blur="validateField('password')"
-            :class="[baseInputClass, errors.password ? errorClass : normalClass]"/>
-          <p v-if="errors.password" class="mt-1 text-sm text-red-600">{{ errors.password }}</p>
+          <label for="password" class="block text-sm font-medium text-text">Password</label>
+          <div class="flex items-center relative">
+            <fa :icon="['fas', 'lock']" class="text-text-light absolute left-3 z-20" />
+            <input id="password" name="password" type="password" autocomplete="new-password" required
+              placeholder="Password" v-model="formData.password"
+              @input="validateField('password')" @blur="validateField('password')"
+              class="pl-10"
+              :class="[baseInputClass, errors.password ? errorClass : normalClass]"/>
+          </div>
+          <p v-if="errors.password" class="mt-1 text-sm text-error">{{ errors.password }}</p>
           
           <!-- Password strength indicator -->
           <div v-if="formData.password && !errors.password" class="mt-1">
-            <div class="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div :class="['h-full', strengthColor]" :style="{ width: passwordStrength + '%' }"></div>
+            <div class="h-1 w-full bg-border rounded-full overflow-hidden">
+              <div :class="['h-full', strengthColorClass]" :style="{ width: passwordStrength + '%' }"></div>
             </div>
-            <p class="text-xs mt-1">{{ strengthText }}</p>
+            <p class="text-xs mt-1 flex items-center" :class="strengthTextColorClass">
+              <fa :icon="strengthIcon" class="mr-1" />
+              {{ strengthText }}
+            </p>
           </div>
         </div>
 
         <!-- General error message -->
-        <div v-if="generalError" class="text-red-500 text-sm p-3 bg-red-50 border border-red-200 rounded flex">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-          </svg>
+        <div v-if="generalError" class="text-error text-sm p-3 bg-error-light border border-error-light rounded flex">
+          <fa :icon="['fas', 'circle-exclamation']" class="h-5 w-5 mr-2 text-error" />
           <span>{{ generalError }}</span>
         </div>
 
         <!-- Submit button and login link -->
-        <div>
+        <div class="relative">
           <button type="submit" 
-            class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
             :disabled="loading || !isFormValid"
             :class="{ 'opacity-50 cursor-not-allowed': !isFormValid }">
-            <span v-if="loading" class="absolute left-0 inset-y-0 flex items-center pl-3">
-              <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </span>
+            <fa v-if="loading" :icon="['fas', 'spinner']" class="animate-spin mt-0.5 h-5 w-5 mr-2" />
+            <fa v-else :icon="['fas', 'user-plus']" class="mr-2 mt-0.5" />
             Register
           </button>
-          <div class="text-sm text-center mt-4">
-            <NuxtLink to="/login" class="font-medium text-indigo-700 hover:underline">
-              Already have an account? Sign in
+          <div class="text-sm text-center mt-4 relative z-20">
+            <NuxtLink to="/login" class="font-medium text-link hover:text-link-hover flex items-center justify-center">
+              <span>Already have an account? Sign in</span>
+              <fa :icon="['fas', 'arrow-right']" class="ml-1" />
             </NuxtLink>
           </div>
         </div>
@@ -82,10 +92,10 @@ import { collection, doc, setDoc } from 'firebase/firestore'
 
 definePageMeta({ layout: 'auth' })
 
-// Common classes
-const baseInputClass = 'appearance-none rounded relative block w-full px-3 py-2 border text-gray-900 focus:outline-none focus:z-10 sm:text-sm'
-const errorClass = 'border-red-500 focus:ring-red-500 focus:border-red-500'
-const normalClass = 'border-gray-300 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500'
+// Common classes using your simplified color system
+const baseInputClass = 'appearance-none rounded relative block w-full px-3 py-2 border text-text focus:outline-none focus:z-10 sm:text-sm'
+const errorClass = 'border-error focus:ring-error focus:border-error'
+const normalClass = 'border-border placeholder-text-light focus:ring-link focus:border-link'
 
 // Form data and errors
 const formData = reactive({ email: '', username: '', password: '' })
@@ -138,11 +148,24 @@ const passwordStrength = computed(() => {
   return Math.min(score, 100)
 })
 
-// Computed properties for password strength UI
-const strengthColor = computed(() => 
-  passwordStrength.value < 33 ? 'bg-red-500' : 
-  passwordStrength.value < 66 ? 'bg-yellow-500' : 'bg-green-500'
+// Computed properties for password strength UI using status colors
+const strengthColorClass = computed(() => 
+  passwordStrength.value < 33 ? 'bg-error' : 
+  passwordStrength.value < 66 ? 'bg-warning' : 'bg-success'
 )
+
+// Text color for the strength text using status colors
+const strengthTextColorClass = computed(() => 
+  passwordStrength.value < 33 ? 'text-error' : 
+  passwordStrength.value < 66 ? 'text-warning' : 'text-success'
+)
+
+// Icon for password strength
+const strengthIcon = computed(() =>
+  passwordStrength.value < 33 ? ['fas', 'exclamation-triangle'] :
+  passwordStrength.value < 66 ? ['fas', 'info-circle'] : ['fas', 'check-circle']
+)
+
 const strengthText = computed(() =>
   passwordStrength.value < 33 ? 'Weak password' : 
   passwordStrength.value < 66 ? 'Medium strength' : 'Strong password'
@@ -172,9 +195,6 @@ const handleRegister = async () => {
         generalError.value = 'This email is already registered. Please use a different email or sign in.'
       } else {
         generalError.value = 'Failed to register. Please try again.'
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Registration error:', result.error)
       }
       loading.value = false
       return
@@ -206,7 +226,7 @@ const handleRegister = async () => {
       if (!userValidation.success) throw new Error('Invalid user data')
       
       await setDoc(doc(collection(firestore, 'users'), uid), userData)
-      navigateTo('/dashboard')
+      // TODO: Add default login page
       
     } catch (err) {
       console.error('Error creating user document:', err)
