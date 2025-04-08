@@ -1,6 +1,9 @@
 <template>
   <div class="default-layout min-h-screen flex flex-col">
-    <HeadersNonAuthedHeader />
+    <Transition name="fade" mode="out-in">
+      <HeadersStandardHeader v-if="isAuthenticated" />
+      <HeadersNonAuthedHeader v-else />
+    </Transition>
     <main class="flex-grow">      
       <slot />
     </main>
@@ -9,5 +12,5 @@
 </template>
 
 <script setup>
-
+const { isAuthenticated, isLoading, authInitialized } = useAuth()
 </script>

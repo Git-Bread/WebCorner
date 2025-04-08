@@ -5,6 +5,7 @@ export const useAuth = () => {
   const user = useState<User | null>('user', () => null)
   const isLoading = useState<boolean>('auth-loading', () => true)
   const isAuthenticated = computed(() => !!user.value)
+  const authInitialized = useState<boolean>('auth-initialized', () => false)
   
   // Initialize auth state listener only on the client side
   if (import.meta.client) {
@@ -12,6 +13,7 @@ export const useAuth = () => {
       const unsubscribe = onAuthStateChanged(auth, (newUser) => {
         user.value = newUser
         isLoading.value = false
+        authInitialized.value = true
       })
       
       // cleanup
@@ -44,6 +46,7 @@ export const useAuth = () => {
     user,
     isLoading,
     isAuthenticated,
+    authInitialized,
 
     // Use the authAction wrapper for each operation
     login: (email: string, password: string) => 

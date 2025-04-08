@@ -1,11 +1,11 @@
 <template>
   <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
 
-    <div class="max-w-md w-full space-y-8 pb-12 z-10">
+    <div class="max-w-md w-full space-y-8 pb-12 z-10 form-fade-in">
       <h2 class="mt-6 text-3xl font-extrabold text-center text-heading">Create your account</h2>
       <form class="mt-8 space-y-4" @submit.prevent="handleRegister">
         <!-- Email field -->
-        <div>
+        <div class="form-field-1">
           <label for="email-address" class="block text-sm font-medium text-text">Email address</label>
           <div class="flex items-center relative">
             <fa :icon="['fas', 'envelope']" class="text-text-light absolute left-3 z-20" />
@@ -19,7 +19,7 @@
         </div>
         
         <!-- Username field -->
-        <div class="pt-px">
+        <div class="pt-px form-field-2">
           <label for="username" class="block text-sm font-medium text-text">Username</label>
           <div class="flex items-center relative">
             <fa :icon="['fas', 'user']" class="text-text-light absolute left-3 z-20" />
@@ -33,7 +33,7 @@
         </div>
         
         <!-- Password field -->
-        <div>
+        <div class="form-field-3">
           <label for="password" class="block text-sm font-medium text-text">Password</label>
           <div class="flex items-center relative">
             <fa :icon="['fas', 'lock']" class="text-text-light absolute left-3 z-20" />
@@ -58,7 +58,7 @@
         </div>
 
         <!-- General error message -->
-        <div v-if="generalError" class="text-error text-sm p-3 bg-error-light border border-error-light rounded flex">
+        <div v-if="generalError" class="text-error text-sm p-3 bg-error-light border border-error-light rounded flex form-error-shake">
           <fa :icon="['fas', 'circle-exclamation']" class="h-5 w-5 mr-2 text-error" />
           <span>{{ generalError }}</span>
         </div>
@@ -68,7 +68,7 @@
           <button type="submit" 
             class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
             :disabled="loading || !isFormValid"
-            :class="{ 'opacity-50 cursor-not-allowed': !isFormValid }">
+            :class="{ 'opacity-50 cursor-not-allowed': !isFormValid || loading, 'submit-button-pulse': isFormValid && !loading }">
             <fa v-if="loading" :icon="['fas', 'spinner']" class="animate-spin mt-0.5 h-5 w-5 mr-2" />
             <fa v-else :icon="['fas', 'user-plus']" class="mr-2 mt-0.5" />
             Register
