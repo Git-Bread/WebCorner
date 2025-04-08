@@ -85,10 +85,45 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { userSchema, safeValidateUser } from '~/schemas/userSchemas'
-import { collection, doc, setDoc } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
+import { calculatePasswordStrength, getStrengthClasses, getStrengthText } from '~/utils/passwordUtils'
+import { showToast } from '~/utils/toast';
+
+// Types for form data and validation
+interface FormData {
+  email: string;
+  username: string;
+  password: string;
+  [key: string]: string; // Index signature to allow dynamic access
+}
+
+interface FormErrors {
+  email: string;
+  username: string;
+  password: string;
+  [key: string]: string; // Index signature to allow dynamic access
+}
+
+interface ValidationResult {
+  success: boolean;
+  error?: {
+    errors: Array<{ message: string }>;
+  };
+}
+
+interface SchemaField {
+  safeParse: (value: string) => ValidationResult;
+}
+
+interface RegistrationSchema {
+  email: SchemaField;
+  username: SchemaField;
+  password: SchemaField;
+  [key: string]: SchemaField; // Index signature to allow dynamic access
+}
 
 definePageMeta({ layout: 'auth' })
 
@@ -98,18 +133,19 @@ const errorClass = 'border-error focus:ring-error focus:border-error'
 const normalClass = 'border-border placeholder-text-light focus:ring-link focus:border-link'
 
 // Form data and errors
-const formData = reactive({ email: '', username: '', password: '' })
-const errors = reactive({ email: '', username: '', password: '' })
+const formData = reactive<FormData>({ email: '', username: '', password: '' });
+const errors = reactive<FormErrors>({ email: '', username: '', password: '' });
 const generalError = ref('')
 const loading = ref(false)
 const { register } = useAuth()
+const { firestore } = useFirebase()
 
 // Registration schema using references from userSchema
-const registrationSchema = {
+const registrationSchema: RegistrationSchema = {
   email: userSchema.shape.email,
   username: userSchema.shape.username,
   password: {
-    safeParse: (value) => {
+    safeParse: (value: string) => {
       if (value.length < 6) {
         return { 
           success: false, 
@@ -122,7 +158,7 @@ const registrationSchema = {
 }
 
 // Field validation
-const validateField = (field) => {
+const validateField = (field: keyof FormData) => {
   const value = formData[field]
   if (!value) return // Skip empty fields during typing
   
@@ -130,46 +166,18 @@ const validateField = (field) => {
   if (!fieldSchema) return
   
   const result = fieldSchema.safeParse(value)
-  errors[field] = result.success ? '' : result.error.errors[0].message
+  errors[field] = result.success ? '' : result.error!.errors[0].message;
 }
 
-// Password strength calculator
-const passwordStrength = computed(() => {
-  const password = formData.password
-  if (!password) return 0
-  
-  let score = 0
-  if (password.length >= 8) score += 25
-  else if (password.length >= 6) score += 10
-  if (/\d/.test(password)) score += 25
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 25
-  if (/[^a-zA-Z0-9]/.test(password)) score += 25
-  
-  return Math.min(score, 100)
-})
+// Password Utility Functions, sets the password strength and classes
+const passwordStrength = computed(() => calculatePasswordStrength(formData.password))
+const strengthClasses = computed(() => getStrengthClasses(passwordStrength.value))
+const strengthText = computed(() => getStrengthText(passwordStrength.value))
 
-// Computed properties for password strength UI using status colors
-const strengthColorClass = computed(() => 
-  passwordStrength.value < 33 ? 'bg-error' : 
-  passwordStrength.value < 66 ? 'bg-warning' : 'bg-success'
-)
-
-// Text color for the strength text using status colors
-const strengthTextColorClass = computed(() => 
-  passwordStrength.value < 33 ? 'text-error' : 
-  passwordStrength.value < 66 ? 'text-warning' : 'text-success'
-)
-
-// Icon for password strength
-const strengthIcon = computed(() =>
-  passwordStrength.value < 33 ? ['fas', 'exclamation-triangle'] :
-  passwordStrength.value < 66 ? ['fas', 'info-circle'] : ['fas', 'check-circle']
-)
-
-const strengthText = computed(() =>
-  passwordStrength.value < 33 ? 'Weak password' : 
-  passwordStrength.value < 66 ? 'Medium strength' : 'Strong password'
-)
+// Password strength indicator classes
+const strengthColorClass = computed(() => strengthClasses.value.bar)
+const strengthTextColorClass = computed(() => strengthClasses.value.text)
+const strengthIcon = computed(() => strengthClasses.value.icon)
 
 // Form validity check
 const isFormValid = computed(() => {
@@ -202,7 +210,7 @@ const handleRegister = async () => {
     
     // Create user document in Firestore
     try {
-      const { auth, firestore } = useFirebase()
+      const { auth } = useFirebase()
       const uid = auth.currentUser?.uid
       
       if (!uid) throw new Error('User ID not found after registration')
@@ -225,9 +233,13 @@ const handleRegister = async () => {
       const userValidation = safeValidateUser(userData)
       if (!userValidation.success) throw new Error('Invalid user data')
       
-      await setDoc(doc(collection(firestore, 'users'), uid), userData)
-      // TODO: Add default login page
+      await setDoc(doc(firestore, 'users', uid), userData)
+      showToast('Login successful! Redirecting...', 'success', 3000);
       
+      // Redirect to dashboard after registration
+      setTimeout(() => {
+        navigateTo('/test')
+      }, 1000)
     } catch (err) {
       console.error('Error creating user document:', err)
       generalError.value = 'Account created but profile setup failed. Please contact support.'

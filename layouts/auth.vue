@@ -19,7 +19,7 @@
     </div>
   </template>
   
-  <script setup>
+  <script setup lang="ts">
 import { HeadersNonAuthedHeader } from '#components';
 
   

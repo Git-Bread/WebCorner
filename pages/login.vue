@@ -1,11 +1,11 @@
 <template>
   <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 relative z-10 pb-28">
+    <div class="max-w-md w-full space-y-8 relative z-10 pb-28 form-fade-in">
       <h2 class="mt-6 text-3xl font-extrabold text-center text-heading">Sign in to your account</h2>
       
       <form class="mt-8 space-y-4" @submit.prevent="handleLogin">
         <!-- Email field -->
-        <div>
+        <div class="form-field-1">
           <label for="email-address" class="block text-sm font-medium text-text">Email address</label>
           <div class="flex items-center relative">
             <fa :icon="['fas', 'envelope']" class="text-text-light absolute left-3 z-20" />
@@ -19,7 +19,7 @@
         </div>
         
         <!-- Password field -->
-        <div>
+        <div class="form-field-2">
           <label for="password" class="block text-sm font-medium text-text">Password</label>
           <div class="flex items-center relative">
             <fa :icon="['fas', 'lock']" class="text-text-light absolute left-3 z-20" />
@@ -32,16 +32,16 @@
         </div>
 
         <!-- General error message -->
-        <div v-if="generalError" class="text-error text-sm p-3 bg-error-light border border-error-light rounded flex">
+        <div v-if="generalError" class="text-error text-sm p-3 bg-error-light border border-error-light rounded flex form-error-shake">
           <fa :icon="['fas', 'circle-exclamation']" class="h-5 w-5 mr-2 text-error" />
           <span>{{ generalError }}</span>
         </div>
 
-        <div>
+        <div class="form-field-3">
           <button type="submit" 
             class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
-            :disabled="loading || !isFormValid"
-            :class="{ 'opacity-50 cursor-not-allowed': !isFormValid || loading }">
+            :class="{ 'opacity-50 cursor-not-allowed': !isFormValid || loading, 'submit-button-pulse': isFormValid && !loading }"
+            :disabled="loading || !isFormValid">
             <fa v-if="loading" :icon="['fas', 'spinner']" class="animate-spin mt-0.5 h-5 w-5 mr-2" />
             <fa v-else :icon="['fas', 'right-to-bracket']" class="mr-2 mt-1" />
             Sign in
@@ -58,8 +58,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { showToast } from '~/utils/toast';
 
 definePageMeta({ layout: 'auth' })
 
@@ -78,7 +79,7 @@ const { login } = useAuth()
 // Simple login validation
 const loginSchema = {
   email: {
-    safeParse: (value) => {
+    safeParse: (value: string) => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(value)) {
         return { 
@@ -92,7 +93,7 @@ const loginSchema = {
 }
 
 // Validate Email
-const validateField = (field) => {
+const validateField = (field: string) => {
   if (field !== 'email') return
   
   const value = formData[field]
@@ -102,7 +103,7 @@ const validateField = (field) => {
   if (!fieldSchema) return
   
   const result = fieldSchema.safeParse(value)
-  errors[field] = result.success ? '' : result.error.errors[0].message
+  errors[field] = result.success ? '' : (result.error?.errors?.[0]?.message ?? 'Invalid input')
 }
 
 // Form validity check, checks so fields are not empty and no errors are present
@@ -128,7 +129,11 @@ const handleLogin = async () => {
         console.error('Login error:', result.error)
       }
     } else {
-      // ADDITIONAL LOGIC FOR SUCCESSFUL LOGIN
+      showToast('Login successful! Redirecting...', 'success', 3000);
+      
+      setTimeout(() => {
+        navigateTo('/test')
+      }, 1000)
     }
   } catch (error) {
     console.error('Login error:', error)

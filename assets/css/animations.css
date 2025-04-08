@@ -235,3 +235,62 @@
     transform: translate(-50%, -50%);
     animation: pulse 15s infinite alternate ease-in-out;
   }
+
+  /* Form Animations */
+  .form-fade-in {
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+  
+  /* Form submit button pulse effect */
+  @keyframes buttonPulse {
+    0% {
+      box-shadow: 0 0 0 0 var(--color-decoration-1);
+    }
+    70% {
+      box-shadow: 0 0 0 10px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+  
+  .submit-button-pulse {
+    animation: buttonPulse 2s infinite;
+    position: relative;
+  }
+  
+  /* Staggered form fields animation */
+  .form-field-1 {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease-out 0.1s forwards;
+  }
+  
+  .form-field-2 {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease-out 0.2s forwards;
+  }
+  
+  .form-field-3 {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease-out 0.3s forwards;
+  }
+  
+  .form-error-shake {
+    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+  
+  @keyframes shake {
+    10%, 90% {
+      transform: translateX(-1px);
+    }
+    20%, 80% {
+      transform: translateX(2px);
+    }
+    30%, 50%, 70% {
+      transform: translateX(-3px);
+    }
+    40%, 60% {
+      transform: translateX(3px);
+    }
+  }
