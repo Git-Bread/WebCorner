@@ -16,7 +16,7 @@
         <!-- Profile section with user info -->
         <div class="flex items-center">
           <!-- User name display -->
-          <span v-if="user" class="text-text mr-3">{{ userName }}</span>
+          <span v-if="user" class="text-text">{{ userName }}</span>
           
           <!-- Profile menu dropdown -->
           <div class="ml-3 relative">
@@ -25,22 +25,14 @@
                 <span class="sr-only">Open user menu</span>
                 <!-- Use user's photoURL if available, otherwise default image -->
                 <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 hover:border-decoration-1">
-                  <img 
-                    :src="userPhotoUrl" 
-                    :alt="`${userName}'s profile`" 
-                    class="h-full w-full object-cover"
-                  />
+                  <img :src="userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
                 </picture>
               </button>
             </div>
             
             <!-- Profile dropdown menu -->
-            <div v-if="menuOpen" 
-                 class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface z-50"
-                 role="menu"
-                 aria-orientation="vertical"
-                 aria-labelledby="user-menu-button"
-                 @blur="closeMenu">
+            <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface z-50"
+            role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" @blur="closeMenu">
               <div class="py-1" role="none">
                 <NuxtLink to="/profile" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
                   Your Profile
@@ -101,7 +93,7 @@ const userPhotoUrl = computed(() => {
   if (userDoc.value?.profile_image_url) {
     return userDoc.value.profile_image_url
   }
-  return '/images/default_profile.webp'
+  return '/images/Profile_Pictures/default_profile.jpg'
 })
 
 // Rest of your code remains unchanged

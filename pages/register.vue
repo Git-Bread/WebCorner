@@ -43,6 +43,7 @@
               class="pl-10"
               :class="[baseInputClass, errors.password ? errorClass : normalClass]"/>
           </div>
+          <p v-if="!errors.password && passwordStrength < 25" class="text-xs text-text-light mt-1">Password must be at least 6 characters long.</p>
           <p v-if="errors.password" class="mt-1 text-sm text-error">{{ errors.password }}</p>
           
           <!-- Password strength indicator -->
@@ -91,6 +92,7 @@ import { userSchema, safeValidateUser } from '~/schemas/userSchemas'
 import { doc, setDoc } from 'firebase/firestore'
 import { calculatePasswordStrength, getStrengthClasses, getStrengthText } from '~/utils/passwordUtils'
 import { showToast } from '~/utils/toast';
+import { getRandomProfileImage } from '~/utils/profileImageUtils';
 
 // Types for form data and validation
 interface FormData {
@@ -220,7 +222,7 @@ const handleRegister = async () => {
         id: uid,
         username: formData.username,
         email: formData.email,
-        profile_image_url: null,
+        profile_image_url: window.location.origin + getRandomProfileImage(), // full url for profile image
         bio: '',
         servers: [],
         createdAt: new Date(),
@@ -231,10 +233,13 @@ const handleRegister = async () => {
       
       // Validate and save user
       const userValidation = safeValidateUser(userData)
-      if (!userValidation.success) throw new Error('Invalid user data')
+      if (!userValidation.success) {
+        console.error('Validation errors:', userValidation.error)
+        throw new Error(`Invalid user data: ${JSON.stringify(userValidation.error)}`)
+      }
       
       await setDoc(doc(firestore, 'users', uid), userData)
-      showToast('Login successful! Redirecting...', 'success', 3000);
+      showToast('Register successful! Redirecting...', 'success', 3000);
       
       // Redirect to dashboard after registration
       setTimeout(() => {
