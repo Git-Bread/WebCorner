@@ -1,4 +1,4 @@
-import { type User, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { type User, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, browserLocalPersistence, setPersistence } from 'firebase/auth'
 
 export const useAuth = () => {
   const { auth } = useFirebase()
@@ -10,8 +10,15 @@ export const useAuth = () => {
   // Initialize auth state listener only on the client side
   if (import.meta.client) {
     const setupAuthListener = () => {
+      // set loading to true at the start
+      isLoading.value = true
+      
       const unsubscribe = onAuthStateChanged(auth, (newUser) => {
         user.value = newUser
+        isLoading.value = false
+        authInitialized.value = true
+      }, (error) => {
+        console.error('Firebase auth error:', error)
         isLoading.value = false
         authInitialized.value = true
       })
@@ -28,18 +35,38 @@ export const useAuth = () => {
       onUnmounted(() => unsubscribe())
     }
   } else {
-    // For SSR, w immediately set loading to false
+    // For SSR, immediately set loading to false
     isLoading.value = false
   }
 
   // Auth operations wrapper, contains action and error handling
   const authAction = async (action: () => Promise<any>) => {
     try {
+      isLoading.value = true
       await action()
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message || 'Authentication error' }
+    } finally {
+      isLoading.value = false
     }
+  }
+
+  const waitForAuthReady = () => {
+    // Return immediately if auth is ready
+    if (authInitialized.value && !isLoading.value) {
+      return Promise.resolve()
+    }
+    
+    // Otherwise wait for auth to be ready
+    return new Promise<void>((resolve) => {
+      const unwatch = watch([isLoading, authInitialized], ([loading, initialized]) => {
+        if (!loading && initialized) {
+          unwatch()
+          resolve()
+        }
+      })
+    })
   }
 
   return {
@@ -47,6 +74,7 @@ export const useAuth = () => {
     isLoading,
     isAuthenticated,
     authInitialized,
+    waitForAuthReady,
 
     // Use the authAction wrapper for each operation
     login: (email: string, password: string) => 

@@ -93,6 +93,7 @@ import { doc, setDoc } from 'firebase/firestore'
 import { calculatePasswordStrength, getStrengthClasses, getStrengthText } from '~/utils/passwordUtils'
 import { showToast } from '~/utils/toast';
 import { getRandomProfileImage } from '~/utils/profileImageUtils';
+import { handleAuthError, handleDatabaseError } from '~/utils/errorHandler'
 
 // Types for form data and validation
 interface FormData {
@@ -200,12 +201,7 @@ const handleRegister = async () => {
     const result = await register(formData.email, formData.password)
     
     if (!result.success) {
-      // Check for specific Firebase error messages and provide user-friendly responses
-      if (result.error?.includes('auth/email-already-in-use') || result.error?.includes('email-already-in-use')) {
-        generalError.value = 'This email is already registered. Please use a different email or sign in.'
-      } else {
-        generalError.value = 'Failed to register. Please try again.'
-      }
+      generalError.value = handleAuthError(result.error)
       loading.value = false
       return
     }
@@ -222,7 +218,7 @@ const handleRegister = async () => {
         id: uid,
         username: formData.username,
         email: formData.email,
-        profile_image_url: window.location.origin + getRandomProfileImage(), // full url for profile image
+        profile_image_url: window.location.origin + getRandomProfileImage(),
         bio: '',
         servers: [],
         createdAt: new Date(),
@@ -234,24 +230,21 @@ const handleRegister = async () => {
       // Validate and save user
       const userValidation = safeValidateUser(userData)
       if (!userValidation.success) {
-        console.error('Validation errors:', userValidation.error)
         throw new Error(`Invalid user data: ${JSON.stringify(userValidation.error)}`)
       }
       
       await setDoc(doc(firestore, 'users', uid), userData)
-      showToast('Register successful! Redirecting...', 'success', 3000);
+      showToast('Register successful! Redirecting...', 'success', 3000)
       
       // Redirect to dashboard after registration
       setTimeout(() => {
         navigateTo('/test')
       }, 1000)
     } catch (err) {
-      console.error('Error creating user document:', err)
-      generalError.value = 'Account created but profile setup failed. Please contact support.'
+      generalError.value = handleDatabaseError(err)
     }
   } catch (error) {
-    console.error('Registration error:', error)
-    generalError.value = 'An unexpected error occurred. Please try again.'
+    generalError.value = handleAuthError(error)
   } finally {
     loading.value = false
   }

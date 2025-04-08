@@ -110,6 +110,7 @@ const handleLogout = async () => {
   if (result.success) {
     menuOpen.value = false
   }
+  navigateTo('/');
 }
 
 // Close menu when clicking outside

@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { showToast } from '~/utils/toast';
+import { handleAuthError } from '~/utils/errorHandler'
 
 definePageMeta({ layout: 'auth' })
 
@@ -122,22 +123,16 @@ const handleLogin = async () => {
     const result = await login(formData.email, formData.password)
     
     if (!result.success) {
-      generalError.value = 'Invalid email or password'
-
-      // Log the error to console in development mode, debugging, should not be in production since it says what type of error it is
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Login error:', result.error)
-      }
+      generalError.value = handleAuthError(result.error)
     } else {
-      showToast('Login successful! Redirecting...', 'success', 3000);
+      showToast('Login successful! Redirecting...', 'success', 3000)
       
       setTimeout(() => {
         navigateTo('/test')
       }, 1000)
     }
   } catch (error) {
-    console.error('Login error:', error)
-    generalError.value = 'An unexpected error occurred. Please try again.'
+    generalError.value = handleAuthError(error)
   } finally {
     loading.value = false
   }

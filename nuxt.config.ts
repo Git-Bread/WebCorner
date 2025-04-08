@@ -3,6 +3,7 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss', '@vesp/nuxt-fontawesome'],
 
+
   // fontawesome configuration
   fontawesome: {
     component: 'fa',

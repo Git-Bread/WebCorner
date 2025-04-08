@@ -12,5 +12,5 @@
 </template>
 
 <script setup>
-const { isAuthenticated, isLoading, authInitialized } = useAuth()
+const { isAuthenticated } = useAuth()
 </script>

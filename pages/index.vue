@@ -31,7 +31,7 @@
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row gap-4 animate-buttons">
         <NuxtLink to="/register" class="cta-button cta-primary px-8 py-3 text-lg font-medium rounded-full shadow-lg flex items-center justify-center">
-          Create Your Server <fa :icon="['fas', 'server']" class="ml-2" />
+          Create your account <fa :icon="['fas', 'server']" class="ml-2" />
         </NuxtLink>
         <NuxtLink to="/login" class="cta-button cta-secondary px-8 py-3 text-lg font-medium rounded-full shadow-md flex items-center justify-center">
           Sign In <fa :icon="['fas', 'arrow-right']" class="ml-2" />
