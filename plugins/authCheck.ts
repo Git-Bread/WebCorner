@@ -5,10 +5,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   // Only run this code on the client side
   if (import.meta.server) return
   
-  // Store event listener references for cleanup
-  let throttledUpdateActivity: (() => void) | null = null
-  let handleScroll: (() => void) | null = null
-  let scrollTimeout: number | null = null
+  // Store interval reference for cleanup
+  let activityCheckInterval: number | null = null
   
   // Wait for the application to be mounted before initializing
   nuxtApp.hook('app:mounted', () => {
@@ -24,12 +22,13 @@ export default defineNuxtPlugin((nuxtApp) => {
             return
           }
           
+          // Initial inactivity check when page loads
           checkInactivity()
             .then(wasInactive => {
               if (wasInactive) {
                 showToast('You have been logged out due to inactivity', 'info', 5000)
               } else if (isAuthenticated.value) {
-                // Update the last active timestamp for authenticated users
+                // We're active now, update timestamp
                 localStorage.setItem('lastActiveTime', Date.now().toString())
               }
             })
@@ -37,41 +36,21 @@ export default defineNuxtPlugin((nuxtApp) => {
               console.error('Error checking inactivity:', error)
             })
           
-          // Throttle function
-          let lastUpdateTime = Date.now()
-          const THROTTLE_DELAY = 15 * 60 * 1000 // 15 minutes
+          // Set up regular interval check (every 4 hours) instead of tracking every event
+          const INTERVAL_CHECK = 4 * 60 * 60 * 1000 // 4 hours in milliseconds
           
-          throttledUpdateActivity = () => {
+          // Instead of tracking clicks and scrolls, just periodically update the timestamp 
+          // while the user has the page open
+          activityCheckInterval = window.setInterval(() => {
             try {
               if (isAuthenticated.value && localStorage.getItem('rememberMe') === 'true') {
-                const now = Date.now()
-                if (now - lastUpdateTime > THROTTLE_DELAY) {
-                  localStorage.setItem('lastActiveTime', now.toString())
-                  lastUpdateTime = now
-                }
+                localStorage.setItem('lastActiveTime', Date.now().toString())
               }
             } catch (e) {
-              console.error('Error in throttledUpdateActivity:', e)
+              console.error('Error in periodic activity update:', e)
             }
-          }
+          }, INTERVAL_CHECK)
           
-          // Add event listeners
-          window.addEventListener('click', throttledUpdateActivity)
-          window.addEventListener('keypress', throttledUpdateActivity)
-          
-          // Scroll event with debounce
-          handleScroll = () => {
-            if (scrollTimeout) {
-              clearTimeout(scrollTimeout)
-            }
-            
-            scrollTimeout = window.setTimeout(() => {
-              if (throttledUpdateActivity) throttledUpdateActivity()
-              scrollTimeout = null
-            }, 1000)
-          }
-          
-          window.addEventListener('scroll', handleScroll, { passive: true })
         } catch (e) {
           console.error('Error setting up activity tracking:', e)
         }
@@ -81,32 +60,21 @@ export default defineNuxtPlugin((nuxtApp) => {
     }, 500) // Increased timeout to ensure everything is ready
   })
   
-  // Properly clean up event listeners when the plugin is deactivated
-  nuxtApp.hook('app:beforeMount', () => {
-    cleanupListeners()
-  })
-  
-  // Function to clean up all event listeners
-  const cleanupListeners = () => {
-    if (throttledUpdateActivity) {
-      window.removeEventListener('click', throttledUpdateActivity)
-      window.removeEventListener('keypress', throttledUpdateActivity)
-    }
-    
-    if (handleScroll) {
-      window.removeEventListener('scroll', handleScroll)
-    }
-    
-    if (scrollTimeout) {
-      clearTimeout(scrollTimeout)
-      scrollTimeout = null
+  // Cleanup function
+  const cleanupInterval = () => {
+    if (activityCheckInterval !== null) {
+      window.clearInterval(activityCheckInterval)
+      activityCheckInterval = null
     }
   }
+  
+  // Properly clean up interval when the plugin is deactivated
+  nuxtApp.hook('app:beforeMount', cleanupInterval)
   
   // Return plugin cleanup function
   return {
     provide: {
-      cleanupAuthListeners: cleanupListeners
+      cleanupAuthInterval: cleanupInterval
     }
   }
 })

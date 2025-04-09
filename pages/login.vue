@@ -19,12 +19,13 @@
             <input id="remember-me" name="remember-me" type="checkbox" v-model="rememberMe" class="h-4 w-4 text-accent-blue focus:ring-accent-blue border-foreground rounded">
             <label for="remember-me" class="ml-2 block text-sm text-text">Remember me</label>
           </div>
+          <div class="text-right">
+            <!-- Forgot Password Button -->
+            <NuxtLink to="/forgot-password" class="text-sm text-link hover:text-link-hover mt-0">
+              Forgot your password?
+            </NuxtLink>
+          </div>
         </div>
-
-        <!-- Forgot Password Button -->
-        <NuxtLink to="/forgot-password" class="text-sm text-link hover:text-link-hover mt-0">
-          Forgot your password?
-        </NuxtLink>
 
         <!-- General error message -->
         <AuthErrorMessage :message="generalError" />
