@@ -1,83 +1,52 @@
 <template>
   <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8 relative z-10 pb-28 form-fade-in">
-      <h2 class="mt-6 text-3xl font-extrabold text-center text-heading">Sign in to your account</h2>
+      <h2 id="login-heading" class="mt-6 text-3xl font-extrabold text-center text-heading">Sign in to your account</h2>
       
-      <form class="mt-8 space-y-4" @submit.prevent="handleLogin">
+      <form class="mt-8 space-y-4" @submit.prevent="handleLogin" aria-labelledby="login-heading">
         <!-- Email field -->
-        <div class="form-field-1">
-          <label for="email-address" class="block text-sm font-medium text-text">Email address</label>
-          <div class="flex items-center relative">
-            <fa :icon="['fas', 'envelope']" class="text-text-light absolute left-3 z-20" />
-            <input id="email-address" name="email" type="email" autocomplete="email" required 
-              placeholder="Email address" v-model="formData.email" 
-              @blur="validateField('email')"
-              class="pl-10"
-              :class="[baseInputClass, errors.email ? errorClass : normalClass]"/>
-          </div>
-          <p v-if="errors.email" class="mt-1 text-sm text-error">{{ errors.email }}</p>
-        </div>
+        <AuthFormField id="email-address" name="email" type="email" label="Email address" icon="envelope" placeholder="Email address" 
+        autocomplete="email" v-model="formData.email" :errorMessage="errors.email" :hasError="!!errors.email" fieldClass="form-field-1" 
+        @blur="validateField('email')"/>
         
         <!-- Password field -->
-        <div class="form-field-2">
-          <label for="password" class="block text-sm font-medium text-text">Password</label>
-          <div class="flex items-center relative">
-            <fa :icon="['fas', 'lock']" class="text-text-light absolute left-3 z-20" />
-            <input id="password" name="password" type="password" autocomplete="current-password" required
-              placeholder="Password" v-model="formData.password"
-              class="pl-10"
-              :class="[baseInputClass, errors.password ? errorClass : normalClass]"/>
+        <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" 
+        autocomplete="current-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" fieldClass="form-field-2"/>
+
+        <!-- Remember Me checkbox -->
+        <div class="flex items-center justify-between mt-2">
+          <div class="flex items-center">
+            <input id="remember-me" name="remember-me" type="checkbox" v-model="rememberMe" class="h-4 w-4 text-accent-blue focus:ring-accent-blue border-foreground rounded">
+            <label for="remember-me" class="ml-2 block text-sm text-text">Remember me</label>
           </div>
-          <p v-if="errors.password" class="mt-1 text-sm text-error">{{ errors.password }}</p>
         </div>
+
+        <!-- Forgot Password Button -->
+        <NuxtLink to="/forgot-password" class="text-sm text-link hover:text-link-hover mt-0">
+          Forgot your password?
+        </NuxtLink>
 
         <!-- General error message -->
-        <div v-if="generalError" class="text-error text-sm p-3 bg-error-light border border-error-light rounded flex form-error-shake">
-          <fa :icon="['fas', 'circle-exclamation']" class="h-5 w-5 mr-2 text-error" />
-          <span>{{ generalError }}</span>
-        </div>
+        <AuthErrorMessage :message="generalError" />
 
-        <div class="form-field-3">
-          <button type="submit" 
-            class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
-            :class="{ 'opacity-50 cursor-not-allowed': !isFormValid || loading, 'submit-button-pulse': isFormValid && !loading }"
-            :disabled="loading || !isFormValid">
-            <fa v-if="loading" :icon="['fas', 'spinner']" class="animate-spin mt-0.5 h-5 w-5 mr-2" />
-            <fa v-else :icon="['fas', 'right-to-bracket']" class="mr-2 mt-1" />
-            Sign in
-          </button>
-          <div class="text-sm text-center mt-4 relative z-20">
-            <NuxtLink to="/register" class="font-medium text-link hover:text-link-hover flex items-center justify-center">
-              <span>Don't have an account? Register</span>
-              <fa :icon="['fas', 'arrow-right']" class="ml-1" />
-            </NuxtLink>
-          </div>
-        </div>
+        <!-- Submit button and register link -->
+        <AuthSubmitButton :loading="loading" :disabled="!isFormValid" label="Sign in" iconName="right-to-bracket" linkTo="/register" 
+        linkText="Don't have an account? Register" fieldClass="form-field-3"/>
       </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { showToast } from '~/utils/toast';
+import { ref, nextTick } from 'vue'
+import { showToast } from '~/utils/toast'
 import { handleAuthError } from '~/utils/errorHandler'
+import useFormValidation from '~/composables/useFormValidation'
 
 definePageMeta({ layout: 'auth' })
 
-// Common field classes using the color system
-const baseInputClass = 'appearance-none rounded relative block w-full px-3 py-2 border text-text focus:outline-none focus:z-10 sm:text-sm'
-const errorClass = 'border-error focus:ring-error focus:border-error'
-const normalClass = 'border-border placeholder-text-light focus:ring-link focus:border-link'
-
-// Form data and errors
-const formData = reactive({ email: '', password: '' })
-const errors = reactive({ email: '', password: '' })
-const generalError = ref('')
-const loading = ref(false)
-const { login } = useAuth()
-
-// Simple login validation
+// Login validation with regex
+// This schema is used to validate the email format and password length
 const loginSchema = {
   email: {
     safeParse: (value: string) => {
@@ -93,34 +62,49 @@ const loginSchema = {
   }
 }
 
-// Validate Email
-const validateField = (field: string) => {
-  if (field !== 'email') return
-  
-  const value = formData[field]
-  if (!value) return
-  
-  const fieldSchema = loginSchema[field]
-  if (!fieldSchema) return
-  
-  const result = fieldSchema.safeParse(value)
-  errors[field] = result.success ? '' : (result.error?.errors?.[0]?.message ?? 'Invalid input')
-}
+// Use form validation composable with field initial values
+const { formData, errors, validateField, isFormValid } = useFormValidation(
+  loginSchema, 
+  { email: '', password: '' }
+)
 
-// Form validity check, checks so fields are not empty and no errors are present
-const isFormValid = computed(() => {
-  return formData.email && formData.password && !errors.email
-})
+const generalError = ref('')
+const loading = ref(false)
+const { login } = useAuth()
+const loadingTimeout = ref<number | null>(null);
+const rememberMe = ref(false);
+
+// Focus the first error field after validation for keyboard accessibility
+const focusFirstError = () => {
+  nextTick(() => {
+    const firstErrorField = Object.keys(errors).find(key => !!errors[key]);
+    if (firstErrorField) {
+      const element = document.getElementById(firstErrorField);
+      if (element) element.focus();
+    }
+  });
+};
 
 const handleLogin = async () => {
   validateField('email')
-  if (!isFormValid.value) return
+  if (!isFormValid.value) {
+    focusFirstError()
+    return
+  }
   
   generalError.value = ''
   
   try {
+    // Timeout check
     loading.value = true
-    const result = await login(formData.email, formData.password)
+    loadingTimeout.value = window.setTimeout(() => {
+      if (loading.value) {
+        loading.value = false;
+        generalError.value = "Request timed out. Please try again.";
+      }
+    }, 15000);
+
+    const result = await login(formData.email, formData.password, rememberMe.value)
     
     if (!result.success) {
       generalError.value = handleAuthError(result.error)
@@ -135,6 +119,10 @@ const handleLogin = async () => {
     generalError.value = handleAuthError(error)
   } finally {
     loading.value = false
+    if (loadingTimeout.value) {
+      clearTimeout(loadingTimeout.value);
+      loadingTimeout.value = null;
+    }
   }
 }
 </script>

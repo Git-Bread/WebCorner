@@ -6,6 +6,9 @@ export function getRandomProfileImage(): string {
   const profileImages = [
     '/images/Profile_Pictures/fox_profile.webp',
     '/images/Profile_Pictures/coldfox_profile.webp',
+    '/images/Profile_Pictures/eagle_profile.webp',
+    '/images/Profile_Pictures/bear_profile.webp',
+    '/images/Profile_Pictures/hare_profile.webp',
     // Todo add more images
   ];
   
