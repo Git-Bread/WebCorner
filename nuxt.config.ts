@@ -33,6 +33,9 @@ export default defineNuxtConfig({
         'Server',
         'UsersGear',
         'Sliders',
+        'comments',
+        'satellite',
+        'check'
       ],
       brands: [
         'Github', 

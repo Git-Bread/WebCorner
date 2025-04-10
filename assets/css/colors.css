@@ -36,8 +36,8 @@
 
     /* Gradients, used in index page */
     --gradient-heading: linear-gradient(to right, #60a5fa, #8b5cf6, #34d399);  /* Vibrant header gradient */
-    --gradient-shape-1: linear-gradient(to right, #60a5fa, #8b5cf6);           /* First shape gradient */
-    --gradient-shape-2: linear-gradient(to right, #34d399, #3b82f6);           /* Second shape gradient */
-    --gradient-shape-3: linear-gradient(to right, #f472b6, #9333ea);           /* Third shape gradient */
+    --gradient-color-1: linear-gradient(to right, #60a5fa, #8b5cf6);           /* First stock gradient */
+    --gradient-color-2: linear-gradient(to right, #34d399, #3b82f6);           /* Second stock gradient */
+    --gradient-color-3: linear-gradient(to right, #f472b6, #9333ea);           /* Third stock gradient */
     --gradient-background: linear-gradient(to bottom right, #f8fafc, #e0f2fe); /* Subtle background gradient */
 }

@@ -14,7 +14,7 @@
         autocomplete="current-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" fieldClass="form-field-2"/>
 
         <!-- Remember Me checkbox -->
-        <div class="flex items-center justify-between mt-2">
+        <div class="flex items-center justify-between mt-2 form-field-2">
           <div class="flex items-center">
             <input id="remember-me" name="remember-me" type="checkbox" v-model="rememberMe" class="h-4 w-4 text-accent-blue focus:ring-accent-blue border-foreground rounded">
             <label for="remember-me" class="ml-2 block text-sm text-text">Remember me</label>

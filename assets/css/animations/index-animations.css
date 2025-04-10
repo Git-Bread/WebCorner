@@ -1,0 +1,333 @@
+/* BACKGROUND */
+/* Orbital animations with nested orbits */
+
+/* Equal spacing for the three orbital systems */
+
+/* First system starts at 0 degrees */
+@keyframes orbitMain {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(250px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(250px) rotate(-360deg);
+  }
+}
+
+/* Second system starts at 120 degrees */
+@keyframes orbitMainSecond {
+  0% {
+    transform: translate(-50%, -50%) rotate(120deg) translateX(250px) rotate(-120deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(480deg) translateX(250px) rotate(-480deg);
+  }
+}
+
+/* Third system starts at 240 degrees */
+@keyframes orbitMainThird {
+  0% {
+    transform: translate(-50%, -50%) rotate(240deg) translateX(250px) rotate(-240deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(600deg) translateX(250px) rotate(-600deg);
+  }
+}
+
+@keyframes orbitSatellites {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes satelliteCounterRotate {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(-360deg);
+    }
+  }
+  
+
+.central-orb {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: transparent;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 60px 10px rgba(0, 0, 0, 0.2), inset 0 0 30px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3;
+}
+
+.central-orb-logo {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* Main orbit */
+.orbit-inner {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Each orbital system */
+.orbital-system {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  top: 50%;
+  left: 50%;
+}
+
+.orbital-system-1 {
+  animation: orbitMain 60s linear infinite;
+}
+
+/* Add styles for the second orbital system */
+.orbital-system-2 {
+  animation: orbitMainSecond 60s linear infinite;
+}
+
+/* Add styles for the third orbital system */
+.orbital-system-3 {
+  animation: orbitMainThird 60s linear infinite;
+}
+
+.medium-orb {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  overflow: hidden; /* For the image */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: none;
+  opacity: 1;
+}
+
+/* New styles for satellite orbit */
+.satellite-orbit {
+  position: absolute;
+  width: 200px; /* Increased from 130px */
+  height: 200px; /* Increased from 130px */
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* Create a single orbit animation pattern with increased distance */
+@keyframes satelliteOrbit {
+  0% { transform: translate(-50%, -50%) rotate(var(--start-angle)) translateY(-100px) rotate(calc(-1 * var(--start-angle))); }
+  100% { transform: translate(-50%, -50%) rotate(calc(var(--start-angle) + 360deg)) translateY(-100px) rotate(calc(-1 * var(--start-angle) - 360deg)); }
+}
+
+/* Change the satellite orbit animation for the second system */
+@keyframes satelliteOrbitSecond {
+  0% { transform: translate(-50%, -50%) rotate(var(--start-angle)) translateY(-140px) rotate(calc(-1 * var(--start-angle))); }
+  100% { transform: translate(-50%, -50%) rotate(calc(var(--start-angle) + 360deg)) translateY(-140px) rotate(calc(-1 * var(--start-angle) - 360deg)); }
+}
+
+/* Create a satellite orbit animation for the third system */
+@keyframes satelliteOrbitThird {
+  0% { transform: translate(-50%, -50%) rotate(calc(var(--start-angle) + 240deg)) translateY(-120px) rotate(calc(-1 * (var(--start-angle) + 240deg))); }
+  100% { transform: translate(-50%, -50%) rotate(calc(var(--start-angle) + 600deg)) translateY(-120px) rotate(calc(-1 * (var(--start-angle) + 600deg))); }
+}
+
+.satellite {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: visible; /* Changed from hidden to visible */
+  top: 50%;
+  left: 50%;
+  animation: satelliteOrbit 40s linear infinite;
+  z-index: 0; /* Ensure satellite is above the wave */
+}
+
+/* Style for second orbital satellites */
+.satellite-2 {
+  animation: satelliteOrbitSecond 40s linear infinite;
+}
+
+/* Style for third orbital satellites */
+.satellite-3 {
+  animation: satelliteOrbitThird 40s linear infinite; /* Slightly different speed for visual variety */
+}
+
+/* Position satellites evenly around the orbit */
+.satellite:nth-child(1) {
+  --start-angle: 0deg;
+}
+
+.satellite:nth-child(2) {
+  --start-angle: 90deg;
+}
+
+.satellite:nth-child(3) {
+  --start-angle: 180deg;
+}
+
+.satellite:nth-child(4) {
+  --start-angle: 270deg;
+}
+
+/* Position satellites evenly around the second orbit (5 satellites) */
+.satellite-2:nth-child(1) {
+  --start-angle: 0deg;
+}
+
+.satellite-2:nth-child(2) {
+  --start-angle: 72deg;
+}
+
+.satellite-2:nth-child(3) {
+  --start-angle: 144deg;
+}
+
+.satellite-2:nth-child(4) {
+  --start-angle: 216deg;
+}
+
+.satellite-2:nth-child(5) {
+  --start-angle: 288deg;
+}
+
+/* Position satellites evenly around the third orbit (4 satellites) */
+.satellite-3:nth-child(1) {
+  --start-angle: 0deg;
+}
+
+.satellite-3:nth-child(2) {
+  --start-angle: 90deg;
+}
+
+.satellite-3:nth-child(3) {
+  --start-angle: 180deg;
+}
+
+.satellite-3:nth-child(4) {
+  --start-angle: 270deg;
+}
+
+/* Style for second orbital satellites */
+.satellite-orbit-2 {
+  width: 280px; /* Larger orbit */
+  height: 280px;
+}
+
+/* Style for third orbital satellites */
+.satellite-orbit-3 {
+  width: 240px; /* Medium size orbit between the first and second */
+  height: 240px;
+}
+
+.pulse-blue-active {
+  z-index: 10;
+  outline: 6px solid rgba(59, 130, 246, 0.5);
+  transition: outline 0.3s ease;
+}
+
+.pulse-purple-active {
+  z-index: 10;
+  outline: 6px solid rgba(139, 92, 246, 0.5);
+  transition: outline 0.3s ease;
+}
+
+.pulse-pink-active {
+  z-index: 10;
+  outline: 6px solid rgba(236, 72, 153, 0.5);
+  transition: outline 0.3s ease;
+}
+
+.pulse-blue-fading, .pulse-purple-fading, .pulse-pink-fading {
+  z-index: 10;
+  outline: 3px solid rgba(59, 130, 246, 0.3);
+  transition: outline 0.5s ease;
+}
+
+/* Existing pulse-inactive styles (adjust z-index if needed) */
+.pulse-blue-inactive, .pulse-purple-inactive, .pulse-pink-inactive {
+  z-index: 5;
+  outline: 0px solid rgba(59, 130, 246, 0);
+  transition: outline 0.3s ease;
+}
+
+/* New Halo effect styles */
+.halo-blue, .halo-purple, .halo-pink {
+  position: absolute;
+  border-radius: 50%;
+  width: 100%; /* Match parent width */
+  height: 100%; /* Match parent height */
+  top: 0;
+  left: 0;
+  transform: scale(0); /* Start small */
+  pointer-events: none;
+  animation: halo-expand 3s ease-out forwards; /* Increased duration */
+  z-index: -1; /* Behind the satellite */
+  opacity: 1; /* Start visible */
+}
+
+/* Color-specific halos */
+.halo-blue {
+  border-color: rgba(59, 130, 246, 0.7); /* Blue halo */
+  border-style: solid;
+  border-width: 2px; /* Thinner border */
+}
+
+.halo-purple {
+  border-color: rgba(139, 92, 246, 0.7); /* Purple halo */
+  border-style: solid;
+  border-width: 2px; /* Thinner border */
+}
+
+.halo-pink {
+  border-color: rgba(236, 72, 153, 0.7); /* Pink halo */
+  border-style: solid;
+  border-width: 2px; /* Thinner border */
+}
+
+/* Halo expansion animation */
+@keyframes halo-expand {
+  0% {
+    transform: scale(0);
+    opacity: 1; /* Start fully opaque */
+  }
+  80% {
+    transform: scale(1.7); /* Increased scale for further travel */
+    opacity: 1; /* Maintain opacity during expansion */
+  }
+  100% {
+    transform: scale(2.0); /* Increased scale for further travel */
+    opacity: 0; /* Fade out at the end */
+  }
+}

@@ -60,9 +60,9 @@ module.exports = {
             backgroundImage: {
                 'gradient-heading': 'var(--gradient-heading)',
                 'gradient-background': 'var(--gradient-background)',
-                'gradient-shape-1': 'var(--gradient-shape-1)',
-                'gradient-shape-2': 'var(--gradient-shape-2)',
-                'gradient-shape-3': 'var(--gradient-shape-3)'
+                'gradient-color-1': 'var(--gradient-color-1)',
+                'gradient-color-2': 'var(--gradient-color-2)',
+                'gradient-color-3': 'var(--gradient-color-3)'
             }
         }
     },

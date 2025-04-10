@@ -1,0 +1,54 @@
+/* Vue Transitions */
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Fade and slide up transition */
+.fade-slide-up-enter-active,
+.fade-slide-up-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.fade-slide-up-enter-from,
+.fade-slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Fade and slide left transition */
+.fade-slide-left-enter-active,
+.fade-slide-left-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-slide-left-enter-from,
+.fade-slide-left-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* Fade and slide down transition */
+.fade-slide-down-enter-active,
+.fade-slide-down-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-slide-down-enter-from,
+.fade-slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Fade and scale transition */
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}

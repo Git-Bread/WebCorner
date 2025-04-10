@@ -9,6 +9,9 @@ export function getRandomProfileImage(): string {
     '/images/Profile_Pictures/eagle_profile.webp',
     '/images/Profile_Pictures/bear_profile.webp',
     '/images/Profile_Pictures/hare_profile.webp',
+    '/images/Profile_Pictures/deer_profile.webp',
+    '/images/Profile_Pictures/owl_profile.webp',
+    '/images/Profile_Pictures/hippo_profile.webp',
     // Todo add more images
   ];
   
