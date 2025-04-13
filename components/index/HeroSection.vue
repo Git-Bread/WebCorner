@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto px-4 flex-grow flex flex-col justify-center items-center relative z-10">
+  <section class="container mx-auto px-4 min-h-[95vh] flex-grow flex flex-col justify-center items-center relative z-10">
     <!-- Hero Section -->
     <div class="text-center mb-12" role="banner">
       <h1 id="main-heading" class="text-5xl md:text-7xl font-bold mb-4 animate-title bg-clip-text text-transparent bg-gradient-heading">WebCorner</h1>
@@ -28,7 +28,7 @@
         Sign In <fa :icon="['fas', 'arrow-right']" class="ml-2" aria-hidden="true" />
       </NuxtLink>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -39,14 +39,14 @@ const features = [
     icon: 'server'
   },
   {
-    title: 'Connect Teams',
-    description: 'Bring your team together with text channels, group-chats, shared-planning and seamless file sharing.',
-    icon: 'users-gear'
-  },
-  {
     title: 'Customize Workflow',
     description: 'Tailor your workspace with components, feeds, and customizable permissions for every team member.',
     icon: 'sliders'
+  },
+  {
+    title: 'Connect Teams',
+    description: 'Bring your team together with text channels, group-chats, shared-planning and seamless file sharing.',
+    icon: 'users-gear'
   }
 ];
 </script>

@@ -35,7 +35,10 @@ export default defineNuxtConfig({
         'Sliders',
         'comments',
         'satellite',
-        'check'
+        'check',
+        'chevron-down',
+        'chevron-up',
+        'cloud'
       ],
       brands: [
         'Github', 
@@ -45,7 +48,7 @@ export default defineNuxtConfig({
   },
   css: [
     '@/assets/css/colors.css',
-    '@/assets/css/animations.css'
+    '@/assets/css/animations.css',
   ],
   tailwindcss: {
     exposeConfig: false,

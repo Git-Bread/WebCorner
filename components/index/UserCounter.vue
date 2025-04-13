@@ -7,7 +7,7 @@
       <div class="flex flex-col items-center">
         <div class="flex items-baseline">
           <span class="text-5xl md:text-7xl font-bold text-accent-blue" aria-live="polite">
-            {{ isLoading ? '...' : formattedUserCount }}
+            {{ isLoading ? '...' : formattedCount }}
           </span>
           <span class="text-2xl md:text-3xl ml-2 text-heading">users</span>
         </div>
@@ -15,64 +15,22 @@
           <fa :icon="['fas', 'spinner']" class="animate-spin mr-2" aria-hidden="true" />
           <span>Counting users...</span>
         </p>
+        <p v-else-if="error" class="mt-2 text-red-500">
+          Couldn't load latest count. Showing estimate.
+        </p>
         <p v-else class="mt-4 text-text">and growing every day!</p>
       </div>
     </div>
   </section>
-  <!-- Decorative triangles (squares rotated 45deg) that extend offscreen -->
-  <div class="absolute inset-0 overflow-hidden" aria-hidden="true" role="presentation">
-    <!-- First triangle with hover animation -->
-    <div class="absolute w-[1000px] h-[1000px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-    bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-30 hover:scale-105 bg-decoration-1 opacity-40"></div>
-    <!-- Second triangle with hover animation -->
-    <div class="absolute w-[900px] h-[900px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-    bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-80 hover:scale-105 bg-decoration-2 opacity-50"></div>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { collection, getCountFromServer } from 'firebase/firestore';
+import { onMounted } from 'vue';
+import { useFirestoreCounter } from '~/composables/decorative/useFirestoreCounter';
 
-const { firestore } = useFirebase();
-const userCount = ref(0);
-const isLoading = ref(true);
+const { count, formattedCount, isLoading, error, fetchCount } = useFirestoreCounter('users');
 
-// Format the user count with thousands separators
-const formattedUserCount = computed(() => {
-  return userCount.value.toLocaleString();
-});
-
-onMounted(async () => {
-  try {
-    // Get count from Firestore collection
-    const usersCollection = collection(firestore, 'users');
-    const snapshot = await getCountFromServer(usersCollection);
-    
-    // Add animation effect - count up from 0
-    const targetCount = snapshot.data().count;
-    const duration = 2000; // ms
-    const start = performance.now();
-    
-    const animate = (timestamp: number) => {
-      const elapsed = timestamp - start;
-      const progress = Math.min(elapsed / duration, 1);
-      userCount.value = Math.floor(progress * targetCount);
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        userCount.value = targetCount;
-      }
-    };
-    
-    requestAnimationFrame(animate);
-    isLoading.value = false;
-  } catch (error) {
-    console.error('Error fetching user count:', error);
-    // Fallback to a reasonable number if there's an error
-    userCount.value = 5000;
-    isLoading.value = false;
-  }
+onMounted(() => {
+  fetchCount();
 });
 </script>

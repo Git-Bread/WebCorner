@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full h-[800px] z-10 overflow-visible" aria-hidden="true">
+  <div class="relative w-full h-[800px] mt-4 mb-4 z-10 overflow-visible" aria-hidden="true">
     <div class="central-orb bg-gradient-central shadow-xl">
       <!-- Logo inside central orb -->
       <div class="central-orb-logo">

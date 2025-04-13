@@ -68,3 +68,17 @@
       transform: translateX(3px);
     }
   }
+
+  /* Simple bounce animation for indicators */
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(3px);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+  
+  .animate-bounce {
+    animation: bounce 2s ease infinite;
+  }

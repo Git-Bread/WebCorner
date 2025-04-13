@@ -1,39 +1,109 @@
 <template>
-  <div class="min-h-[92vh] flex flex-col bg-gradient-background overflow-hidden relative">
-    <div class="relative w-full mx-auto max-w-6xl"> <!-- Increased max width for orbit + chatbox -->
-      <div class="hidden md:flex flex-col md:flex-row items-center justify-center">
-        <!-- Orbit System Component -->
-        <div class="relative w-full md:flex-shrink-0 mb-8 mt-8">
-          <OrbitSystem @satellite-pulse="handleSatellitePulse" />
-        </div>
-        
-        <!-- Chat Box section -->
-        <div class="chat-box mb-8 z-10 items-start">
-          <ChatBox ref="chatBoxRef" />
+  <div class="flex flex-col bg-gradient-background overflow-hidden relative">
+    <!-- Hero Section -->
+    <HeroSection id="nav-section-1"/>
+
+    <!-- Server Section with Orbit System -->
+    <ServerSection id="nav-section-2"/>
+    <!-- Server Sections animations and decorations -->
+    <div class="hidden md:block w-full bg-gradient-to-br from-blue-50 to-background z-10">
+      <div class="container mx-auto px-4 text-center">
+        <div class="relative w-full mx-auto max-w-6xl">
+          <div class="flex flex-col md:flex-row items-center justify-center">
+            <!-- Orbit System -->
+            <div class="relative w-full md:flex-shrink-0">
+              <OrbitSystem @satellite-pulse="handleSatellitePulse" />
+            </div>
+            
+            <!-- Chat Box -->
+            <div class="chat-box mb-8 z-10 items-start">
+              <ChatBox ref="chatBoxRef" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    
-    <!-- Header Section Component -->
-    <div class="flex-grow py-8 md:py-12">
-      <HeroSection />
-    </div>
 
     <!-- Full width feature sections -->
-    <FeatureSections />
-    <UserCounter />
+    <CustomizeWorkflow id="nav-section-3"/>
+    <DashboardAnimation class="w-[400px]"/>
+
+    <ConnectTeams id="nav-section-4"/>
+    <UserCounter/>
+
+    <!-- Persistent Bouncing Navigation Chevron -->
+    <div class="fixed bottom-8 right-8 z-50 flex flex-col items-center">
+      <button 
+        @click="navigateToNextSection" 
+        class="p-3 bg-green-500 bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg transition-all duration-300"
+        aria-label="Navigate to next section">
+        <fa :icon="['fas', isLastSection ? 'chevron-up' : 'chevron-down']"  class="text-white text-xl animate-bounce" aria-hidden="true" />
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import OrbitSystem from '../components/index/OrbitSystem.vue';
 import ChatBox from '../components/index/ChatBox.vue';
 import HeroSection from '../components/index/HeroSection.vue';
-import FeatureSections from '../components/index/FeatureSections.vue';
+import ServerSection from '../components/index/ServerSection.vue';
+import CustomizeWorkflow from '../components/index/CustomizeWorkflow.vue';
 import UserCounter from '../components/index/UserCounter.vue';
+import ConnectTeams from '~/components/index/ConnectTeams.vue';
+import DashboardAnimation from '~/components/index/DashboardAnimation.vue';
 
+// Refs for the chat box
 const chatBoxRef = ref<InstanceType<typeof ChatBox> | null>(null);
+
+// Define navigation sections
+const navigationIds = ['nav-section-1', 'nav-section-2', 'nav-section-3', 'nav-section-4'];
+const sections = ref<HTMLElement[]>([]);
+const currentSectionIndex = ref(0);
+
+const isLastSection = computed(() => {
+  return currentSectionIndex.value === sections.value.length - 1;
+});
+
+onMounted(() => {
+  // Collect navigation sections
+  sections.value = navigationIds
+    .map(id => document.getElementById(id))
+    .filter(el => el !== null) as HTMLElement[];
+  
+  // Create separate observers for each section
+  sections.value.forEach((section, index) => {
+    const sectionObserver = new IntersectionObserver((entries) => {
+      // check if it's intersecting
+      if (entries[0].isIntersecting && entries[0].intersectionRatio > 0.5) {
+        currentSectionIndex.value = index;
+      }
+    }, { 
+      threshold: 0.5, // Consider section visible when 50% is in view
+      rootMargin: '0px' // No margin adjustment
+    });
+    
+    sectionObserver.observe(section);
+    
+    // Store observer in a list for cleanup
+    observerRefs.value.push(sectionObserver);
+  });
+});
+
+// Store all observers for cleanup
+const observerRefs = ref<IntersectionObserver[]>([]);
+
+onUnmounted(() => {
+  // Disconnect all observers
+  observerRefs.value.forEach(observer => observer.disconnect());
+});
+
+// Navigate to the next section when chevron is clicked
+function navigateToNextSection() {
+  const nextIndex = isLastSection.value ? 0 : (currentSectionIndex.value + 1);
+  sections.value[nextIndex].scrollIntoView({ behavior: 'smooth' });
+}
 
 // Handle satellite pulse events from orbit component
 function handleSatellitePulse(data: { profileImage: string, type: string }) {
@@ -54,5 +124,10 @@ function handleSatellitePulse(data: { profileImage: string, type: string }) {
   .chat-box {
     display: block;
   }
+}
+
+/* Custom animation for the chevron button hover effect */
+button:hover .animate-bounce {
+  animation-duration: 1s;
 }
 </style>
