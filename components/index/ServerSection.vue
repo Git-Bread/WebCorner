@@ -27,10 +27,8 @@
           </li>
         </ul>
       </div>
-      <div class="lg:w-1/2 order-1 lg:order-2 lg:mb-0">
-        <div class="rounded-xl overflow-hidden shadow-lg bg-white p-2">
-          <img src="/images/Logo.png" alt="Server creation interface" class="w-full max-w-md mx-auto" />
-        </div>
+      <div class="lg:w-1/2 order-2 mb-6 lg:mb-0">
+        <img src="/images/REPLACE.png" alt="REPLACE" class="w-full h-full object-cover rounded-2xl" />
       </div>
     </div>
   </div>

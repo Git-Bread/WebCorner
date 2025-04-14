@@ -29,16 +29,18 @@
 
     <!-- Workflow and dashboard animation -->
     <section id="nav-section-3" class="min-h-screen flex flex-col justify-center">
-      <CustomizeWorkflow />
-      <div class="flex justify-center my-8">
-        <DashboardAnimation class="w-full max-w-lg" />
+      <CustomizeWorkflow class="mb-8" />
+      <div class="flex justify-center flex-grow px-4 my-4">
+        <DashboardAnimation class="w-full max-w-5xl h-full" />
       </div>
     </section>
 
     <!-- Connect Teams and User Counter -->
     <section id="nav-section-4" class="min-h-screen flex flex-col justify-center">
-      <ConnectTeams />
-      <UserCounter />
+      <ConnectTeams class="mb-8" />
+      <div class="flex-grow flex justify-center items-center px-4">
+        <UserCounter class="w-full max-w-5xl" />
+      </div>
     </section>
 
     <!-- Persistent Bouncing Navigation Chevron -->

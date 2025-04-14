@@ -49,7 +49,7 @@
         </div>
         
         <div class="satellite satellite-2 satellite-pulse-2">
-          <img src="../../public/images/Profile_Pictures/deer_profile.webp" alt="" class="w-full h-full rounded-full object-cover" />
+          <img src="../../public/images/Profile_Pictures/parrot_profile.webp" alt="" class="w-full h-full rounded-full object-cover" />
         </div>
         
         <div class="satellite satellite-2 satellite-pulse-2">
@@ -61,7 +61,7 @@
         </div>
         
         <div class="satellite satellite-2 satellite-pulse-2">
-          <img src="../../public/images/Profile_Pictures/fox_profile.webp" alt="" class="w-full h-full rounded-full object-cover" />
+          <img src="../../public/images/Profile_Pictures/orangebird_profile.webp" alt="" class="w-full h-full rounded-full object-cover" />
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@
         </div>
         
         <div class="satellite satellite-3 satellite-pulse-3">
-          <img src="../../public/images/Profile_Pictures/bear_profile.webp" alt="" class="w-full h-full rounded-full object-cover" />
+          <img src="../../public/images/Profile_Pictures/bluebird_profile.webp" alt="" class="w-full h-full rounded-full object-cover" />
         </div>
         
         <div class="satellite satellite-3 satellite-pulse-3">
