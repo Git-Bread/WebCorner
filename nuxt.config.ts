@@ -38,7 +38,11 @@ export default defineNuxtConfig({
         'check',
         'chevron-down',
         'chevron-up',
-        'cloud'
+        'cloud',
+        'cog',
+        'times',
+        'calendar',
+        'file-export'
       ],
       brands: [
         'Github', 

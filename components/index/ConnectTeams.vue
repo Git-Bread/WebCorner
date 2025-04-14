@@ -1,5 +1,5 @@
 <template>
-  <section class="w-full py-4 sm:py-86 bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 relative overflow-hidden border-t-4 border-b-4 border-purple-300" aria-labelledby="teams-heading">
+  <div class="w-full py-4 sm:py-86 bg-gradient-to-br from-purple-50 via-purple-100 to-purple-200 relative overflow-hidden border-t-4 border-b-4 border-purple-300" aria-labelledby="teams-heading">
     <div class="container mx-auto px-4 flex flex-col lg:flex-row items-center gap-6 sm:gap-8 lg:gap-16 relative z-10">
       <div class="lg:w-1/2 order-1 mb-6 lg:mb-0">
         <div class="rounded-xl overflow-hidden shadow-lg bg-white p-2">
@@ -31,5 +31,5 @@
         </ul>
       </div>
     </div>
-  </section>
+  </div>
 </template>

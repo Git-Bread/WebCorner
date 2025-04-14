@@ -1,35 +1,45 @@
 <template>
   <div class="flex flex-col bg-gradient-background overflow-hidden relative">
     <!-- Hero Section -->
-    <HeroSection id="nav-section-1"/>
+    <section id="nav-section-1" class="min-h-[96vh] flex items-center m-0 p-0">
+      <HeroSection />
+    </section>
 
     <!-- Server Section with Orbit System -->
-    <ServerSection id="nav-section-2"/>
-    <!-- Server Sections animations and decorations -->
-    <div class="hidden md:block w-full bg-gradient-to-br from-blue-50 to-background z-10">
-      <div class="container mx-auto px-4 text-center">
-        <div class="relative w-full mx-auto max-w-6xl">
-          <div class="flex flex-col md:flex-row items-center justify-center">
-            <!-- Orbit System -->
-            <div class="relative w-full md:flex-shrink-0">
-              <OrbitSystem @satellite-pulse="handleSatellitePulse" />
-            </div>
-            
-            <!-- Chat Box -->
-            <div class="chat-box mb-8 z-10 items-start">
-              <ChatBox ref="chatBoxRef" />
+    <section id="nav-section-2" class="min-h-screen flex flex-col justify-center">
+      <ServerSection />
+      <div class="hidden md:block w-full bg-gradient-to-br from-blue-50 to-background z-10 flex-grow">
+        <div class="container mx-auto px-4 text-center">
+          <div class="relative w-full mx-auto max-w-6xl">
+            <div class="flex flex-col md:flex-row items-center justify-center">
+              <!-- Orbit System -->
+              <div class="relative w-full md:flex-shrink-0">
+                <OrbitSystem @satellite-pulse="handleSatellitePulse" />
+              </div>
+          
+              <!-- Chat Box -->
+              <div class="chat-box mb-8 z-10 items-start">
+                <ChatBox ref="chatBoxRef" />
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Full width feature sections -->
-    <CustomizeWorkflow id="nav-section-3"/>
-    <DashboardAnimation class="w-[400px]"/>
+    <!-- Workflow and dashboard animation -->
+    <section id="nav-section-3" class="min-h-screen flex flex-col justify-center">
+      <CustomizeWorkflow />
+      <div class="flex justify-center my-8">
+        <DashboardAnimation class="w-full max-w-lg" />
+      </div>
+    </section>
 
-    <ConnectTeams id="nav-section-4"/>
-    <UserCounter/>
+    <!-- Connect Teams and User Counter -->
+    <section id="nav-section-4" class="min-h-screen flex flex-col justify-center">
+      <ConnectTeams />
+      <UserCounter />
+    </section>
 
     <!-- Persistent Bouncing Navigation Chevron -->
     <div class="fixed bottom-8 right-8 z-50 flex flex-col items-center">
@@ -37,7 +47,7 @@
         @click="navigateToNextSection" 
         class="p-3 bg-green-500 bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg transition-all duration-300"
         aria-label="Navigate to next section">
-        <fa :icon="['fas', isLastSection ? 'chevron-up' : 'chevron-down']"  class="text-white text-xl animate-bounce" aria-hidden="true" />
+        <fa :icon="['fas', isLastSection ? 'chevron-up' : 'chevron-down']" class="text-white text-xl animate-bounce" aria-hidden="true" />
       </button>
     </div>
   </div>

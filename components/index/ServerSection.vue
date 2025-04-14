@@ -1,6 +1,6 @@
 <template>
   <!-- Create Servers Section with enhanced background -->
-  <section class="w-full py-4 sm:py-8 bg-gradient-to-br from-accent-blue-50 via-blue-100 to-accent-blue-200 relative overflow-hidden border-t-4 border-b-4 border-accent-blue-300" aria-labelledby="servers-heading">
+  <div class="w-full py-4 sm:py-8 bg-gradient-to-br from-accent-blue-50 via-blue-100 to-accent-blue-200 relative overflow-hidden border-t-4 border-b-4 border-accent-blue-300" aria-labelledby="servers-heading">
     <div class="container mx-auto px-4 flex flex-col lg:flex-row items-center gap-6 sm:gap-8 lg:gap-16 relative z-10">
       <div class="lg:w-1/2 order-2 lg:order-1 py-4">
         <h2 id="servers-heading" class="text-3xl sm:text-4xl font-bold mb-4 text-heading">
@@ -33,5 +33,5 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
 </template>
