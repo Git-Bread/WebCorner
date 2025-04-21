@@ -1,5 +1,5 @@
 <template>
-  <header class="shadow-md bg-background">
+  <header class="shadow-md z-10 bg-background">
     <div class="mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         <!-- Site Title on the left -->
@@ -15,23 +15,26 @@
     
         <!-- Profile section with user info -->
         <div class="flex items-center">
-          <!-- User name display -->
-          <span v-if="user" class="text-text">{{ userName }}</span>
+          <!-- User name display with client-only to prevent hydration mismatch -->
+          <client-only>
+            <span class="text-text">{{ userName }}</span>
+          </client-only>
           
           <!-- Profile menu dropdown -->
           <div class="ml-3 relative">
             <div>
               <button @click="toggleMenu" type="button" class="flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-link rounded-full" aria-expanded="false">
-                <span class="sr-only">Open user menu</span>
                 <!-- Use user's photoURL if available, otherwise default image -->
                 <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 hover:border-decoration-1">
-                  <img :src="userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
+                  <client-only>
+                    <img :src="userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
+                  </client-only>
                 </picture>
               </button>
             </div>
             
             <!-- Profile dropdown menu -->
-            <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface z-50"
+            <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface"
             role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" @blur="closeMenu">
               <div class="py-1" role="none">
                 <NuxtLink to="/profile" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">

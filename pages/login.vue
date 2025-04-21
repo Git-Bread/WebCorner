@@ -113,7 +113,7 @@ const handleLogin = async () => {
       showToast('Login successful! Redirecting...', 'success', 3000)
       
       setTimeout(() => {
-        navigateTo('/test')
+        navigateTo('/dashboard')
       }, 1000)
     }
   } catch (error) {

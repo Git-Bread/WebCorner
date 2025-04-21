@@ -12,7 +12,7 @@
         <span class="font-medium text-sm" :class="userColorClass">{{ username }}</span>
         <span class="text-text/50 text-xs ml-2 mt-0.5">{{ formattedTime }}</span>
       </div>
-      <div class="text-text text-sm break-words">
+      <div class="text-text text-sm break-words text-start">
         {{ message }}
       </div>
     </div>

@@ -6,7 +6,7 @@
     </div>
 
     <!-- Settings menu -->
-    <div class="absolute top-4 right-4 z-20 settings-menu">
+    <div class="absolute top-4 right-4 settings-menu">
       <!-- Cogwheel button -->
       <button @click="settingsOpen = !settingsOpen" aria-label="Animation settings" 
         class="bg-white/70 hover:bg-white text-gray-800 p-3 rounded-full shadow-md transition-all duration-300 hover:scale-110"
@@ -24,8 +24,8 @@
           </button>
         </div>
         
+        <!-- Particle count -->
         <div class="space-y-3">
-          <!-- Particle count -->
           <div>
             <label for="particleCount" class="block text-xs font-medium text-gray-700">
               Particles: {{ settings.particleCount }}

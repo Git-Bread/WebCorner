@@ -150,7 +150,7 @@ const handleRegister = async () => {
       
       // Redirect to dashboard after registration
       setTimeout(() => {
-        navigateTo('/test')
+        navigateTo('/dashboard')
       }, 1000)
     } catch (err) {
       generalError.value = handleDatabaseError(err)
