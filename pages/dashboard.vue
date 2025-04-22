@@ -11,5 +11,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  definePageMeta({ layout: 'default-authed' });
+  definePageMeta({ 
+    layout: 'default-authed',
+  });
 </script>

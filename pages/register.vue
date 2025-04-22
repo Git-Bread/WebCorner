@@ -46,6 +46,7 @@ import { handleAuthError, handleDatabaseError } from '~/utils/errorHandler'
 import { calculatePasswordStrength } from '~/utils/passwordUtils'
 import useFormValidation from '~/composables/useFormValidation'
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue'
+import { defaultSettings } from '~/composables/useUserSettings'
 
 definePageMeta({ layout: 'auth' })
 
@@ -135,7 +136,9 @@ const handleRegister = async () => {
         servers: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        settings: {},
+        settings: {
+          userPreferences: defaultSettings
+        },
         components: {}
       }
       

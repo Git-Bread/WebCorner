@@ -42,7 +42,10 @@ export default defineNuxtConfig({
         'cog',
         'times',
         'calendar',
-        'file-export'
+        'file-export',
+        'bell',
+        'universal-access',
+        'save',
       ],
       brands: [
         'Github', 

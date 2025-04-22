@@ -2,13 +2,20 @@
   <header class="shadow-md z-10 bg-background">
     <div class="mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
-        <!-- Site Title on the left -->
+
+        <!-- Site Title on the left, diffrent link if logged in -->
+        <ClientOnly>
         <div class="flex items-center">
-          <NuxtLink to="/" class="flex items-center">
+          <NuxtLink v-if="!isAuthenticated" to="/" class="flex items-center">
+            <img src="/images/logo.png" alt="WebCorner Logo" class="h-10 w-10 mr-2" />
+            <h1 class="text-3xl font-bold text-heading">WebCorner</h1>
+          </NuxtLink>
+          <NuxtLink v-else to="/dashboard" class="flex items-center">
             <img src="/images/logo.png" alt="WebCorner Logo" class="h-10 w-10 mr-2" />
             <h1 class="text-3xl font-bold text-heading">WebCorner</h1>
           </NuxtLink>
         </div>
+        </ClientOnly>
     
         <!-- Empty space in the middle -->
         <div class="flex-grow"></div>
@@ -16,9 +23,9 @@
         <!-- Profile section with user info -->
         <div class="flex items-center">
           <!-- User name display with client-only to prevent hydration mismatch -->
-          <client-only>
+          <ClientOnly>
             <span class="text-text">{{ userName }}</span>
-          </client-only>
+          </ClientOnly>
           
           <!-- Profile menu dropdown -->
           <div class="ml-3 relative">
@@ -26,9 +33,9 @@
               <button @click="toggleMenu" type="button" class="flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-link rounded-full" aria-expanded="false">
                 <!-- Use user's photoURL if available, otherwise default image -->
                 <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 hover:border-decoration-1">
-                  <client-only>
+                  <ClientOnly>
                     <img :src="userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
-                  </client-only>
+                  </ClientOnly>
                 </picture>
               </button>
             </div>
@@ -37,12 +44,12 @@
             <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface"
             role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" @blur="closeMenu">
               <div class="py-1" role="none">
-                <NuxtLink to="/profile" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
+                <button @click="toggleProfilePanel" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
                   Your Profile
-                </NuxtLink>
-                <NuxtLink to="/settings" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
+                </button>
+                <button @click="toggleSettingsPanel" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
                   Settings
-                </NuxtLink>
+                </button>
                 <button @click="handleLogout" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
                   Sign out
                 </button>
@@ -53,10 +60,20 @@
       </div>
     </div>
   </header>
+
+  <!-- Profile Panel -->
+  <UserComponentsProfile v-if="profileOpen" @close="closeProfilePanel" />
+
+  <!-- Settings Panel -->
+  <UserComponentsSettings v-if="settingsOpen" @close-settings="closeSettingsPanel" />
 </template>
 
 <script setup lang="ts">
+import { ClientOnly } from '#components';
 import { doc, getDoc } from 'firebase/firestore'
+import UserComponentsProfile from '~/components/userComponents/profile.vue';
+import UserComponentsSettings from '~/components/userComponents/settings.vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 interface UserDocument {
   username: string;
@@ -64,9 +81,14 @@ interface UserDocument {
   profile_image_url?: string;
 }
 
-const { user, logout } = useAuth()
+const { user, logout, isAuthenticated } = useAuth()
 const menuOpen = ref(false)
 const userDoc = ref<UserDocument | null>(null)
+
+// Local state for Profile panel visibility
+const profileOpen = ref(false);
+// Local state for Settings panel visibility
+const settingsOpen = ref(false);
 
 onMounted(async () => {
   if (user.value) {
@@ -99,13 +121,34 @@ const userPhotoUrl = computed(() => {
   return '/images/Profile_Pictures/default_profile.jpg'
 })
 
-// Rest of your code remains unchanged
+// Menu toggle
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
 }
 
 const closeMenu = () => {
   menuOpen.value = false
+}
+
+// Profile Panel show/close functions
+const toggleProfilePanel = () => {
+  profileOpen.value = !profileOpen.value;
+  menuOpen.value = false; // Close menu when toggling panel
+}
+
+const closeProfilePanel = () => {
+  profileOpen.value = false;
+}
+
+// Settings Panel toggle function
+const toggleSettingsPanel = () => {
+  settingsOpen.value = !settingsOpen.value;
+  menuOpen.value = false; // Close menu when toggling panel
+}
+
+// Settings Panel close function
+const closeSettingsPanel = () => {
+  settingsOpen.value = false;
 }
 
 const handleLogout = async () => {
@@ -116,17 +159,31 @@ const handleLogout = async () => {
   navigateTo('/login');
 }
 
-// Close menu when clicking outside
+// Close menu when clicking outside & handle Escape key
 onMounted(() => {
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLElement
-    if (!target.closest('.relative')) {
+    // Close menu if click is outside the relative container of the dropdown
+    if (!target.closest('.ml-3.relative')) { 
       menuOpen.value = false
+    }
+  })
+  
+  // Close panels with escape key
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      if (profileOpen.value) {
+        closeProfilePanel();
+      }
+      if (settingsOpen.value) {
+        closeSettingsPanel(); // Use the new function here too
+      }
     }
   })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', () => {})
+  document.removeEventListener('keydown', () => {})
 })
 </script>
