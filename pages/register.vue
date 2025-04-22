@@ -19,7 +19,7 @@
           <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" 
           autocomplete="new-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" 
           @blur="validateField('password')" @update:modelValue="validateField('password')">
-            <p v-if="!errors.password && !passwordStrength" class="text-text-light mt-1">Password must be at least 6 characters long.</p>
+            <p v-if="!errors.password && !passwordStrength" class="text-text-muted mt-1 h">Password must be at least 6 characters long.</p>
           </AuthFormField>
 
           <!-- Password strength indicator -->

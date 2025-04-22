@@ -58,6 +58,7 @@ export default defineNuxtConfig({
     '@/assets/css/animations.css',
     '@/assets/css/font-size.css',
     '@/assets/css/icon-size.css',
+    '@/assets/css/accessibility.css',
   ],
   tailwindcss: {
     exposeConfig: false,

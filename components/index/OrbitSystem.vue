@@ -1,6 +1,6 @@
 <template>
   <div class="relative w-full h-[800px] mt-4 mb-4 z-10 overflow-visible" aria-hidden="true">
-    <div class="central-orb bg-gradient-central shadow-xl">
+    <div class="central-orb shadow-xl">
       <!-- Logo inside central orb -->
       <div class="central-orb-logo">
         <img src="../../public/images/Logo.png" alt="" class="w-[90px] h-[90px]" />
@@ -12,7 +12,7 @@
     <div class="orbital-system orbital-system-1">
       <!-- Server icon -->
       <div class="server-icon medium-orb">
-        <fa :icon="['fas', 'server']" class="text-5xl text-accent-blue" />
+        <fa :icon="['fas', 'server']" class="text-5xl text-theme-primary" />
       </div>
       
       <!-- Satellite orbit ring -->
@@ -39,7 +39,7 @@
     <div class="orbital-system orbital-system-2">
       <!-- Server icon -->
       <div class="server-icon medium-orb">
-        <fa :icon="['fas', 'server']" class="text-5xl text-accent-blue" />
+        <fa :icon="['fas', 'server']" class="text-5xl text-theme-primary" />
       </div>
       
       <!-- Satellite orbit ring -->
@@ -70,7 +70,7 @@
     <div class="orbital-system orbital-system-3">
       <!-- Server icon -->
       <div class="server-icon medium-orb">
-        <fa :icon="['fas', 'server']" class="text-5xl text-accent-blue" />
+        <fa :icon="['fas', 'server']" class="text-5xl text-theme-primary" />
       </div>
       
       <!-- Satellite orbit ring -->

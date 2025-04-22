@@ -1,7 +1,7 @@
 <template>
     <div class="relative" :class="fieldClass">
       <button type="submit" 
-        class="w-full flex justify-center items-center py-2 px-4 border border-transparent font-medium rounded-md text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
+        class="w-full flex justify-center items-center py-2 px-4 border border-transparent font-medium rounded-md text-background bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
         :disabled="disabled || loading"
         :class="{ 'opacity-50 cursor-not-allowed': disabled || loading, 'submit-button-pulse': !disabled && !loading }"
         :aria-busy="loading"
@@ -12,7 +12,7 @@
       </button>
       <div class="text-center mt-4 relative z-20">
         <NuxtLink :to="linkTo" class="font-medium text-link hover:text-link-hover flex items-center justify-center">
-          <span>{{ linkText }}</span>
+          <span class="hover:underline">{{ linkText }}</span>
           <fa :icon="['fas', 'arrow-right']" class="ml-1" aria-hidden="true"/>
         </NuxtLink>
       </div>

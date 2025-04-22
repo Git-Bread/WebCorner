@@ -1,11 +1,11 @@
 <template>
-  <div class="w-96 h-[600px] bg-background/80 rounded-lg overflow-hidden flex flex-col shadow-xl border border-accent-blue/20" aria-hidden="true">
-    <div class="p-3 bg-background/90 border-b border-accent-blue/30">
+  <div class="w-96 h-[600px] bg-ui-overlay rounded-lg overflow-hidden flex flex-col shadow-xl border border-ui-accent" aria-hidden="true">
+    <div class="p-3 bg-background/90 border-b border-ui-accent">
       <h3 class="font-semibold text-heading flex items-center">
-        <fa :icon="['fas', 'comments']" class="text-accent-blue mr-2"/>Live Chat
+        <fa :icon="['fas', 'comments']" class="text-theme-primary mr-2"/>Live Chat
       </h3>
     </div>
-    <div ref="messagesContainer" class="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-accent-blue/30 scrollbar-track-transparent flex flex-col">
+    <div ref="messagesContainer" class="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-ui-accent scrollbar-track-transparent flex flex-col">
       <div class="flex flex-col">
         <TransitionGroup name="message">
           <ChatMessage
@@ -22,7 +22,7 @@
       
       <!-- Empty state when no messages -->
       <div v-if="messages.length === 0" class="flex-1 flex mb-4 items-center justify-center text-text/50 flex-col">
-        <fa :icon="['fas', 'satellite']" class="mb-2 text-accent-blue/30" />
+        <fa :icon="['fas', 'satellite']" class="mb-2 text-theme-primary/30 icon-xl" />
         <p>Waiting for good vibes...</p>
       </div>
     </div>
@@ -194,8 +194,8 @@ defineExpose({
   width: 6px;
 }
 
-.scrollbar-thumb-accent-blue\/30::-webkit-scrollbar-thumb {
-  background-color: rgba(var(--accent-blue-rgb), 0.3);
+.scrollbar-thumb-ui-accent::-webkit-scrollbar-thumb {
+  background-color: var(--color-ui-accent);
   border-radius: 3px;
 }
 

@@ -12,7 +12,7 @@
     <div class="mb-6 border-b border-border">
       <div class="flex flex-wrap gap-2">
         <button v-for="(tab, index) in tabs" :key="index" @click="activeTab = tab.id" :class="['px-3 py-2 font-medium focus:outline-none whitespace-nowrap border-b-2', 
-        activeTab === tab.id ? 'text-accent-blue border-accent-blue' : 'text-text hover:text-heading border-transparent']">
+        activeTab === tab.id ? 'text-theme-primary border-theme-primary' : 'text-text hover:text-heading border-transparent']">
         <fa :icon="['fas', tab.icon]" class="mr-1" aria-hidden="true" />{{ tab.name }}</button>
       </div>
     </div>
@@ -30,19 +30,19 @@
               <button 
                 @click="updateTheme('light')"
                 :class="['p-3 border rounded-md hover:border-link focus:outline-none focus:ring-2 focus:ring-link',
-                  userSettings.appearance.theme === 'light' ? 'border-accent-blue ring-2 ring-accent-blue bg-surface' : 'bg-background border-border']">
+                  userSettings.appearance.theme === 'light' ? 'border-theme-primary ring-2 ring-theme-primary bg-surface' : 'bg-background border-border']">
                 <span class="block w-full text-center">Light</span>
               </button>
               <button 
                 @click="updateTheme('dark')"
                 :class="['p-3 border rounded-md hover:border-link focus:outline-none focus:ring-2 focus:ring-link',
-                  userSettings.appearance.theme === 'dark' ? 'border-accent-blue ring-2 ring-accent-blue bg-surface' : 'bg-background border-border']">
+                  userSettings.appearance.theme === 'dark' ? 'border-theme-primary ring-2 ring-theme-primary bg-surface' : 'bg-background border-border']">
                 <span class="block w-full text-center">Dark</span>
               </button>
               <button 
                 @click="updateTheme('system')"
                 :class="['p-3 border rounded-md hover:border-link focus:outline-none focus:ring-2 focus:ring-link',
-                  userSettings.appearance.theme === 'system' ? 'border-accent-blue ring-2 ring-accent-blue bg-surface' : 'bg-background border-border']">
+                  userSettings.appearance.theme === 'system' ? 'border-theme-primary ring-2 ring-theme-primary bg-surface' : 'bg-background border-border']">
                 <span class="block w-full text-center">System</span>
               </button>
             </div>
@@ -59,7 +59,7 @@
                 :class="[
                   'p-3 border rounded-md w-24 h-24 flex flex-col items-center justify-center',
                   userSettings.appearance.fontSize === size.value 
-                    ? 'border-accent-blue ring-2 ring-accent-blue bg-surface'
+                    ? 'border-theme-primary ring-2 ring-theme-primary bg-surface'
                     : 'border-border bg-background hover:border-link focus:outline-none focus:ring-2 focus:ring-link'
                 ]">
                 <span :class="['font-bold']">Wc</span> <!-- Removed size.exampleClass -->
@@ -138,7 +138,7 @@
       <button 
         @click="saveUserSettings"
         :disabled="isSaving"
-        class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-white bg-accent-blue hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-blue disabled:bg-opacity-50 disabled:cursor-not-allowed">
+        class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-background bg-theme-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-primary disabled:bg-opacity-50 disabled:cursor-not-allowed">
         <fa v-if="!isSaving" :icon="['fas', 'save']" class="mr-2" aria-hidden="true" />
         <span v-else class="mr-2 animate-spin">
           <fa :icon="['fas', 'spinner']" aria-hidden="true" />

@@ -7,10 +7,10 @@
         <div class="absolute inset-0 overflow-hidden" aria-hidden="true" role="presentation">
           <!-- First triangle with hover animation -->
           <div class="absolute w-[1200px] h-[1200px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-          bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-30 hover:scale-105 bg-decoration-1 opacity-40"></div>
+          bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-30 hover:scale-105 bg-accent-1 opacity-40"></div>
           <!-- Second triangle with hover animation -->
           <div class="absolute w-[1100px] h-[1100px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-          bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-80 hover:scale-105 bg-decoration-2 opacity-50"></div>
+          bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-80 hover:scale-105 bg-accent-2 opacity-50"></div>
         </div>
         <slot />
       </main>
@@ -19,7 +19,7 @@
       <!-- Settings Button -->
       <button 
         @click="showVisitorSettings = !showVisitorSettings" 
-        class="fixed bottom-4 right-4 z-40 p-3 bg-accent-blue text-white rounded-full shadow-lg hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-blue"
+        class="fixed bottom-4 right-4 z-40 p-3 bg-theme-primary text-background rounded-full shadow-lg hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-primary"
         aria-label="Toggle settings">
         <fa :icon="['fas', 'cog']" class="w-5 h-5" />
       </button>

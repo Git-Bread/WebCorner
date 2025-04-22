@@ -1,10 +1,10 @@
 :root {
     /* Text and UI colors */
     --color-text: #1f2937;            /* Main text color */
-    --color-text-light: #6b7280;      /* Secondary text, icons, placeholders */
+    --color-text-muted: #6b7280;      /* Secondary text, icons, placeholders */
     --color-heading: #08071e;         /* Headings, buttons, emphasis */
     --color-link: #4f46e5;            /* Links, actions */
-    --color-link-hover: #4338ca;      /* Link hover state */
+    --color-link-hover: #271bb5;      /* Link hover state */
     
     /* Background colors */
     --color-background: #ffffff;      /* Main background */
@@ -12,7 +12,7 @@
     --color-border: #e5e7eb;          /* Borders, dividers */
     
     /* Action colors */
-    --color-primary: #08071e;         /* Primary actions */
+    --color-primary: var(--color-heading);  /* Primary actions - Same as heading color */
     --color-secondary: #10b981;       /* Secondary actions */
     --color-secondary-dark: #059669;  /* Secondary hover state */
     
@@ -23,21 +23,48 @@
     --color-error-light: #fee2e2;     /* Error backgrounds */
     --color-info: #3b82f6;            /* Information messages */
     
-    /* Decorative colors */
-    --color-decoration-1: #10b981;    /* First triangle */
-    --color-decoration-2: #4f46e5;    /* Second triangle */
+    /* Decorative colors - for visual accents */
+    --color-accent-1: #10b981;        /* First accent color (previously decoration-1) */
+    --color-accent-2: #4f46e5;        /* Second accent color (previously decoration-2) */
     
-    /* Vibrant accent colors */
-    --color-blue: #60a5fa;            /* Bright blue for accents */
-    --color-indigo: #8b5cf6;          /* Vibrant indigo for accents */
-    --color-green: #34d399;           /* Bright green for accents */
-    --color-pink: #f472b6;            /* Playful pink for accents */
-    --color-purple: #9333ea;          /* Rich purple for accents */
+    /* Theme colors - instead of specific color names */
+    --color-theme-primary: #60a5fa;   /* Primary theme color (previously blue) */
+    --color-theme-secondary: #8b5cf6; /* Secondary theme color (previously indigo) */
+    --color-theme-tertiary: #34d399;  /* Tertiary theme color (previously green) */
+    --color-theme-quaternary: #f472b6;/* Quaternary theme color (previously pink) */
+    --color-theme-quinary: #9333ea;   /* Quinary theme color (previously purple) */
 
-    /* Gradients, used in index page */
-    --gradient-heading: linear-gradient(to right, #60a5fa, #8b5cf6, #34d399);  /* Vibrant header gradient */
-    --gradient-color-1: linear-gradient(to right, #60a5fa, #8b5cf6);           /* First stock gradient */
-    --gradient-color-2: linear-gradient(to right, #34d399, #3b82f6);           /* Second stock gradient */
-    --gradient-color-3: linear-gradient(to right, #f472b6, #9333ea);           /* Third stock gradient */
-    --gradient-background: linear-gradient(to bottom right, #f8fafc, #e0f2fe); /* Subtle background gradient */
+    /* RGB versions for opacity variations */
+    --color-theme-primary-rgb: 96, 165, 250;   /* RGB for theme-primary */
+    --color-theme-secondary-rgb: 139, 92, 246; /* RGB for theme-secondary */
+    --color-theme-tertiary-rgb: 52, 211, 153;  /* RGB for theme-tertiary */
+    --color-theme-quaternary-rgb: 244, 114, 182; /* RGB for theme-quaternary */
+    --color-theme-quinary-rgb: 147, 51, 234;   /* RGB for theme-quinary */
+    --color-info-rgb: 59, 130, 246;            /* RGB for info color */
+    
+    /* Interactive element states - for orbit system */
+    --color-interactive-1-active: rgba(var(--color-info-rgb), 0.5);        /* First interactive state active */
+    --color-interactive-1-highlight: rgba(var(--color-info-rgb), 0.7);     /* First interactive state highlight */
+    --color-interactive-2-active: rgba(var(--color-theme-secondary-rgb), 0.5);  /* Second interactive state active */
+    --color-interactive-2-highlight: rgba(var(--color-theme-secondary-rgb), 0.7);  /* Second interactive state highlight */
+    --color-interactive-3-active: rgba(236, 72, 153, 0.5);     /* Third interactive state active */
+    --color-interactive-3-highlight: rgba(236, 72, 153, 0.7);  /* Third interactive state highlight */
+    
+    /* UI Component colors - for specific UI elements */
+    --color-ui-overlay: rgba(255, 255, 255, 0.8);              /* Overlay backgrounds */
+    --color-ui-accent: rgba(var(--color-theme-primary-rgb), 0.3);  /* UI accent elements */
+    --color-ui-control: rgba(var(--color-theme-tertiary-rgb), 0.8);  /* UI controls */
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary), var(--color-theme-tertiary));
+    --gradient-1: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary));
+    --gradient-2: linear-gradient(to right, var(--color-theme-tertiary), var(--color-info));
+    --gradient-3: linear-gradient(to right, var(--color-theme-quaternary), var(--color-theme-quinary));
+    --gradient-page: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+    
+    /* Moderately blue gradient for the server section */
+    --gradient-section-1: linear-gradient(to bottom right, #f0f7ff, #e1effe, #d0e7ff);
+    
+    --gradient-section-2: linear-gradient(to bottom right, #ecfdf5, #d1fae5, #a7f3d0);
+    --gradient-section-3: linear-gradient(to bottom right, #f5f3ff, #ede9fe, #ddd6fe);
 }

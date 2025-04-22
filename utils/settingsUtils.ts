@@ -5,13 +5,13 @@ export const getToggleTrackClasses = (isActive: boolean) => {
   return [
     'relative', 'inline-flex', 'items-center', 'h-6', 'rounded-full', 'w-11', 
     'transition-colors', 'duration-200', 'ease-in-out', 
-    isActive ? 'bg-accent-blue' : 'bg-gray-300 dark:bg-gray-600'
+    isActive ? 'bg-theme-primary' : 'bg-border dark:bg-gray-600'
   ];
 };
 
 export const getToggleThumbClasses = (isActive: boolean) => {
   return [
-    'inline-block', 'w-4', 'h-4', 'transform', 'rounded-full', 'bg-white', 'shadow', 
+    'inline-block', 'w-4', 'h-4', 'transform', 'rounded-full', 'bg-background', 'shadow', 
     'transition-transform', 'duration-200', 'ease-in-out',
     isActive ? 'translate-x-6' : 'translate-x-1'
   ];

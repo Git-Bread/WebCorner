@@ -14,7 +14,7 @@ module.exports = {
                 // Text colors
                 text: {
                     DEFAULT: 'var(--color-text)',
-                    light: 'var(--color-text-light)'
+                    muted: 'var(--color-text-muted)'
                 },
                 heading: 'var(--color-heading)',
                 link: {
@@ -44,37 +44,52 @@ module.exports = {
                 info: 'var(--color-info)',
                 
                 // Decorative colors
-                decoration: {
-                    1: 'var(--color-decoration-1)',
-                    2: 'var(--color-decoration-2)'
+                accent: {
+                    1: 'var(--color-accent-1)',
+                    2: 'var(--color-accent-2)'
                 },
                 
-                // Accent colors
-                accent: {
-                    blue: 'var(--color-blue)',
-                    indigo: 'var(--color-indigo)',
-                    green: 'var(--color-green)',
-                    pink: 'var(--color-pink)',
-                    purple: 'var(--color-purple)'
+                // Theme colors
+                theme: {
+                    primary: 'var(--color-theme-primary)',
+                    secondary: 'var(--color-theme-secondary)',
+                    tertiary: 'var(--color-theme-tertiary)',
+                    quaternary: 'var(--color-theme-quaternary)',
+                    quinary: 'var(--color-theme-quinary)'
+                },
+                
+                // Interactive element colors
+                interactive: {
+                    '1': {
+                        active: 'var(--color-interactive-1-active)',
+                        highlight: 'var(--color-interactive-1-highlight)'
+                    },
+                    '2': {
+                        active: 'var(--color-interactive-2-active)',
+                        highlight: 'var(--color-interactive-2-highlight)'
+                    },
+                    '3': {
+                        active: 'var(--color-interactive-3-active)',
+                        highlight: 'var(--color-interactive-3-highlight)'
+                    }
+                },
+                
+                // UI component colors
+                ui: {
+                    overlay: 'var(--color-ui-overlay)',
+                    accent: 'var(--color-ui-accent)',
+                    control: 'var(--color-ui-control)'
                 }
             },
             backgroundImage: {
-                'gradient-heading': 'var(--gradient-heading)',
-                'gradient-background': 'var(--gradient-background)',
-                'gradient-color-1': 'var(--gradient-color-1)',
-                'gradient-color-2': 'var(--gradient-color-2)',
-                'gradient-color-3': 'var(--gradient-color-3)'
-            },
-            fontSize: {
-                'xs': 'var(--font-size-xs)',
-                'sm': 'var(--font-size-sm)',
-                'base': 'var(--font-size-base)',
-                'lg': 'var(--font-size-lg)',
-                'xl': 'var(--font-size-xl)',
-                'h1': 'var(--font-size-h1)',
-                'h2': 'var(--font-size-h2)',
-                'h3': 'var(--font-size-h3)',
-                'h4': 'var(--font-size-h4)',
+                'gradient-hero': 'var(--gradient-hero)',
+                'gradient-1': 'var(--gradient-1)',
+                'gradient-2': 'var(--gradient-2)',
+                'gradient-3': 'var(--gradient-3)',
+                'gradient-page': 'var(--gradient-page)',
+                'gradient-section-1': 'var(--gradient-section-1)',
+                'gradient-section-2': 'var(--gradient-section-2)',
+                'gradient-section-3': 'var(--gradient-section-3)',
             }
         }
     },

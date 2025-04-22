@@ -1,5 +1,5 @@
 <template>
-  <div class="flex p-3 rounded-lg bg-background/70 border-l-2 transform transition-all duration-300" :class="[
+  <div class="flex p-3 rounded-lg bg-ui-overlay border-l-2 transform transition-all duration-300" :class="[
       isFadingOut ? 'fade-out' : 'opacity-100', 
       borderColorClass,
       'animate-slideInFromSide'
@@ -10,7 +10,7 @@
     <div class="flex-1 min-w-0">
       <div class="flex items-center mb-1">
         <span class="font-medium" :class="userColorClass">{{ username }}</span> 
-        <span class="text-text/50 ml-2">{{ formattedTime }}</span> 
+        <span class="text-text-muted/50 ml-2">{{ formattedTime }}</span> 
       </div>
       <div class="text-text break-words text-start">
         {{ message }}
@@ -51,17 +51,17 @@ const formattedTime = computed(() => {
 });
 
 const userColorClass = computed(() => {
-  if (props.type === 'blue') return 'text-accent-blue';
-  if (props.type === 'purple') return 'text-accent-purple';
-  if (props.type === 'pink') return 'text-accent-pink';
-  return 'text-accent-blue';
+  if (props.type === 'blue') return 'text-theme-primary';
+  if (props.type === 'purple') return 'text-theme-secondary';
+  if (props.type === 'pink') return 'text-theme-quaternary';
+  return 'text-theme-primary';
 });
 
 const borderColorClass = computed(() => {
-  if (props.type === 'blue') return 'border-accent-blue';
-  if (props.type === 'purple') return 'border-accent-purple';
-  if (props.type === 'pink') return 'border-accent-pink';
-  return 'border-accent-blue';
+  if (props.type === 'blue') return 'border-theme-primary';
+  if (props.type === 'purple') return 'border-theme-secondary';
+  if (props.type === 'pink') return 'border-theme-quaternary';
+  return 'border-theme-primary';
 });
 
 onMounted(() => {
@@ -93,11 +93,11 @@ onMounted(() => {
 
 .chat-timestamp {
   font-size: 0.75rem;
-  color: #aaa;
+  color: var(--color-text-muted);
 }
 
 .chat-body {
-  color: #e1e1e6;
+  color: var(--color-text);
   line-height: 1.4;
 }
 </style>

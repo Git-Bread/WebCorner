@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col bg-gradient-background overflow-hidden relative">
+  <div class="flex flex-col bg-gradient-page overflow-hidden relative">
     <!-- Hero Section -->
     <section id="nav-section-1" class="min-h-[96vh] flex items-center m-0 p-0">
       <HeroSection />
@@ -8,7 +8,7 @@
     <!-- Server Section with Orbit System -->
     <section id="nav-section-2" class="min-h-screen flex flex-col justify-center">
       <ServerSection />
-      <div class="hidden md:block w-full bg-gradient-to-br from-blue-50 to-background z-10 flex-grow">
+      <div class="hidden md:block w-full bg-background z-10 flex-grow">
         <div class="container mx-auto px-4 text-center">
           <div class="relative w-full mx-auto max-w-6xl">
             <div class="flex flex-col md:flex-row items-center justify-center">
@@ -47,9 +47,9 @@
     <div class="fixed bottom-4 right-16 z-50 flex flex-col items-center">
       <button 
         @click="navigateToNextSection" 
-        class="p-3 bg-green-500 bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg transition-all duration-300"
+        class="p-3 bg-ui-control rounded-full shadow-lg transition-all duration-300"
         aria-label="Navigate to next section">
-        <fa :icon="['fas', isLastSection ? 'chevron-up' : 'chevron-down']" class="text-white animate-bounce" aria-hidden="true" />
+        <fa :icon="['fas', isLastSection ? 'chevron-up' : 'chevron-down']" class="text-background animate-bounce" aria-hidden="true" />
       </button>
     </div>
   </div>

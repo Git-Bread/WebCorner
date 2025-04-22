@@ -32,7 +32,7 @@
             <div>
               <button @click="toggleMenu" type="button" class="flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-link rounded-full" aria-expanded="false">
                 <!-- Use user's photoURL if available, otherwise default image -->
-                <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 hover:border-decoration-1">
+                <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 hover:border-accent-1">
                   <ClientOnly>
                     <img :src="userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
                   </ClientOnly>
