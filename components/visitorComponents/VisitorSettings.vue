@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed bottom-4 right-4 p-4 rounded-lg shadow-lg bg-surface max-w-lg z-50">
+  <div class="fixed bottom-4 right-4 p-4 rounded-lg shadow-lg bg-surface w-full max-w-lg z-50">
     <!-- Close Button -->
     <button 
       @click="$emit('close-settings')"
@@ -10,10 +10,10 @@
 
     <!-- Settings Navigation Tabs -->
     <div class="mb-6 border-b border-border">
-      <div class="flex space-x-4">
-        <button v-for="(tab, index) in tabs" :key="index" @click="activeTab = tab.id" :class="['px-4 py-2 font-medium focus:outline-none', 
-        activeTab === tab.id ? 'text-accent-blue border-b-2 border-accent-blue' : 'text-text hover:text-heading']">
-        <fa :icon="['fas', tab.icon]" class="mr-2" aria-hidden="true" />{{ tab.name }}</button>
+      <div class="flex flex-wrap gap-2">
+        <button v-for="(tab, index) in tabs" :key="index" @click="activeTab = tab.id" :class="['px-3 py-2 font-medium focus:outline-none whitespace-nowrap border-b-2', 
+        activeTab === tab.id ? 'text-accent-blue border-accent-blue' : 'text-text hover:text-heading border-transparent']">
+        <fa :icon="['fas', tab.icon]" class="mr-1" aria-hidden="true" />{{ tab.name }}</button>
       </div>
     </div>
 
