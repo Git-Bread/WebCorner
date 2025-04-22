@@ -15,8 +15,7 @@
       </button>
       
       <!-- Settings submenu -->
-      <div v-if="settingsOpen" 
-        class="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg p-4 w-64 animate-fade-in border border-gray-100">
+      <div v-if="settingsOpen" class="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg p-4 z-20 w-64 animate-fade-in border border-gray-100">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
           <h3 class="font-bold text-gray-800">Animation Settings</h3>
           <button @click="settingsOpen = false" aria-label="Close" class="text-gray-500 hover:text-gray-800">
@@ -27,7 +26,7 @@
         <!-- Particle count -->
         <div class="space-y-3">
           <div>
-            <label for="particleCount" class="block text-xs font-medium text-gray-700">
+            <label for="particleCount" class="block font-medium text-gray-700">
               Particles: {{ settings.particleCount }}
             </label>
             <input id="particleCount" type="range" v-model.number="settings.particleCount" min="50" max="300" step="10"
@@ -36,7 +35,7 @@
           
           <!-- Max distance -->
           <div>
-            <label for="maxDistance" class="block text-xs font-medium text-gray-700">
+            <label for="maxDistance" class="block font-medium text-gray-700">
               Connection: {{ settings.maxDistance }}px
             </label>
             <input id="maxDistance" type="range" v-model.number="settings.maxDistance" min="40" max="150" step="5"
@@ -45,7 +44,7 @@
           
           <!-- Mouse interaction radius -->
           <div>
-            <label for="mouseRadius" class="block text-xs font-medium text-gray-700">
+            <label for="mouseRadius" class="block font-medium text-gray-700">
               Mouse Radius: {{ settings.mouseRadius }}px
             </label>
             <input id="mouseRadius" type="range" v-model.number="settings.mouseRadius" min="40" max="150" step="5"
@@ -55,13 +54,13 @@
           <!-- Color settings -->
           <div class="flex items-center justify-between space-x-2">
             <div>
-              <label for="particleColor" class="block text-xs font-medium text-gray-700">Particle</label>
+              <label for="particleColor" class="block font-medium text-gray-700">Particle</label>
               <input id="particleColor" type="color" v-model="settings.mainParticleColor" 
                 class="w-8 h-8 rounded border border-gray-200 mt-1 cursor-pointer" />
             </div>
             
             <div>
-              <label for="interactionColor" class="block text-xs font-medium text-gray-700">Interaction</label>
+              <label for="interactionColor" class="block font-medium text-gray-700">Interaction</label>
               <input id="interactionColor" type="color" v-model="settings.interactionColor" 
                 class="w-8 h-8 rounded border border-gray-200 mt-1 cursor-pointer" />
             </div>
@@ -69,12 +68,10 @@
           
           <!-- Action buttons -->
           <div class="grid grid-cols-2 gap-2 pt-2">
-            <button @click="resetSettings" 
-              class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 px-3 rounded-md text-sm transition-colors">
+            <button @click="resetSettings" class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 px-3 rounded-md transition-colors">
               Reset
             </button>
-            <button @click="applySettings" 
-              class="bg-accent-blue hover:bg-blue-600 text-white py-1 px-3 rounded-md text-sm transition-colors">
+            <button @click="applySettings" class="bg-accent-blue hover:bg-blue-600 text-white py-1 px-3 rounded-md transition-colors">
               Apply
             </button>
           </div>
@@ -83,11 +80,11 @@
     </div>
 
     <!-- Content Container -->
-    <div class="container mx-auto px-4 h-screen flex-grow flex flex-col justify-center items-center relative z-10">
+    <div class="container mx-auto px-4 h-screen flex-grow flex flex-col pb-12 justify-center items-center relative z-10">
       <!-- Hero Section -->
       <div class="text-center mb-12" role="banner">
-        <h1 id="main-heading" class="text-5xl md:text-7xl font-bold mb-4 animate-title bg-clip-text text-transparent bg-gradient-heading">WebCorner</h1>
-        <p class="text-xl md:text-2xl text-text max-w-2xl mx-auto animate-subtitle">Your team's communication hub for seamless collaboration</p>
+        <h1 id="main-heading" class="font-bold super-large-title animate-title bg-clip-text text-transparent bg-gradient-heading">WebCorner</h1>
+        <h2 class="text-text max-w-2xl mx-auto animate-subtitle mt-0">Your team's communication hub for seamless collaboration</h2>
       </div>
 
       <!-- Feature Section -->
@@ -95,20 +92,20 @@
         <div v-for="(feature, index) in features" :key="feature.title"
           class="feature-card bg-white rounded-lg shadow-lg p-6 border border-gray-200 transition-all duration-300"
           :class="{ 'animate-card-1': index === 0, 'animate-card-2': index === 1, 'animate-card-3': index === 2 }">
-          <div class="text-4xl mb-4 text-accent-blue" aria-hidden="true">
-            <fa :icon="['fas', feature.icon]" class="feature-icon" />
+          <div class="mb-4 text-accent-blue" aria-hidden="true">
+            <fa :icon="['fas', feature.icon]" class="feature-icon icon-md" />
           </div>
-          <h3 class="text-xl font-bold mb-2 text-heading">{{ feature.title }}</h3>
+          <h3 class="font-bold mb-2 text-heading">{{ feature.title }}</h3>
           <p class="text-text">{{ feature.description }}</p>
         </div>
       </div>
 
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row gap-4 animate-buttons" role="navigation" aria-label="Account options">
-        <NuxtLink to="/register" class="cta-button cta-primary px-8 py-3 text-lg font-medium rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+        <NuxtLink to="/register" class="cta-button cta-primary px-8 py-3 font-medium rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
           Create your account <fa :icon="['fas', 'server']" class="ml-2" aria-hidden="true" />
         </NuxtLink>
-        <NuxtLink to="/login" class="cta-button cta-secondary px-8 py-3 text-lg font-medium rounded-full shadow-md flex items-center justify-center hover:scale-105 transition-transform">
+        <NuxtLink to="/login" class="cta-button cta-secondary px-8 py-3 font-medium rounded-full shadow-md flex items-center justify-center hover:scale-105 transition-transform">
           Sign In <fa :icon="['fas', 'arrow-right']" class="ml-2" aria-hidden="true" />
         </NuxtLink>
       </div>

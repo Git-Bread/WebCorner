@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8 relative z-10 pb-28 form-fade-in">
-      <h2 id="login-heading" class="mt-6 text-3xl font-extrabold text-center text-heading">Sign in to your account</h2>
+      <h1 id="login-heading" class="mt-6 font-extrabold text-center text-heading">Sign in to your account</h1>
       
       <form class="mt-8 space-y-4" @submit.prevent="handleLogin" aria-labelledby="login-heading">
         <!-- Email field -->
@@ -17,11 +17,11 @@
         <div class="flex items-center justify-between mt-2 form-field-2">
           <div class="flex items-center">
             <input id="remember-me" name="remember-me" type="checkbox" v-model="rememberMe" class="h-4 w-4 text-accent-blue focus:ring-accent-blue border-foreground rounded">
-            <label for="remember-me" class="ml-2 block text-sm text-text">Remember me</label>
+            <label for="remember-me" class="ml-2 block text-text">Remember me</label>
           </div>
           <div class="text-right">
             <!-- Forgot Password Button -->
-            <NuxtLink to="/forgot-password" class="text-sm text-link hover:text-link-hover mt-0">
+            <NuxtLink to="/forgot-password" class="text-link hover:text-link-hover mt-0">
               Forgot your password?
             </NuxtLink>
           </div>

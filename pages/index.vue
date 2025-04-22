@@ -49,7 +49,7 @@
         @click="navigateToNextSection" 
         class="p-3 bg-green-500 bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg transition-all duration-300"
         aria-label="Navigate to next section">
-        <fa :icon="['fas', isLastSection ? 'chevron-up' : 'chevron-down']" class="text-white text-xl animate-bounce" aria-hidden="true" />
+        <fa :icon="['fas', isLastSection ? 'chevron-up' : 'chevron-down']" class="text-white animate-bounce" aria-hidden="true" />
       </button>
     </div>
   </div>

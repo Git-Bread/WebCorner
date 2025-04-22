@@ -1,0 +1,111 @@
+/* --- Global Icon Styling --- */
+:root {
+  /* Icon sizing variables - increased sizes */
+  --icon-size-xs: 1.25rem;   /* 20px - Small icons (was 16px) */
+  --icon-size-sm: 1.5rem;    /* 24px - Default icons (was 20px) */
+  --icon-size-md: 1.75rem;   /* 28px - Medium icons (was 24px) */
+  --icon-size-lg: 2.5rem;    /* 40px - Large icons (was 32px) */
+  --icon-size-xl: 3rem;      /* 48px - Extra large icons (was 40px) */
+}
+
+/* Icon size adjustments based on user font size preference */
+:root[data-font-size="small"] {
+  --icon-size-xs: 1.125rem;  /* 18px (was 14px) */
+  --icon-size-sm: 1.375rem;  /* 22px (was 18px) */
+  --icon-size-md: 1.625rem;  /* 26px (was 22px) */
+  --icon-size-lg: 2.25rem;   /* 36px (was 28px) */
+  --icon-size-xl: 2.75rem;   /* 44px (was 36px) */
+}
+
+/* Medium (default) stays the same as root */
+
+:root[data-font-size="large"] {
+  --icon-size-xs: 1.375rem;  /* 22px (was 18px) */
+  --icon-size-sm: 1.625rem;  /* 26px (was 22px) */
+  --icon-size-md: 2rem;      /* 32px (was 28px) */
+  --icon-size-lg: 2.75rem;   /* 44px (was 36px) */
+  --icon-size-xl: 3.25rem;   /* 52px (was 44px) */
+}
+
+:root[data-font-size="extra-large"] {
+  --icon-size-xs: 1.5rem;    /* 24px (was 20px) */
+  --icon-size-sm: 1.75rem;   /* 28px (was 24px) */
+  --icon-size-md: 2.25rem;   /* 36px (was 32px) */
+  --icon-size-lg: 3rem;      /* 48px (was 40px) */
+  --icon-size-xl: 3.5rem;    /* 56px (was 48px) */
+}
+
+/* Apply icon sizes to icon elements */
+.icon, i[class*="fa-"], i[class*="icon"], svg.icon {
+  font-size: var(--icon-size-sm);
+  height: auto;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -0.125em; /* Better alignment with text */
+}
+
+/* Enhanced icon alignment in lists and flex containers */
+li > .icon, li > i[class*="fa-"],
+.flex > .icon, .flex > i[class*="fa-"],
+.inline-flex > .icon, .inline-flex > i[class*="fa-"] {
+  vertical-align: middle;
+  margin-top: -0.15em; /* Fine-tune vertical alignment */
+}
+
+.icon-xs, .icon--xs {
+  font-size: var(--icon-size-xs) !important;
+}
+
+.icon-sm, .icon--sm {
+  font-size: var(--icon-size-sm) !important;
+}
+
+.icon-md, .icon--md {
+  font-size: var(--icon-size-md) !important;
+}
+
+.icon-lg, .icon--lg {
+  font-size: var(--icon-size-lg) !important;
+}
+
+.icon-xl, .icon--xl {
+  font-size: var(--icon-size-xl) !important;
+}
+
+/* Button icon combinations */
+.btn .icon, .button .icon,
+.btn i[class*="fa-"], .button i[class*="fa-"] {
+  font-size: 1.2em; /* Slightly larger than the button text */
+  vertical-align: middle;
+  margin-right: 0.25em;
+}
+
+/* Icon-only buttons - ensures proper sizing */
+.btn-icon, .button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  line-height: 1;
+}
+
+.btn-icon .icon, .button-icon .icon,
+.btn-icon i[class*="fa-"], .button-icon i[class*="fa-"] {
+  font-size: var(--icon-size-md);
+  margin: 0;
+}
+
+/* Navigation icons */
+nav .icon, .nav-link .icon,
+nav i[class*="fa-"], .nav-link i[class*="fa-"] {
+  font-size: var(--icon-size-sm);
+  vertical-align: middle;
+}
+
+/* Form field icons */
+.input-group .icon, .form-control-icon .icon,
+.input-group i[class*="fa-"], .form-control-icon i[class*="fa-"] {
+  font-size: var(--icon-size-sm);
+}

@@ -56,6 +56,8 @@ export default defineNuxtConfig({
   css: [
     '@/assets/css/colors.css',
     '@/assets/css/animations.css',
+    '@/assets/css/font-size.css',
+    '@/assets/css/icon-size.css',
   ],
   tailwindcss: {
     exposeConfig: false,

@@ -64,6 +64,17 @@ module.exports = {
                 'gradient-color-1': 'var(--gradient-color-1)',
                 'gradient-color-2': 'var(--gradient-color-2)',
                 'gradient-color-3': 'var(--gradient-color-3)'
+            },
+            fontSize: {
+                'xs': 'var(--font-size-xs)',
+                'sm': 'var(--font-size-sm)',
+                'base': 'var(--font-size-base)',
+                'lg': 'var(--font-size-lg)',
+                'xl': 'var(--font-size-xl)',
+                'h1': 'var(--font-size-h1)',
+                'h2': 'var(--font-size-h2)',
+                'h3': 'var(--font-size-h3)',
+                'h4': 'var(--font-size-h4)',
             }
         }
     },

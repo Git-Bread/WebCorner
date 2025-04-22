@@ -1,15 +1,11 @@
 <template>
   <div class="w-96 h-[600px] bg-background/80 rounded-lg overflow-hidden flex flex-col shadow-xl border border-accent-blue/20" aria-hidden="true">
     <div class="p-3 bg-background/90 border-b border-accent-blue/30">
-      <h3 class="text-lg font-semibold text-heading flex items-center">
+      <h3 class="font-semibold text-heading flex items-center">
         <fa :icon="['fas', 'comments']" class="text-accent-blue mr-2"/>Live Chat
       </h3>
     </div>
-    <div 
-      ref="messagesContainer" 
-      class="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-accent-blue/30 scrollbar-track-transparent flex flex-col"
-    >
-      <!-- Wrap TransitionGroup in a div that takes the flex classes -->
+    <div ref="messagesContainer" class="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-accent-blue/30 scrollbar-track-transparent flex flex-col">
       <div class="flex flex-col">
         <TransitionGroup name="message">
           <ChatMessage
@@ -26,7 +22,7 @@
       
       <!-- Empty state when no messages -->
       <div v-if="messages.length === 0" class="flex-1 flex mb-4 items-center justify-center text-text/50 flex-col">
-        <fa :icon="['fas', 'satellite']" class="text-4xl mb-2 text-accent-blue/30" />
+        <fa :icon="['fas', 'satellite']" class="mb-2 text-accent-blue/30" />
         <p>Waiting for good vibes...</p>
       </div>
     </div>

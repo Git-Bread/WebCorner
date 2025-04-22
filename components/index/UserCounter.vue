@@ -1,8 +1,8 @@
 <template>
   <section class="w-full z-10 py-16 mb-32 md:py-24 bg-gradient-to-br from-background to-accent-blue-100" aria-labelledby="user-stats-heading">
     <div class="container mx-auto px-4 text-center">
-      <h2 id="user-stats-heading" class="text-3xl md:text-4xl font-bold mb-4 text-heading">Join our growing community</h2>
-      <p class="text-lg mb-10 text-text max-w-2xl mx-auto">People from around the world trust WebCorner for their team collaboration needs.</p>
+      <h1 id="user-stats-heading" class="font-bold mb-4 text-heading">Join our growing community</h1>
+      <h3 class="mb-10 text-text max-w-2xl mx-auto">People from around the world trust WebCorner for their team collaboration needs.</h3>
       
       <div class="flex flex-col items-center">
         <div class="flex items-baseline">
@@ -18,7 +18,7 @@
         <p v-else-if="error" class="mt-2 text-red-500">
           Couldn't load latest count. Showing estimate.
         </p>
-        <p v-else class="mt-4 text-text">and growing every day!</p>
+        <h4 v-else class="mt-4 text-text">and growing every day!</h4>
       </div>
     </div>
   </section>

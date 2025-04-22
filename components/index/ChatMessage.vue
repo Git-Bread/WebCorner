@@ -1,20 +1,20 @@
 <template>
   <div class="flex p-3 rounded-lg bg-background/70 border-l-2 transform transition-all duration-300" :class="[
-      isFadingOut ? 'opacity-0' : 'opacity-100', 
+      isFadingOut ? 'fade-out' : 'opacity-100', 
       borderColorClass,
-      'animate-fadeInFromSide'
+      'animate-slideInFromSide'
     ]">
     <div class="mr-3 flex-shrink-0">
       <img :src="profileImage" class="rounded-full w-10 h-10 object-cover border-2":class="borderColorClass"/>
     </div>
     <div class="flex-1 min-w-0">
       <div class="flex items-center mb-1">
-        <span class="font-medium text-sm" :class="userColorClass">{{ username }}</span>
-        <span class="text-text/50 text-xs ml-2 mt-0.5">{{ formattedTime }}</span>
+        <span class="font-medium" :class="userColorClass">{{ username }}</span> 
+        <span class="text-text/50 ml-2">{{ formattedTime }}</span> 
       </div>
-      <div class="text-text text-sm break-words text-start">
+      <div class="text-text break-words text-start">
         {{ message }}
-      </div>
+      </div> 
     </div>
   </div>
 </template>
@@ -65,7 +65,6 @@ const borderColorClass = computed(() => {
 });
 
 onMounted(() => {
-  // Start the fade-out animation after 30 seconds
   setTimeout(() => {
     isFadingOut.value = true;
   }, 30000);
@@ -73,22 +72,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.chat-message {
-  display: flex;
-  margin-bottom: 16px;
-  background-color: rgba(25, 25, 35, 0.7);
-  border-radius: 8px;
-  padding: 10px;
-  border-left: 3px solid transparent;
-  animation: slide-in 0.3s ease-out;
-  opacity: 1;
-  transition: opacity 1s ease-out;
-}
-
-.chat-message.fade-out {
-  opacity: 0;
-}
-
 .chat-avatar {
   margin-right: 12px;
 }
@@ -116,47 +99,5 @@ onMounted(() => {
 .chat-body {
   color: #e1e1e6;
   line-height: 1.4;
-}
-
-@keyframes slide-in {
-  from {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.chat-slide-in {
-  animation: chat-slide-in 0.3s ease-out;
-}
-
-@keyframes chat-slide-in {
-  from {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Add this to your global animations if you want to reuse it */
-@keyframes fadeInFromSide {
-  from {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.animate-fadeInFromSide {
-  animation: fadeInFromSide 0.3s ease-out;
 }
 </style>

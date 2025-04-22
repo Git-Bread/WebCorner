@@ -3,7 +3,7 @@
     <div class="h-1 w-full bg-border rounded-full overflow-hidden" role="progressbar" :aria-valuenow="strength" aria-valuemin="0" aria-valuemax="100">
       <div :class="['h-full', strengthColorClass]" :style="{ width: strength + '%' }"></div>
     </div>
-    <p class="text-xs mt-1 flex items-center" :class="strengthTextColorClass">
+    <p class="text-small mt-1 flex items-center" :class="strengthTextColorClass">
       <fa :icon="strengthIcon" class="mr-1" aria-hidden="true"/>
       {{ strengthText }}
     </p>

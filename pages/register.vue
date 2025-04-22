@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8 pb-12 z-10 form-fade-in">
-      <h2 id="register-heading" class="mt-6 text-3xl font-extrabold text-center text-heading">Create your account</h2>
+      <h1 id="register-heading" class="mt-6 font-extrabold text-center text-heading">Create your account</h1>
       
       <form class="mt-8 space-y-4" @submit.prevent="handleRegister" aria-labelledby="register-heading">
         <!-- Email field -->
@@ -19,7 +19,7 @@
           <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" 
           autocomplete="new-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" 
           @blur="validateField('password')" @update:modelValue="validateField('password')">
-            <p v-if="!errors.password && !passwordStrength" class="text-xs text-text-light mt-1">Password must be at least 6 characters long.</p>
+            <p v-if="!errors.password && !passwordStrength" class="text-text-light mt-1">Password must be at least 6 characters long.</p>
           </AuthFormField>
 
           <!-- Password strength indicator -->

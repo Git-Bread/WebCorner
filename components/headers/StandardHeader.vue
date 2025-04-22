@@ -8,11 +8,11 @@
         <div class="flex items-center">
           <NuxtLink v-if="!isAuthenticated" to="/" class="flex items-center">
             <img src="/images/logo.png" alt="WebCorner Logo" class="h-10 w-10 mr-2" />
-            <h1 class="text-3xl font-bold text-heading">WebCorner</h1>
+            <h1 class="font-bold text-heading">WebCorner</h1>
           </NuxtLink>
           <NuxtLink v-else to="/dashboard" class="flex items-center">
             <img src="/images/logo.png" alt="WebCorner Logo" class="h-10 w-10 mr-2" />
-            <h1 class="text-3xl font-bold text-heading">WebCorner</h1>
+            <h1 class="font-bold text-heading">WebCorner</h1>
           </NuxtLink>
         </div>
         </ClientOnly>

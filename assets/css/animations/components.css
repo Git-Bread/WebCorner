@@ -121,3 +121,25 @@
 .animate-fade-in {
   animation: fadeIn 0.2s ease-out forwards;
 }
+
+/* Slide in from side animation for chat messages */
+@keyframes slideInFromSide {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideInFromSide {
+  animation: slideInFromSide 0.3s ease-out;
+}
+
+/* Fade out animation */
+.fade-out {
+  opacity: 0;
+  transition: opacity 1s ease-out;
+}

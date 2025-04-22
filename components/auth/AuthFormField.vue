@@ -1,6 +1,6 @@
 <template>
   <div :class="fieldClass">
-    <label :for="id" class="block text-sm font-medium text-text">{{ label }}</label>
+    <label :for="id" class="block font-medium text-text">{{ label }}</label>
     <div class="flex items-center relative">
       <fa :icon="['fas', icon]" class="text-text-light absolute left-3 z-20" aria-hidden="true" />
       <input 
@@ -19,7 +19,7 @@
         :aria-describedby="hasError && errorMessage ? `${id}-error` : undefined"
       />
     </div>
-    <p v-if="errorMessage" :id="`${id}-error`" class="mt-1 text-sm text-error" role="alert">{{ errorMessage }}</p>
+    <p v-if="errorMessage" :id="`${id}-error`" class="mt-1 text-error" role="alert">{{ errorMessage }}</p>
     <slot></slot>
   </div>
 </template>
@@ -39,7 +39,7 @@ defineProps({
   fieldClass: { type: String, default: '' },
   baseInputClass: {
     type: String,
-    default: 'appearance-none rounded relative block w-full px-3 py-2 border text-text focus:outline-none focus:z-10 sm:text-sm'
+    default: 'appearance-none rounded relative block w-full px-3 py-2 border text-text focus:outline-none focus:z-10'
   },
   errorClass: {
     type: String,
