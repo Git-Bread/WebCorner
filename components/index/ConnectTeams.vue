@@ -4,10 +4,10 @@
       <div class="lg:w-1/2 order-2 lg:order-1 py-4">
         <div id="teams-heading" class="font-bold mb-4 text-heading">
           <!-- Mobile heading - visible on screens below sm breakpoint -->
-          <h1 class="block sm:hidden">Connect Teams</h1>
+          <h2 class="block sm:hidden">Connect Teams</h2>
           
           <!-- Desktop heading - visible on sm screens and up -->
-          <h1 class="hidden sm:block">Bring Your Team Together!</h1>
+          <h2 class="hidden sm:block">Bring Your Team Together!</h2>
         </div>
         <p class="mb-6 text-text">Bring your team together with text channels, group-chats, shared-planning and seamless file sharing. Keep conversations organized and searchable to improve team productivity.</p>
         <ul class="space-y-3 mb-6 sm:mb-8 feature-list" aria-label="Team collaboration features">

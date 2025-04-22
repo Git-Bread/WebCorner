@@ -84,7 +84,7 @@
       <!-- Hero Section -->
       <div class="text-center mb-12" role="banner">
         <h1 id="main-heading" class="font-bold super-large-title animate-title bg-clip-text text-transparent bg-gradient-heading">WebCorner</h1>
-        <h2 class="text-text max-w-2xl mx-auto animate-subtitle mt-0">Your team's communication hub for seamless collaboration</h2>
+        <h3 class="text-text max-w-2xl mx-auto animate-subtitle mt-0">Your team's communication hub for seamless collaboration</h3>
       </div>
 
       <!-- Feature Section -->

@@ -7,10 +7,10 @@
       <div class="lg:w-1/2 order-1 lg:order-2 py-4">
         <div id="workflow-heading" class="font-bold mb-4 text-heading">
           <!-- Mobile heading - visible on screens below sm breakpoint -->
-          <h1 class="block sm:hidden">Customize Workflow</h1>
+          <h2 class="block sm:hidden">Customize Workflow</h2>
           
           <!-- Desktop heading - visible on sm screens and up -->
-          <h1 class="hidden sm:block">Your Workflow, Your Rules!</h1>
+          <h2 class="hidden sm:block">Your Workflow, Your Rules!</h2>
         </div>
         <p class="mb-6 text-text">Tailor your workspace with components, feeds, and customizable permissions for every team member. Create workflows that match your team's unique processes.</p>
         <ul class="space-y-3 mb-6 sm:mb-8 feature-list" aria-label="Workflow customization features">

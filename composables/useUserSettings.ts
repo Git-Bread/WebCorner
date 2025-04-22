@@ -1,6 +1,7 @@
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { type User as FirebaseUser } from 'firebase/auth';
 import { handleDatabaseError } from '~/utils/errorHandler';
+import { applyTheme, applyFontSize, applyAccessibilitySettings } from '~/utils/settingsUtils';
 
 // Define TypeScript types for our settings
 export interface AppearanceSettings {
@@ -153,40 +154,22 @@ export const useUserSettings = () => {
     }
   };
 
-  // Apply settings to the application
+  // Apply settings to the application using shared utility functions
   const applySettings = (currentSettings: UserSettings = settings.value) => {
     if (!import.meta.client) return;
     
     try {
-      // Theme
-      if (currentSettings.appearance.theme === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else if (currentSettings.appearance.theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        // System preference
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
+      // Apply theme settings
+      applyTheme(currentSettings.appearance.theme);
       
-      // Font size
-      document.documentElement.dataset.fontSize = currentSettings.appearance.fontSize;
+      // Apply font size
+      applyFontSize(currentSettings.appearance.fontSize);
       
-      // Accessibility
-      if (currentSettings.accessibility.disableAnimations) {
-        document.documentElement.classList.add('disable-animations');
-      } else {
-        document.documentElement.classList.remove('disable-animations');
-      }
-      
-      if (currentSettings.accessibility.highContrast) {
-        document.documentElement.classList.add('high-contrast');
-      } else {
-        document.documentElement.classList.remove('high-contrast');
-      }
+      // Apply accessibility settings
+      applyAccessibilitySettings(
+        currentSettings.accessibility.disableAnimations,
+        currentSettings.accessibility.highContrast
+      );
     } catch (err) {
       console.error('Error applying settings:', err);
     }

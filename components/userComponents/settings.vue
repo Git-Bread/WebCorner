@@ -57,7 +57,7 @@
                 :key="size.value"
                 @click="updateFontSize(size.value)"
                 :class="[
-                  'p-3 border rounded-md w-20 h-20 flex flex-col items-center justify-center', // Increased size from w-16 h-16 to w-20 h-20
+                  'p-3 border rounded-md w-24 h-24 flex flex-col items-center justify-center',
                   userSettings.appearance.fontSize === size.value 
                     ? 'border-accent-blue ring-2 ring-accent-blue bg-surface'
                     : 'border-border bg-background hover:border-link focus:outline-none focus:ring-2 focus:ring-link'
@@ -150,9 +150,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, defineEmits } from 'vue';
+import { ref, computed, onMounted, nextTick, defineEmits, watch } from 'vue';
 import { useUserSettings, type UserSettings } from '~/composables/useUserSettings';
 import { showToast } from '~/utils/toast';
+import { getToggleTrackClasses, getToggleThumbClasses } from '~/utils/settingsUtils'; // Import utility functions
 
 // Define emits
 const emit = defineEmits(['close-settings']);
@@ -238,22 +239,6 @@ const saveUserSettings = async () => {
   } finally {
     isSaving.value = false;
   }
-};
-
-const getToggleTrackClasses = (isActive: boolean) => {
-  return [
-    'relative', 'inline-flex', 'items-center', 'h-6', 'rounded-full', 'w-11', 
-    'transition-colors', 'duration-200', 'ease-in-out', 
-    isActive ? 'bg-accent-blue' : 'bg-gray-300 dark:bg-gray-600'
-  ];
-};
-
-const getToggleThumbClasses = (isActive: boolean) => {
-  return [
-    'inline-block', 'w-4', 'h-4', 'transform', 'rounded-full', 'bg-white', 'shadow', 
-    'transition-transform', 'duration-200', 'ease-in-out',
-    isActive ? 'translate-x-6' : 'translate-x-1'
-  ];
 };
 
 // Calculate and set minimum height after component mounts

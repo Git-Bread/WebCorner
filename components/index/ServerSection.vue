@@ -5,10 +5,10 @@
       <div class="lg:w-1/2 order-2 lg:order-1 py-4">
         <div id="servers-heading" class="font-bold mb-4 text-heading">
           <!-- Mobile heading - visible on screens below sm breakpoint -->
-          <h1 class="block sm:hidden">Create Servers</h1>
+          <h2 class="block sm:hidden">Create Servers</h2>
           
           <!-- Desktop heading - visible on sm screens and up -->
-          <h1 class="hidden sm:block">The Communication Centres of Tomorrow!</h1>
+          <h2 class="hidden sm:block">The Communication Centres of Tomorrow!</h2>
         </div>
         <p class="mb-6 text-text">The most important aspect of teamwork is communication, and here at WebCorner we understand and try to embody this concept. Create your own town square or project forum where
           you and your team can communicate and collaborate in a modern controlled enviroment.</p>

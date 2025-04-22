@@ -1,7 +1,7 @@
 <template>
   <section class="w-full z-10 py-16 mb-32 md:py-24 bg-gradient-to-br from-background to-accent-blue-100" aria-labelledby="user-stats-heading">
     <div class="container mx-auto px-4 text-center">
-      <h1 id="user-stats-heading" class="font-bold mb-4 text-heading">Join our growing community</h1>
+      <h2 id="user-stats-heading" class="font-bold mb-4 text-heading">Join our growing community</h2>
       <h3 class="mb-10 text-text max-w-2xl mx-auto">People from around the world trust WebCorner for their team collaboration needs.</h3>
       
       <div class="flex flex-col items-center">

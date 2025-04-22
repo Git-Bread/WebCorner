@@ -44,7 +44,7 @@
     </section>
 
     <!-- Persistent Bouncing Navigation Chevron -->
-    <div class="fixed bottom-8 right-8 z-50 flex flex-col items-center">
+    <div class="fixed bottom-4 right-16 z-50 flex flex-col items-center">
       <button 
         @click="navigateToNextSection" 
         class="p-3 bg-green-500 bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg transition-all duration-300"
