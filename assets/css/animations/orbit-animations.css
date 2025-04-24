@@ -58,8 +58,8 @@
   left: 50%;
   transform: translate(-50%, -50%);
   background: transparent;
-  border: 2px solid rgba(0, 0, 0, 0.3);
-  box-shadow: 0 0 60px 10px rgba(0, 0, 0, 0.2), inset 0 0 30px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--color-orbit-central);
+  box-shadow: 0 0 60px 10px var(--color-orbit-shadow), inset 0 0 30px var(--color-orbit-shadow);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -84,7 +84,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-orbit-inner);
 }
 
 .orbital-system {
@@ -131,7 +131,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-orbit-satellite);
 }
 
 @keyframes satelliteOrbit {
@@ -155,7 +155,7 @@
   height: 50px;
   border-radius: 50%;
   background-color: white;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 10px var(--color-orbit-shadow);
   overflow: visible;
   top: 50%;
   left: 50%;
@@ -235,31 +235,31 @@
 
 .pulse-blue-active {
   z-index: 10;
-  outline: 6px solid rgba(59, 130, 246, 0.5);
+  outline: 6px solid var(--color-interactive-1-active);
   transition: outline 0.3s ease;
 }
 
 .pulse-purple-active {
   z-index: 10;
-  outline: 6px solid rgba(139, 92, 246, 0.5);
+  outline: 6px solid var(--color-interactive-2-active);
   transition: outline 0.3s ease;
 }
 
 .pulse-pink-active {
   z-index: 10;
-  outline: 6px solid rgba(236, 72, 153, 0.5);
+  outline: 6px solid var(--color-interactive-3-active);
   transition: outline 0.3s ease;
 }
 
 .pulse-blue-fading, .pulse-purple-fading, .pulse-pink-fading {
   z-index: 10;
-  outline: 3px solid rgba(59, 130, 246, 0.3);
+  outline: 3px solid var(--color-interactive-1-highlight);
   transition: outline 0.5s ease;
 }
 
 .pulse-blue-inactive, .pulse-purple-inactive, .pulse-pink-inactive {
   z-index: 5;
-  outline: 0px solid rgba(59, 130, 246, 0);
+  outline: 0px solid transparent;
   transition: outline 0.3s ease;
 }
 
@@ -278,19 +278,19 @@
 }
 
 .halo-blue {
-  border-color: rgba(59, 130, 246, 0.7);
+  border-color: var(--color-interactive-1-highlight);
   border-style: solid;
   border-width: 2px; 
 }
 
 .halo-purple {
-  border-color: rgba(139, 92, 246, 0.7);
+  border-color: var(--color-interactive-2-highlight);
   border-style: solid;
   border-width: 2px;
 }
 
 .halo-pink {
-  border-color: rgba(236, 72, 153, 0.7);
+  border-color: var(--color-interactive-3-highlight);
   border-style: solid;
   border-width: 2px; 
 }

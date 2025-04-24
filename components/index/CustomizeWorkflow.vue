@@ -21,15 +21,15 @@
         <ul class="space-y-3 mb-6 sm:mb-8 feature-list" aria-label="Workflow customization features">
           <li class="flex items-center">
             <fa :icon="['fas', 'sliders']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span>Customize the page just for you</span>
+            <span class="text-text">Customize the page just for you</span>
           </li>
           <li class="flex items-center">
             <fa :icon="['fas', 'calendar']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span>Your schedules, your planning, your workspace</span>
+            <span class="text-text">Your schedules, your planning, your workspace</span>
           </li>
           <li class="flex items-center">
             <fa :icon="['fas', 'palette']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span>A unique overlay for every server</span>
+            <span class="text-text">A unique overlay for every server</span>
           </li>
         </ul>
       </div>

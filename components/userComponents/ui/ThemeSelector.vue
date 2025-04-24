@@ -7,7 +7,9 @@
         :key="theme"
         @click="$emit('update:theme', theme)"
         :class="['p-3 border rounded-md hover:border-link focus:outline-none focus:ring-2 focus:ring-link',
-          modelValue === theme ? 'border-theme-primary ring-2 ring-theme-primary bg-surface' : 'bg-background border-border']">
+          modelValue === theme 
+            ? 'border-theme-primary ring-2 ring-theme-primary bg-surface text-heading font-medium' 
+            : 'bg-background border-border text-text hover:text-heading']">
         <span class="block w-full text-center">{{ getThemeName(theme) }}</span>
       </button>
     </div>

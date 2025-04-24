@@ -15,15 +15,15 @@
         <ul class="space-y-3 mb-6 sm:mb-8" aria-label="Server features">
           <li class="flex items-center">
             <fa :icon="['fas', 'shield']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span class="mb-0.5">A focus on security with rigorous authentication and permissions, no unwanted visitors allowed</span>
+            <span class="mb-0.5 text-text">A focus on security with rigorous authentication and permissions, no unwanted visitors allowed</span>
           </li>
           <li class="flex items-center">
             <fa :icon="['fas', 'server']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span class="mb-0.5">Customisable servers to match your organisation or groups needs </span>
+            <span class="mb-0.5 text-text">Customisable servers to match your organisation or groups needs </span>
           </li>
           <li class="flex items-center">
             <fa :icon="['fas', 'cloud']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span class="mb-0.5">A robust and secure system where everything is stored in the cloud</span>
+            <span class="mb-0.5 text-text">A robust and secure system where everything is stored in the cloud</span>
           </li>
         </ul>
       </div>

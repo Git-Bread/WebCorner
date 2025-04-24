@@ -78,7 +78,8 @@ module.exports = {
                 ui: {
                     overlay: 'var(--color-ui-overlay)',
                     accent: 'var(--color-ui-accent)',
-                    control: 'var(--color-ui-control)'
+                    control: 'var(--color-ui-control)',
+                    panel: 'var(--color-ui-panel-bg)'
                 }
             },
             backgroundImage: {

@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed bottom-4 right-4 p-4 rounded-lg shadow-lg bg-surface w-full max-w-lg z-50">
+  <div class="fixed bottom-4 right-1 sm:right-4 p-4 rounded-lg shadow-lg bg-ui-panel border border-border w-full max-w-lg z-50">
     <!-- Close Button -->
     <button 
       @click="$emit('close-settings')"

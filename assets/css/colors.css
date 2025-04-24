@@ -47,14 +47,22 @@
     --color-interactive-1-highlight: rgba(var(--color-info-rgb), 0.7);     /* First interactive state highlight */
     --color-interactive-2-active: rgba(var(--color-theme-secondary-rgb), 0.5);  /* Second interactive state active */
     --color-interactive-2-highlight: rgba(var(--color-theme-secondary-rgb), 0.7);  /* Second interactive state highlight */
-    --color-interactive-3-active: rgba(236, 72, 153, 0.5);     /* Third interactive state active */
-    --color-interactive-3-highlight: rgba(236, 72, 153, 0.7);  /* Third interactive state highlight */
+    --color-interactive-3-active: rgba(var(--color-theme-quaternary-rgb), 0.5);     /* Third interactive state active */
+    --color-interactive-3-highlight: rgba(var(--color-theme-quaternary-rgb), 0.7);  /* Third interactive state highlight */
     
     /* UI Component colors - for specific UI elements */
     --color-ui-overlay: rgba(255, 255, 255, 0.8);              /* Overlay backgrounds */
     --color-ui-accent: rgba(var(--color-theme-primary-rgb), 0.3);  /* UI accent elements */
     --color-ui-control: rgba(var(--color-theme-tertiary-rgb), 0.8);  /* UI controls */
-
+    --color-ui-panel-bg: #ffffff;                              /* UI panel backgrounds */
+    --color-ui-panel-shadow: rgba(0, 0, 0, 0.1);              /* UI panel shadows */
+    
+    /* Orbit system colors */
+    --color-orbit-central: rgba(0, 0, 0, 0.3);  /* Central orbit border - standard black with opacity */
+    --color-orbit-inner: rgba(0, 0, 0, 0.2);  /* Inner orbit path - standard black with opacity */
+    --color-orbit-satellite: rgba(0, 0, 0, 0.15);  /* Satellite orbit paths - standard black with opacity */
+    --color-orbit-shadow: rgba(0, 0, 0, 0.08);  /* Refined orbit shadows - lighter and more subtle */
+    
     /* Gradients */
     --gradient-hero: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary), var(--color-theme-tertiary));
     --gradient-1: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary));
@@ -64,7 +72,6 @@
     
     /* Moderately blue gradient for the server section */
     --gradient-section-1: linear-gradient(to bottom right, #f0f7ff, #e1effe, #d0e7ff);
-    
     --gradient-section-2: linear-gradient(to bottom right, #ecfdf5, #d1fae5, #a7f3d0);
     --gradient-section-3: linear-gradient(to bottom right, #f5f3ff, #ede9fe, #ddd6fe);
 }
@@ -113,7 +120,15 @@ html.dark {
     --color-ui-overlay: rgba(0, 0, 0, 0.75);              /* Overlay backgrounds */
     --color-ui-accent: rgba(var(--color-theme-primary-rgb), 0.3);  /* UI accent elements */
     --color-ui-control: rgba(var(--color-theme-tertiary-rgb), 0.8);  /* UI controls */
-
+    --color-ui-panel-bg: #273548;                         /* UI panel backgrounds - darker blue-gray */
+    --color-ui-panel-shadow: rgba(0, 0, 0, 0.25);         /* UI panel shadows - darker shadow */
+    
+    /* Orbit system colors - adjusted for dark mode */
+    --color-orbit-central: rgba(var(--color-theme-primary-rgb), 0.4);  /* Central orbit border */
+    --color-orbit-inner: rgba(var(--color-theme-secondary-rgb), 0.3);  /* Inner orbit path */
+    --color-orbit-satellite: rgba(var(--color-theme-tertiary-rgb), 0.25);  /* Satellite orbit paths */
+    --color-orbit-shadow: rgba(var(--color-theme-primary-rgb), 0.25);  /* Orbit shadows */
+    
     /* Gradients - adjusted for dark mode */
     --gradient-hero: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary), var(--color-theme-tertiary));
     --gradient-1: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary));

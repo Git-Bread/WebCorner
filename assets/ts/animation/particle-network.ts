@@ -57,12 +57,15 @@ export class ParticleNetwork {
   private particleCount = 150;
   private maxDistance = 80;       // maximum distance for particles to connect with lines
   private particleBaseAlpha = 0.9;
-  private mainParticleColor = '#FF0000'; 
-  private interactionColor = '#00FFFF';   // color when particles are interacted with
-  private baseLineColor = '71, 85, 105';  // base RGB color for connection lines
-  private glowColor = 'rgba(71, 85, 105, 0.3)';
+  private mainParticleColor = '';  // Will be set from CSS variable
+  private interactionColor = '';   // Will be set from CSS variable
+  private baseLineColor = '';      // Will be set from CSS variable
+  private glowColor = '';          // Will be set from CSS variable
   private interactionDuration = 250;      // how long particles stay highlighted after interaction
   private quadtreeCapacity = 4;           // max points per quadtree node before subdivision
+  
+  // Theme observer to detect theme changes
+  private themeObserver: MutationObserver | null = null;
 
   //Creates a new particle network animation
   constructor(canvas: HTMLCanvasElement, rootElement: HTMLElement) {
@@ -87,6 +90,10 @@ export class ParticleNetwork {
     this.handleInteractionEnd = this.handleInteractionEnd.bind(this);
     this.handleMouseOut = this.handleMouseOut.bind(this);
     this.animate = this.animate.bind(this);
+
+    // Initialize theme colors
+    this.updateThemeColors();
+    this.observeThemeChanges();
   }
 
   //Updates animation settings
@@ -175,8 +182,40 @@ export class ParticleNetwork {
       this.processParticleInteraction(p, particlesNearMouse);
 
       // Draw the particle with appropriate color
-      this.ctx.fillStyle = p.isInteracting ? this.interactionColor : this.mainParticleColor;
-      this.ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      if (p.isInteracting) {
+        // Use interaction color directly for highlighted particles
+        this.ctx.fillStyle = this.interactionColor;
+      } else if (this.mainParticleColor.includes('gradient')) {
+        // For gradient particles, create a small radial gradient for each particle
+        const gradient = this.ctx.createRadialGradient(
+          p.x, p.y, 0,
+          p.x, p.y, p.size * 2
+        );
+        
+        // Extract colors from linear-gradient CSS string
+        const colorMatch = this.mainParticleColor.match(/rgba?\([^)]+\)/g);
+        if (colorMatch && colorMatch.length >= 2) {
+          gradient.addColorStop(0, colorMatch[0]);
+          gradient.addColorStop(1, colorMatch[1]);
+          if (colorMatch.length > 2) {
+            gradient.addColorStop(0.5, colorMatch[2]);
+          }
+        } else {
+          // Fallback if gradient parsing fails
+          gradient.addColorStop(0, 'rgba(96, 165, 250, 0.7)');
+          gradient.addColorStop(1, 'rgba(139, 92, 246, 0.5)');
+        }
+        
+        this.ctx.fillStyle = gradient;
+      } else {
+        // Use the regular particle color
+        this.ctx.fillStyle = this.mainParticleColor;
+      }
+      
+      // Draw circular particles instead of rectangles for better gradient effect
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      this.ctx.fill();
 
       // Update position for next frame
       p.x += p.vx;
@@ -422,6 +461,27 @@ export class ParticleNetwork {
     if (this.resizeTimeout) clearTimeout(this.resizeTimeout);
     this.particles.forEach(p => {
       if (p.interactionTimeoutId) clearTimeout(p.interactionTimeoutId);
+    });
+  }
+
+  // Updates theme colors from CSS variables
+  private updateThemeColors(): void {
+    const computedStyle = getComputedStyle(document.documentElement);
+    this.mainParticleColor = computedStyle.getPropertyValue('--main-particle-color').trim();
+    this.interactionColor = computedStyle.getPropertyValue('--interaction-color').trim();
+    this.baseLineColor = computedStyle.getPropertyValue('--base-line-color').trim();
+    this.glowColor = computedStyle.getPropertyValue('--glow-color').trim();
+  }
+
+  // Observes theme changes and updates colors accordingly
+  private observeThemeChanges(): void {
+    this.themeObserver = new MutationObserver(() => {
+      this.updateThemeColors();
+    });
+
+    this.themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['style']
     });
   }
 }

@@ -18,15 +18,15 @@ import { ClientOnly } from '#components';
         <ul class="space-y-3 mb-6 sm:mb-8 feature-list" aria-label="Team collaboration features">
           <li class="flex items-center">
             <fa :icon="['fas', 'comments']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span>Real-time messaging and notifications</span>
+            <span class="text-text">Real-time messaging and notifications</span>
           </li>
           <li class="flex items-center">
             <fa :icon="['fas', 'file-export']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span>File sharing with version history</span>
+            <span class="text-text">File sharing with version history</span>
           </li>
           <li class="flex items-center">
             <fa :icon="['fas', 'users-gear']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span>Dynamic group roles and project designations</span>
+            <span class="text-text">Dynamic group roles and project designations</span>
           </li>
         </ul>
       </div>

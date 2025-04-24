@@ -46,6 +46,8 @@ export default defineNuxtConfig({
         'bell',
         'universal-access',
         'save',
+        'sun',
+        'moon',
       ],
       brands: [
         'Github', 

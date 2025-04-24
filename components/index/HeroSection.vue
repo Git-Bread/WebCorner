@@ -1,12 +1,21 @@
 <template>
-  <div ref="heroRootRef" class="relative h-screen w-full overflow-hidden">
-    <!-- Background Container -->
-    <div class="bg-surface absolute inset-0 z-0" aria-hidden="true">
+  <div ref="heroRootRef" class="relative min-h-screen h-auto w-full overflow-hidden"> <!-- Changed h-screen to min-h-screen and added h-auto -->
+    <!-- Background Container with backdrop -->
+    <div class="bg-surface absolute inset-0 z-0" aria-hidden="true"> <!-- Removed incorrect closing div from previous edit -->
+      <!-- Subtle backdrop for better particle visibility -->
+      <div class="absolute inset-0 particle-backdrop"></div>
       <canvas ref="canvasRef" class="absolute inset-0 w-full h-full block"></canvas>
-    </div>
+    </div> <!-- Correct closing div for background container -->
 
     <!-- Settings menu -->
-    <div class="absolute top-4 right-4 settings-menu">
+    <div class="absolute top-4 right-2 sm:right-4 flex space-x-2 z-10 settings-menu">
+      <!-- Dark mode toggle button -->
+      <button @click="toggleDarkMode" aria-label="Toggle dark mode" 
+        class="bg-ui-overlay hover:bg-background text-heading p-3 rounded-full shadow-md transition-all duration-300 hover:scale-110"
+        :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        <fa :icon="['fas', isDarkMode ? 'sun' : 'moon']" class="text-xl" />
+      </button>
+      
       <!-- Cogwheel button -->
       <button @click="settingsOpen = !settingsOpen" aria-label="Animation settings" 
         class="bg-ui-overlay hover:bg-background text-heading p-3 rounded-full shadow-md transition-all duration-300 hover:scale-110"
@@ -52,39 +61,22 @@
           </div>
           
           <!-- Color settings -->
-          <div class="flex items-center justify-between space-x-2">
-            <div>
-              <label for="particleColor" class="block font-medium text-heading">Particle</label>
-              <input id="particleColor" type="color" v-model="settings.mainParticleColor" 
-                class="w-8 h-8 rounded border border-border mt-1 cursor-pointer" />
-            </div>
-            
-            <div>
-              <label for="interactionColor" class="block font-medium text-heading">Interaction</label>
-              <input id="interactionColor" type="color" v-model="settings.interactionColor" 
-                class="w-8 h-8 rounded border border-border mt-1 cursor-pointer" />
-            </div>
-          </div>
-          
-          <!-- Action buttons -->
-          <div class="grid grid-cols-2 gap-2 pt-2">
-            <button @click="resetSettings" class="bg-border hover:bg-surface text-heading py-1 px-3 rounded-md transition-colors">
-              Reset
-            </button>
-            <button @click="applySettings" class="bg-theme-primary hover:bg-info text-background py-1 px-3 rounded-md transition-colors">
-              Apply
-            </button>
+          <div class="space-y-3">
+            <!-- Particle color presets -->
+            <ColorPresetButtons label="Particle Style" v-model="settings.selectedParticlePreset" :preset-options="particlePresetOptions"/>
+            <!-- Interaction color presets -->
+            <ColorPresetButtons label="Interaction Style" v-model="settings.selectedInteractionPreset" :preset-options="interactionPresetOptions"/>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Content Container -->
-    <div class="container mx-auto px-4 h-screen flex-grow flex flex-col pb-12 justify-center items-center relative z-10">
+    <div class="container mx-auto px-4 min-h-screen flex-grow flex flex-col pb-12 justify-center items-center relative z-10">
       <!-- Hero Section -->
-      <div class="text-center mb-12" role="banner">
-        <h1 id="main-heading" class="font-bold super-large-title animate-title bg-clip-text text-transparent bg-gradient-hero">WebCorner</h1>
-        <h3 class="text-text max-w-2xl mx-auto animate-subtitle mt-0">Your team's communication hub for seamless collaboration</h3>
+      <div class="text-center mb-12 pt-20 md:pt-0" role="banner"> <!-- Added top padding for mobile -->
+        <h1 id="main-heading" class="hidden sm:block font-bold super-large-title animate-title bg-clip-text text-transparent bg-gradient-hero">WebCorner</h1>
+        <h3 class="hidden sm:block text-text max-w-2xl mx-auto animate-subtitle mt-0">Your team's communication hub for seamless collaboration</h3>
       </div>
 
       <!-- Feature Section -->
@@ -92,21 +84,24 @@
         <div v-for="(feature, index) in features" :key="feature.title"
           class="feature-card bg-background rounded-lg shadow-lg p-6 border border-border transition-all duration-300"
           :class="{ 'animate-card-1': index === 0, 'animate-card-2': index === 1, 'animate-card-3': index === 2 }">
-          <div class="mb-4 text-theme-primary" aria-hidden="true">
-            <fa :icon="['fas', feature.icon]" class="feature-icon icon-md" />
+          <!-- Flex container for icon and title -->
+          <div class="flex items-center mb-3"> 
+            <div class="text-theme-primary mr-3" aria-hidden="true">
+              <fa :icon="['fas', feature.icon]" class="feature-icon icon-md" />
+            </div>
+            <h3 class="font-bold text-heading">{{ feature.title }}</h3>
           </div>
-          <h3 class="font-bold mb-2 text-heading">{{ feature.title }}</h3>
           <p class="text-text">{{ feature.description }}</p>
         </div>
       </div>
 
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row gap-4 animate-buttons" role="navigation" aria-label="Account options">
-        <NuxtLink to="/register" class="cta-button bg-secondary hover:bg-secondary-dark text-background px-8 py-3 font-medium rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
-          Create your account <fa :icon="['fas', 'server']" class="ml-2" aria-hidden="true" />
+        <NuxtLink to="/register" class="cta-button bg-theme-tertiary hover:bg-accent-1 text-background px-8 py-3 font-medium rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+          <span>Create your account</span> <fa :icon="['fas', 'server']" class="ml-2 mt-0.5" aria-hidden="true" />
         </NuxtLink>
-        <NuxtLink to="/login" class="cta-button bg-background border border-theme-primary text-theme-primary px-8 py-3 font-medium rounded-full shadow-md flex items-center justify-center hover:scale-105 transition-transform">
-          Sign In <fa :icon="['fas', 'arrow-right']" class="ml-2" aria-hidden="true" />
+        <NuxtLink to="/login" class="cta-button bg-background border border-theme-primary text-theme-primary px-8 py-3 font-medium rounded-full shadow-md flex items-center justify-center hover:scale-105 transition-transform hover:bg-surface">
+          <span>Sign In</span> <fa :icon="['fas', 'arrow-right']" class="ml-2 mt-0.5" aria-hidden="true" />
         </NuxtLink>
       </div>
     </div>
@@ -116,64 +111,46 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, watch } from 'vue';
 import { ParticleNetwork } from '@/assets/ts/animation/particle-network';
-
-const features = [
-  {
-    title: 'Create Servers',
-    description: 'Build custom communication servers for your team, department, or entire organization with just a few clicks.',
-    icon: 'server'
-  },
-  {
-    title: 'Customize Workflow',
-    description: 'Tailor your workspace with components, feeds, and customizable permissions for every team member.',
-    icon: 'sliders'
-  },
-  {
-    title: 'Connect Teams',
-    description: 'Bring your team together with text channels, group-chats, shared-planning and seamless file sharing.',
-    icon: 'users-gear'
-  }
-];
+import ColorPresetButtons from '@/components/index/ColorPresetButtons.vue';
+import { useSettingsManager } from '@/composables/useSettingsManager';
+import { 
+  particlePresetOptions, 
+  interactionPresetOptions, 
+  defaultAnimationSettings,
+  heroFeatures as features,
+  getPresetStyleById 
+} from '@/assets/ts/animation/heroAnimationConstants';
+import type { AnimationSettings } from '@/assets/ts/animation/types';
 
 // Settings menu state
 const settingsOpen = ref(false);
+const isDarkMode = ref(false);
 
-// Default animation settings
-const defaultSettings = {
-  particleCount: 150,
-  maxDistance: 80,
-  mainParticleColor: '#FF0000',
-  interactionColor: '#00FFFF',
-  mouseRadius: 80
-};
+// Initialize the settings manager for visitor
+const { updateTheme, currentSettings } = useSettingsManager('visitor');
 
 // Animation settings - create a copy of default settings
-const settings = reactive({...defaultSettings});
-
-// Store user preferences in localStorage
-const saveSettings = () => {
-  localStorage.setItem('animation-settings', JSON.stringify(settings));
-};
-
-// Load saved settings if they exist
-const loadSettings = () => {
-  const savedSettings = localStorage.getItem('animation-settings');
-  if (savedSettings) {
-    const parsedSettings = JSON.parse(savedSettings);
-    Object.assign(settings, parsedSettings);
-  }
-};
-
-// Reset settings to defaults
-const resetSettings = () => {
-  Object.assign(settings, defaultSettings);
-  applySettings();
-};
+const settings = reactive<AnimationSettings>({...defaultAnimationSettings});
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const heroRootRef = ref<HTMLDivElement | null>(null);
 let particleNetworkInstance: ParticleNetwork | null = null;
 
+// Store user preferences in localStorage
+const saveSettings = () => {
+  const settingsToSave = {
+    particleCount: settings.particleCount,
+    maxDistance: settings.maxDistance,
+    mouseRadius: settings.mouseRadius,
+    mainParticleColor: settings.mainParticleColor,
+    interactionColor: settings.interactionColor,
+    selectedParticlePreset: settings.selectedParticlePreset,
+    selectedInteractionPreset: settings.selectedInteractionPreset
+  };
+  localStorage.setItem('animation-settings', JSON.stringify(settingsToSave));
+};
+
+// Initialize Particle Network
 const initParticleNetwork = () => {
   const canvas = canvasRef.value;
   const heroRoot = heroRootRef.value;
@@ -188,22 +165,20 @@ const initParticleNetwork = () => {
       particleNetworkInstance = new ParticleNetwork(canvas, heroRoot);
       
       // Apply current settings
-      if (particleNetworkInstance) {
-        particleNetworkInstance.updateSettings({
-          particleCount: settings.particleCount,
-          maxDistance: settings.maxDistance,
-          mainParticleColor: settings.mainParticleColor,
-          interactionColor: settings.interactionColor,
-          mouseRadius: settings.mouseRadius
-        });
-      }
+      particleNetworkInstance.updateSettings({
+        particleCount: settings.particleCount,
+        maxDistance: settings.maxDistance,
+        mouseRadius: settings.mouseRadius,
+        mainParticleColor: settings.mainParticleColor,
+        interactionColor: settings.interactionColor
+      });
       
       particleNetworkInstance.start();
     } catch (error) {
       console.error("Failed to initialize Particle Network:", error);
     }
   } else {
-      console.error("Canvas or Root element not found for Particle Network.");
+    console.error("Canvas or Root element not found for Particle Network.");
   }
 };
 
@@ -223,6 +198,42 @@ const applySettings = () => {
   }
 };
 
+// Watch for changes in the particle count slider
+watch(() => settings.particleCount, () => {
+  applySettings();
+});
+
+// Watch for changes in the max distance slider
+watch(() => settings.maxDistance, () => {
+  applySettings();
+});
+
+// Watch for changes in the mouse radius slider
+watch(() => settings.mouseRadius, () => {
+  applySettings();
+});
+
+// Watch for changes in the selected particle preset
+watch(() => settings.selectedParticlePreset, (newPresetId) => {
+  settings.mainParticleColor = getPresetStyleById(newPresetId, particlePresetOptions);
+  applySettings();
+}, { immediate: true });
+
+// Watch for changes in the selected interaction preset
+watch(() => settings.selectedInteractionPreset, (newPresetId) => {
+  settings.interactionColor = getPresetStyleById(newPresetId, interactionPresetOptions);
+  applySettings();
+}, { immediate: true });
+
+// Load saved settings if they exist
+const loadSettings = () => {
+  const savedSettings = localStorage.getItem('animation-settings');
+  if (savedSettings) {
+    const parsedSettings = JSON.parse(savedSettings);
+    Object.assign(settings, parsedSettings);
+  }
+};
+
 // Close settings menu when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
@@ -231,8 +242,41 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
+// Theme change observer
+let themeObserver: MutationObserver | null = null;
+
+// Update colors when theme changes and refresh particle network
+const updateThemeColors = () => {
+  // Update particle network with new settings
+  if (particleNetworkInstance) {
+    particleNetworkInstance.updateSettings({
+      mainParticleColor: settings.mainParticleColor,
+      interactionColor: settings.interactionColor
+    });
+  }
+};
+
+// Toggle dark mode using the settings manager
+const toggleDarkMode = () => {
+  const newTheme = isDarkMode.value ? 'light' : 'dark';
+  isDarkMode.value = !isDarkMode.value;
+  
+  // Use the settings manager to update theme - this will save to visitor settings
+  updateTheme(newTheme);
+};
+
 onMounted(() => {
-  // Load saved settings
+  // Get theme from settings manager
+  if (currentSettings.value && currentSettings.value.appearance) {
+    const currentTheme = currentSettings.value.appearance.theme;
+    // Set isDarkMode based on current theme from settings manager
+    isDarkMode.value = currentTheme === 'dark';
+  } else {
+    // Fallback: check for dark class
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  }
+  
+  // Load saved settings (will override defaults if they exist)
   loadSettings();
   
   // Initialize particle network with saved settings
@@ -240,6 +284,26 @@ onMounted(() => {
   
   // Add click outside listener
   document.addEventListener('click', handleClickOutside);
+  
+  // Set up observer for theme changes
+  themeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (
+        mutation.type === 'attributes' && 
+        (mutation.attributeName === 'class' || mutation.attributeName === 'data-theme')
+      ) {
+        // Update isDarkMode when class changes from outside this component
+        isDarkMode.value = document.documentElement.classList.contains('dark');
+        updateThemeColors();
+      }
+    });
+  });
+  
+  // Observe document element for class changes (dark/light mode)
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme']
+  });
 });
 
 onUnmounted(() => {
@@ -251,5 +315,11 @@ onUnmounted(() => {
   
   // Remove click outside listener
   document.removeEventListener('click', handleClickOutside);
+  
+  // Disconnect the theme observer
+  if (themeObserver) {
+    themeObserver.disconnect();
+    themeObserver = null;
+  }
 });
 </script>
