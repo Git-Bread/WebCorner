@@ -1,3 +1,8 @@
+<script setup lang="ts">
+import { ClientOnly } from '#components';
+
+</script>
+
 <template>
   <div class="w-full py-4 sm:py-8 bg-gradient-section-3 relative overflow-hidden border-t-4 border-b-4 border-shade-3-300" aria-labelledby="teams-heading">
     <div class="container mx-auto px-4 flex flex-col lg:flex-row items-center gap-6 sm:gap-8 lg:gap-16 relative z-10">
@@ -26,7 +31,12 @@
         </ul>
       </div>
       <div class="lg:w-1/2 order-1 lg:order-2 mb-6 lg:mb-0">
-        <img src="/images/REPLACE.png" alt="REPLACE" class="w-full h-full object-cover rounded-2xl" />
+        <ClientOnly>
+          <picture>
+            <source srcset="/images/GroupImage.webp" alt="Image of a group of people in a software project" type="image/webp" class="w-full h-full object-cover rounded-2xl" />
+            <img src="/images/GroupImage.jpg" alt="Image of a group of people in a software project" type="image/jpg" class="w-full h-full object-cover rounded-2xl" />
+          </picture>
+        </ClientOnly>
       </div>
     </div>
   </div>

@@ -3,26 +3,45 @@ import { type User as FirebaseUser } from 'firebase/auth';
 import { handleDatabaseError } from '~/utils/errorHandler';
 import { applyTheme, applyFontSize, applyAccessibilitySettings } from '~/utils/settingsUtils';
 
-// Define TypeScript types for our settings
-export interface AppearanceSettings {
-  theme: 'light' | 'dark' | 'system';
-  fontSize: 'small' | 'medium' | 'large' | 'extra-large';
+// const array for reuse
+export const themeOptions = ['light', 'dark', 'system'] as const;
+export type ThemeOption = typeof themeOptions[number];
+export const fontSizeOptions = ['small', 'medium', 'large', 'extra-large'] as const;
+export type FontSizeOption = typeof fontSizeOptions[number];
+
+// Font sizes available in the application with display names
+export const fontSizes = [
+  { name: 'Small', value: 'small' as FontSizeOption },
+  { name: 'Medium', value: 'medium' as FontSizeOption },
+  { name: 'Large', value: 'large' as FontSizeOption },
+  { name: 'X-Large', value: 'extra-large' as FontSizeOption }
+];
+
+// Type guards for validation and font size options, probaly not needed
+// but useful for type safety
+export function isValidTheme(theme: string): theme is ThemeOption {
+  return themeOptions.includes(theme as ThemeOption);
+}
+export function isValidFontSize(fontSize: string): fontSize is FontSizeOption {
+  return fontSizeOptions.includes(fontSize as FontSizeOption);
 }
 
+// Define TypeScript types
+export interface AppearanceSettings {
+  theme: ThemeOption;
+  fontSize: FontSizeOption;
+}
 export interface NotificationSettings {
   email: boolean;
   desktop: boolean;
 }
-
 export interface PrivacySettings {
   onlineStatus: boolean;
 }
-
 export interface AccessibilitySettings {
   disableAnimations: boolean;
   highContrast: boolean;
 }
-
 export interface UserSettings {
   appearance: AppearanceSettings;
   notifications: NotificationSettings;
@@ -49,6 +68,18 @@ export const defaultSettings: UserSettings = {
   }
 };
 
+// Default settings for visitor
+export const defaultVisitorSettings = {
+  appearance: {
+    theme: 'light' as ThemeOption, 
+    fontSize: 'medium' as FontSizeOption,
+  },
+  accessibility: {
+    disableAnimations: false,
+    highContrast: false,
+  }
+};
+
 export const useUserSettings = () => {
   const { firestore } = useFirebase();
   const { user } = useAuth();
@@ -57,6 +88,21 @@ export const useUserSettings = () => {
   const settings = useState<UserSettings>('userSettings', () => ({ ...defaultSettings }));
   const isLoading = useState<boolean>('settingsLoading', () => false);
   const error = useState<string | null>('settingsError', () => null);
+  
+  // Load visitor settings from localStorage
+  const loadVisitorSettings = () => {
+    if (import.meta.client && localStorage) {
+      try {
+        const savedSettings = localStorage.getItem('visitorSettings');
+        if (savedSettings) {
+          return JSON.parse(savedSettings);
+        }
+      } catch (e) {
+        console.error('Error loading visitor settings from localStorage:', e);
+      }
+    }
+    return { ...defaultVisitorSettings };
+  };
 
   // Load user settings from Firestore
   const loadSettings = async () => {
@@ -74,7 +120,7 @@ export const useUserSettings = () => {
         const userPreferences = userData?.settings?.userPreferences;
         
         if (userPreferences) {
-          // If we have stored preferences, use them
+          // If there are stored preferences, use them
           // Deep copy to avoid reference issues, and provide defaults for any missing properties
           settings.value = {
             appearance: { 
@@ -180,7 +226,7 @@ export const useUserSettings = () => {
     if (newUser) {
       await loadSettings();
       
-      // Apply settings to the application if we're on the client
+      // Apply settings to the application on the client
       if (import.meta.client) {
         applySettings();
       }
@@ -196,6 +242,13 @@ export const useUserSettings = () => {
     error,
     loadSettings,
     saveSettings,
-    applySettings
+    applySettings,
+    fontSizes,
+    themeOptions,
+    fontSizeOptions,
+    defaultVisitorSettings,
+    isValidTheme,
+    isValidFontSize,
+    loadVisitorSettings
   };
 };

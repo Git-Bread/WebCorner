@@ -28,7 +28,12 @@
         </ul>
       </div>
       <div class="lg:w-1/2 order-2 mb-6 lg:mb-0">
-        <img src="/images/REPLACE.png" alt="REPLACE" class="w-full h-full object-cover rounded-2xl" />
+        <ClientOnly>
+          <picture>
+            <source srcset="/images/ServerImage.webp" alt="Image of a representation of a server structure" type="image/webp" class="rounded-2xl" />
+            <img src="/images/ServerImage.jpg" alt="Image of a representation of a server structure"  type="image/jpg" class="rounded-2xl" />
+          </picture>
+        </ClientOnly>
       </div>
     </div>
   </div>

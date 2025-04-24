@@ -65,14 +65,14 @@
   <UserComponentsProfile v-if="profileOpen" @close="closeProfilePanel" />
 
   <!-- Settings Panel -->
-  <UserComponentsSettings v-if="settingsOpen" @close-settings="closeSettingsPanel" />
+  <SettingsMenu v-if="settingsOpen" mode="user" @close-settings="closeSettingsPanel" />
 </template>
 
 <script setup lang="ts">
 import { ClientOnly } from '#components';
 import { doc, getDoc } from 'firebase/firestore'
-import UserComponentsProfile from '~/components/userComponents/profile.vue';
-import UserComponentsSettings from '~/components/userComponents/settings.vue';
+import UserComponentsProfile from '~/components/userComponents/Profile.vue';
+import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 interface UserDocument {

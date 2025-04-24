@@ -68,3 +68,61 @@
     --gradient-section-2: linear-gradient(to bottom right, #ecfdf5, #d1fae5, #a7f3d0);
     --gradient-section-3: linear-gradient(to bottom right, #f5f3ff, #ede9fe, #ddd6fe);
 }
+
+/* Dark theme colors */
+html.dark {
+    /* Text and UI colors */
+    --color-text: #f3f4f6;            /* Main text color */
+    --color-text-muted: #9ca3af;      /* Secondary text, icons, placeholders */
+    --color-heading: #f9fafb;         /* Headings, buttons, emphasis */
+    --color-link: #818cf8;            /* Links, actions */
+    --color-link-hover: #a5b4fc;      /* Link hover state */
+    
+    /* Background colors */
+    --color-background: #111827;      /* Main background */
+    --color-surface: #1f2937;         /* Cards, sections, containers */
+    --color-border: #374151;          /* Borders, dividers */
+    
+    /* Action colors - keep the same as light theme for consistency */
+    --color-primary: var(--color-heading);  /* Primary actions - Same as heading color */
+    --color-secondary: #10b981;       /* Secondary actions */
+    --color-secondary-dark: #059669;  /* Secondary hover state */
+    
+    /* Status colors - keep the same as light theme for consistency with standard colors */
+    --color-success: #10b981;         /* Success messages, strong password */
+    --color-warning: #f59e0b;         /* Warnings, medium password */
+    --color-error: #ef4444;           /* Errors, weak password */
+    --color-error-light: #7f1d1d;     /* Error backgrounds - darker in dark mode */
+    --color-info: #3b82f6;            /* Information messages */
+    
+    /* Theme colors - slightly adjusted for dark mode to improve visibility */
+    --color-theme-primary: #60a5fa;   /* Primary theme color (previously blue) */
+    --color-theme-secondary: #a78bfa; /* Secondary theme color (previously indigo) */
+    --color-theme-tertiary: #34d399;  /* Tertiary theme color (previously green) */
+    --color-theme-quaternary: #f472b6;/* Quaternary theme color (previously pink) */
+    --color-theme-quinary: #c084fc;   /* Quinary theme color (previously purple) */
+
+    /* RGB versions for opacity variations */
+    --color-theme-primary-rgb: 96, 165, 250;   /* RGB for theme-primary */
+    --color-theme-secondary-rgb: 167, 139, 250; /* RGB for theme-secondary */
+    --color-theme-tertiary-rgb: 52, 211, 153;  /* RGB for theme-tertiary */
+    --color-theme-quaternary-rgb: 244, 114, 182; /* RGB for theme-quaternary */
+    --color-theme-quinary-rgb: 192, 132, 252;   /* RGB for theme-quinary */
+    
+    /* UI Component colors - adjusted for dark mode */
+    --color-ui-overlay: rgba(0, 0, 0, 0.75);              /* Overlay backgrounds */
+    --color-ui-accent: rgba(var(--color-theme-primary-rgb), 0.3);  /* UI accent elements */
+    --color-ui-control: rgba(var(--color-theme-tertiary-rgb), 0.8);  /* UI controls */
+
+    /* Gradients - adjusted for dark mode */
+    --gradient-hero: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary), var(--color-theme-tertiary));
+    --gradient-1: linear-gradient(to right, var(--color-theme-primary), var(--color-theme-secondary));
+    --gradient-2: linear-gradient(to right, var(--color-theme-tertiary), var(--color-info));
+    --gradient-3: linear-gradient(to right, var(--color-theme-quaternary), var(--color-theme-quinary));
+    --gradient-page: linear-gradient(to bottom right, #111827, #1f2937);
+    
+    /* Darker gradients for sections */
+    --gradient-section-1: linear-gradient(to bottom right, #172554, #1e3a8a, #1e40af);
+    --gradient-section-2: linear-gradient(to bottom right, #064e3b, #065f46, #047857);
+    --gradient-section-3: linear-gradient(to bottom right, #4c1d95, #5b21b6, #6d28d9);
+}
