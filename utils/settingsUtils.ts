@@ -18,21 +18,27 @@ export const getToggleThumbClasses = (isActive: boolean) => {
 };
 
 // Apply theme settings to the document
-export const applyTheme = (theme: 'light' | 'dark' | 'system') => {
+export const applyTheme = (theme: string) => {
   if (!import.meta.client) return;
   
-  if (theme === 'light') {
-    document.documentElement.classList.remove('dark');
-  } else if (theme === 'dark') {
+  // Reset all theme classes first
+  const themeClasses = ['dark', 'v-theme'];
+  themeClasses.forEach(cls => {
+    document.documentElement.classList.remove(cls);
+  });
+  
+  // Apply the selected theme
+  if (theme === 'dark') {
     document.documentElement.classList.add('dark');
-  } else {
+  } else if (theme === 'v-theme') {
+    document.documentElement.classList.add('v-theme');
+  } else if (theme === 'system') {
     // System preference
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
     }
   }
+  // If theme is 'light' or any other value, no class is needed
 };
 
 // Apply font size to the document

@@ -5,12 +5,19 @@
       'animate-slideInFromSide'
     ]">
     <div class="mr-3 flex-shrink-0">
-      <img :src="profileImage" class="rounded-full w-10 h-10 object-cover border-2":class="borderColorClass"/>
+      <img 
+        :src="profileImage" 
+        class="rounded-full w-10 h-10 object-cover border-2" 
+        :class="borderColorClass"
+      />
     </div>
     <div class="flex-1 min-w-0">
       <div class="flex items-center mb-1">
         <span class="font-medium" :class="userColorClass">{{ username }}</span> 
-        <span class="text-text-muted/50 ml-2">{{ formattedTime }}</span> 
+        <div class="text-text-muted ml-2 text-sm flex items-center">
+          <fa :icon="['fas', 'clock']" class="mr-1 text-xs" :class="userColorClass" />
+          <span>{{ formattedTime }}</span>
+        </div>
       </div>
       <div class="text-text break-words text-start">
         {{ message }}
@@ -47,7 +54,9 @@ const timestamp = ref(new Date());
 const formattedTime = computed(() => {
   const hours = timestamp.value.getHours();
   const minutes = timestamp.value.getMinutes();
-  return `${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const formattedHours = hours % 12 || 12; // Convert to 12-hour format
+  return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
 });
 
 const userColorClass = computed(() => {

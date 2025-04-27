@@ -4,7 +4,7 @@ import { handleDatabaseError } from '~/utils/errorHandler';
 import { applyTheme, applyFontSize, applyAccessibilitySettings } from '~/utils/settingsUtils';
 
 // const array for reuse
-export const themeOptions = ['light', 'dark'] as const;
+export const themeOptions = ['light', 'dark', 'v-theme'] as const;
 export type ThemeOption = typeof themeOptions[number];
 export const fontSizeOptions = ['small', 'medium', 'large', 'extra-large'] as const;
 export type FontSizeOption = typeof fontSizeOptions[number];

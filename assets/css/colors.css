@@ -141,3 +141,70 @@ html.dark {
     --gradient-section-2: linear-gradient(to bottom right, #064e3b, #065f46, #047857);
     --gradient-section-3: linear-gradient(to bottom right, #4c1d95, #5b21b6, #6d28d9);
 }
+
+/* V's Theme - Violet-based color scheme */
+html.v-theme {
+    /* Text and UI colors */
+    --color-text: #f8f5ff;            /* Light violet-tinted text for contrast */
+    --color-text-muted: #c4b5fd;      /* Soft violet for secondary text */
+    --color-heading: #ffffff;         /* Pure white for headings for strong contrast */
+    --color-link: #d8b4fe;            /* Light violet for links */
+    --color-link-hover: #f0abfc;      /* Pink-violet for link hover */
+    
+    /* Background colors */
+    --color-background: #2e1065;      /* Deep violet background */
+    --color-surface: #4c1d95;         /* Medium violet surface */
+    --color-border: #6d28d9;          /* Bright violet border */
+    
+    /* Action colors */
+    --color-primary: var(--color-heading);  /* Primary actions - Same as heading color */
+    --color-secondary: #a855f7;       /* Bright violet for secondary actions */
+    --color-secondary-dark: #9333ea;  /* Darker violet for hover states */
+    
+    /* Status colors - maintain consistency with standard alerts but with violet tints */
+    --color-success: #10b981;         /* Success - keeping green for universal recognition */
+    --color-warning: #f59e0b;         /* Warning - keeping amber for universal recognition */
+    --color-error: #f87171;           /* Error - slightly softer red */
+    --color-error-light: #581c87;     /* Error backgrounds - deep violet */
+    --color-info: #818cf8;            /* Information - soft indigo */
+    
+    /* Theme colors - violet spectrum dominance */
+    --color-theme-primary: #a78bfa;   /* Primary theme color - bright violet */
+    --color-theme-secondary: #c084fc; /* Secondary theme color - bright purple */
+    --color-theme-tertiary: #d8b4fe;  /* Tertiary theme color - light violet */
+    --color-theme-quaternary: #f0abfc;/* Quaternary theme color - pink-violet */
+    --color-theme-quinary: #f5d0fe;   /* Quinary theme color - very light pink-violet */
+
+    /* RGB versions for opacity variations */
+    --color-theme-primary-rgb: 167, 139, 250;   /* RGB for theme-primary */
+    --color-theme-secondary-rgb: 192, 132, 252; /* RGB for theme-secondary */
+    --color-theme-tertiary-rgb: 216, 180, 254;  /* RGB for theme-tertiary */
+    --color-theme-quaternary-rgb: 240, 171, 252; /* RGB for theme-quaternary */
+    --color-theme-quinary-rgb: 245, 208, 254;   /* RGB for theme-quinary */
+    --color-info-rgb: 129, 140, 248;            /* RGB for info color */
+    
+    /* UI Component colors - adjusted for violet theme */
+    --color-ui-overlay: rgba(46, 16, 101, 0.85);              /* Overlay backgrounds - deep violet with opacity */
+    --color-ui-accent: rgba(var(--color-theme-primary-rgb), 0.4);  /* UI accent elements */
+    --color-ui-control: rgba(var(--color-theme-tertiary-rgb), 0.9);  /* UI controls */
+    --color-ui-panel-bg: #3b0764;                             /* UI panel backgrounds - darker violet */
+    --color-ui-panel-shadow: rgba(0, 0, 0, 0.3);              /* UI panel shadows - darker shadow */
+    
+    /* Orbit system colors - adjusted for violet theme */
+    --color-orbit-central: rgba(var(--color-theme-primary-rgb), 0.5);  /* Central orbit border */
+    --color-orbit-inner: rgba(var(--color-theme-secondary-rgb), 0.4);  /* Inner orbit path */
+    --color-orbit-satellite: rgba(var(--color-theme-tertiary-rgb), 0.35);  /* Satellite orbit paths */
+    --color-orbit-shadow: rgba(var(--color-theme-primary-rgb), 0.3);  /* Orbit shadows */
+    
+    /* Gradients - adjusted for violet theme */
+    --gradient-hero: linear-gradient(to right, #a855f7, #d8b4fe, #f0abfc);
+    --gradient-1: linear-gradient(to right, #a78bfa, #c084fc);
+    --gradient-2: linear-gradient(to right, #d8b4fe, #f0abfc);
+    --gradient-3: linear-gradient(to right, #f5d0fe, #818cf8);
+    --gradient-page: linear-gradient(to bottom right, #2e1065, #4c1d95);
+    
+    /* Violet gradients for sections */
+    --gradient-section-1: linear-gradient(to bottom right, #4c1d95, #6d28d9, #7e22ce);
+    --gradient-section-2: linear-gradient(to bottom right, #581c87, #7e22ce, #9333ea);
+    --gradient-section-3: linear-gradient(to bottom right, #6b21a8, #8b5cf6, #a78bfa);
+}

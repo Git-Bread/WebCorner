@@ -29,6 +29,7 @@ defineProps<{
 defineEmits(['update:theme']);
 
 function getThemeName(theme: ThemeOption): string {
+  if (theme === 'v-theme') return "V's Theme";
   return theme.charAt(0).toUpperCase() + theme.slice(1);
 }
 </script>
