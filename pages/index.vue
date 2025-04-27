@@ -11,7 +11,7 @@
       <div class="hidden md:block w-full bg-background z-10 flex-grow">
         <div class="container mx-auto px-4 text-center">
           <div class="relative w-full mx-auto max-w-6xl">
-            <div class="flex flex-col md:flex-row items-center justify-center">
+            <div v-if="animationControl.animationsEnabled.value" class="flex flex-col md:flex-row items-center justify-center">
               <!-- Orbit System -->
               <div class="relative w-full md:flex-shrink-0">
                 <OrbitSystem @satellite-pulse="handleSatellitePulse" />
@@ -20,6 +20,16 @@
               <!-- Chat Box -->
               <div class="chat-box mb-8 z-10 items-start">
                 <ChatBox ref="chatBoxRef" />
+              </div>
+            </div>
+            <div v-else class="py-16 text-center">
+              <div class="bg-background rounded-lg p-8 shadow-md border border-border inline-block max-w-xl">
+                <div class="flex justify-center mb-4">
+                  <fa :icon="['fas', 'users']" class="text-theme-primary text-4xl mr-4" />
+                  <fa :icon="['fas', 'comments']" class="text-theme-secondary text-4xl" />
+                </div>
+                <h3 class="text-heading text-xl font-bold mb-3">Interactive Visualizations Hidden</h3>
+                <p class="text-text">The orbit system and chat visualizations are hidden for improved accessibility. You can enable animations in your accessibility settings.</p>
               </div>
             </div>
           </div>
@@ -65,6 +75,7 @@ import CustomizeWorkflow from '../components/index/CustomizeWorkflow.vue';
 import UserCounter from '../components/index/UserCounter.vue';
 import ConnectTeams from '~/components/index/ConnectTeams.vue';
 import DashboardAnimation from '~/components/index/DashboardAnimation.vue';
+import { animationControl } from '~/composables/decorative/useAnimationControl';
 
 // Refs for the chat box
 const chatBoxRef = ref<InstanceType<typeof ChatBox> | null>(null);

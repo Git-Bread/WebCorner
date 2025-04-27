@@ -28,15 +28,13 @@
       <SettingsTab 
         v-show="activeTab === 'appearance'" 
         title="Appearance">
-        <!-- Theme Selection -->
-        <ThemeSelector 
-          :model-value="settings.appearance.theme"
-          @update:theme="settingsManager.updateTheme" />
-        
-        <!-- Font Size -->
-        <FontSizeSelector 
-          :model-value="settings.appearance.fontSize"
-          @update:font-size="settingsManager.updateFontSize" />
+        <AppearanceTab 
+          :settings="{
+            appearance: settings.appearance,
+            accessibility: settings.accessibility
+          }"
+          @update:theme="settingsManager.updateTheme"
+          @update:fontSize="settingsManager.updateFontSize" />
       </SettingsTab>
 
       <!-- Notifications Tab (User Only) -->
@@ -111,6 +109,7 @@ import ToggleSwitch from '~/components/userComponents/ui/ToggleSwitch.vue';
 import ThemeSelector from '~/components/userComponents/ui/ThemeSelector.vue';
 import FontSizeSelector from '~/components/userComponents/ui/FontSizeSelector.vue';
 import SettingsTab from '~/components/userComponents/ui/SettingsTab.vue';
+import AppearanceTab from '~/components/userComponents/settings/AppearanceTab.vue';
 
 // Define props
 const props = defineProps({

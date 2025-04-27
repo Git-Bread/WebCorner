@@ -7,10 +7,10 @@
       <div class="absolute hidden md:block inset-0 overflow-hidden bottom-0" aria-hidden="true" role="presentation">
         <!-- First triangle with hover animation -->
         <div class="absolute w-[1200px] h-[1200px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-30 hover:scale-105 bg-theme-tertiary opacity-40"></div>
+        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-30 hover:scale-105 bg-theme-tertiary opacity-40 preserve-transform triangle-1"></div>
         <!-- Second triangle with hover animation -->
         <div class="absolute w-[1100px] h-[1100px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-80 hover:scale-105 bg-theme-secondary opacity-50"></div>
+        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-80 hover:scale-105 bg-theme-secondary opacity-50 preserve-transform triangle-2"></div>
       </div>
       <slot />
     </main>

@@ -61,6 +61,7 @@ export default defineNuxtConfig({
     '@/assets/css/font-size.css',
     '@/assets/css/icon-size.css',
     '@/assets/css/accessibility.css',
+    '@/assets/css/high-contrast.css',
   ],
   tailwindcss: {
     exposeConfig: false,

@@ -1,0 +1,224 @@
+/* High Contrast Theme */
+html.high-contrast {
+    /* Text and UI colors - Maximum contrast for readability */
+    --color-text: #000000;            /* Main text color - pure black */
+    --color-text-muted: #333333;      /* Secondary text - dark gray but still readable */
+    --color-heading: #000000;         /* Headings - pure black for emphasis */
+    --color-link: #0000CC;            /* Links - traditional blue with high contrast */
+    --color-link-hover: #0000FF;      /* Link hover - brighter blue */
+    
+    /* Background colors - clean, high contrast */
+    --color-background: #FFFFFF;      /* Main background - pure white */
+    --color-surface: #F5F5F5;         /* Cards, sections - very light gray */
+    --color-border: #000000;          /* Borders - pure black for visibility */
+    
+    /* Action colors - primary is bold blue, secondary is bold green */
+    --color-primary: #0000CC;         /* Primary actions - same as links */
+    --color-secondary: #008000;       /* Secondary actions - bold green */
+    --color-secondary-dark: #006600;  /* Secondary hover - darker green */
+    
+    /* Status colors - bold, recognizable, high contrast */
+    --color-success: #008000;         /* Success - bold green */
+    --color-warning: #CC6600;         /* Warning - dark orange */
+    --color-error: #CC0000;           /* Error - bold red */
+    --color-error-light: #FFCCCC;     /* Error backgrounds - light red */
+    --color-info: #0066CC;            /* Information - bold blue */
+    
+    /* Theme colors - bold primary colors for clear distinction */
+    --color-theme-primary: #0000CC;   /* Primary - bold blue */
+    --color-theme-secondary: #CC0000; /* Secondary - bold red */
+    --color-theme-tertiary: #008000;  /* Tertiary - bold green */
+    --color-theme-quaternary: #CC00CC;/* Quaternary - bold purple */
+    --color-theme-quinary: #CC6600;   /* Quinary - bold orange */
+
+    /* RGB versions for opacity variations */
+    --color-theme-primary-rgb: 0, 0, 204;      /* RGB for theme-primary */
+    --color-theme-secondary-rgb: 204, 0, 0;    /* RGB for theme-secondary */
+    --color-theme-tertiary-rgb: 0, 128, 0;     /* RGB for theme-tertiary */
+    --color-theme-quaternary-rgb: 204, 0, 204; /* RGB for theme-quaternary */
+    --color-theme-quinary-rgb: 204, 102, 0;    /* RGB for theme-quinary */
+    --color-info-rgb: 0, 102, 204;             /* RGB for info color */
+    
+    /* Interactive element states - bolder colors for orbit system */
+    --color-interactive-1-active: rgba(0, 0, 204, 0.6);        /* First interactive state active */
+    --color-interactive-1-highlight: rgba(0, 0, 204, 0.8);     /* First interactive state highlight */
+    --color-interactive-2-active: rgba(204, 0, 0, 0.6);        /* Second interactive state active */
+    --color-interactive-2-highlight: rgba(204, 0, 0, 0.8);     /* Second interactive state highlight */
+    --color-interactive-3-active: rgba(0, 128, 0, 0.6);        /* Third interactive state active */
+    --color-interactive-3-highlight: rgba(0, 128, 0, 0.8);     /* Third interactive state highlight */
+    
+    /* UI Component colors - high contrast for accessibility */
+    --color-ui-overlay: rgba(255, 255, 255, 0.95);              /* Overlay backgrounds - nearly opaque */
+    --color-ui-accent: rgba(0, 0, 204, 0.3);                    /* UI accent elements */
+    --color-ui-control: rgba(0, 128, 0, 0.8);                   /* UI controls */
+    --color-ui-panel-bg: #FFFFFF;                               /* UI panel backgrounds */
+    --color-ui-panel-shadow: rgba(0, 0, 0, 0.4);                /* UI panel shadows - more defined */
+    
+    /* Orbit system colors */
+    --color-orbit-central: rgba(0, 0, 0, 0.8);                  /* Central orbit border - nearly black */
+    --color-orbit-inner: rgba(0, 0, 0, 0.7);                    /* Inner orbit path - very dark */
+    --color-orbit-satellite: rgba(0, 0, 0, 0.6);                /* Satellite orbit paths - dark */
+    --color-orbit-shadow: rgba(0, 0, 0, 0.5);                   /* Orbit shadows - medium dark */
+    
+    /* Gradients - simplified, high contrast */
+    --gradient-hero: linear-gradient(to right, #0000CC, #CC0000);  /* Blue to Red */
+    --gradient-1: linear-gradient(to right, #0000CC, #0066CC);     /* Dark blue to blue */
+    --gradient-2: linear-gradient(to right, #008000, #0066CC);     /* Green to blue */
+    --gradient-3: linear-gradient(to right, #CC00CC, #CC6600);     /* Purple to orange */
+    --gradient-page: linear-gradient(to bottom right, #FFFFFF, #F5F5F5); /* White to very light gray */
+    
+    /* Section backgrounds - subtle but still accessible */
+    --gradient-section-1: linear-gradient(to bottom right, #E6E6FF, #CCCCFF); /* Very light blue */
+    --gradient-section-2: linear-gradient(to bottom right, #E6FFE6, #CCFFCC); /* Very light green */
+    --gradient-section-3: linear-gradient(to bottom right, #FFE6FF, #FFCCFF); /* Very light purple */
+
+    /* Enhanced focus indicators for keyboard navigation */
+    *:focus {
+        outline: 3px solid #0000CC !important;
+        outline-offset: 2px !important;
+    }
+    
+    /* Enhanced borders throughout the application */
+    .border {
+        border-width: 2px !important;
+    }
+    
+    /* Buttons with clearer borders */
+    button, .btn, [role="button"] {
+        border-width: 2px !important;
+    }
+    
+    /* Form fields with enhanced borders */
+    input, select, textarea {
+        border-width: 2px !important;
+        border-color: #000000 !important;
+    }
+    
+    /* Text selection */
+    ::selection {
+        background-color: #0000CC;
+        color: #FFFFFF;
+    }
+}
+
+/* Dark High Contrast Theme */
+html.high-contrast.dark {
+    /* Text and UI colors - maximum contrast for dark theme */
+    --color-text: #FFFFFF;            /* Main text color - pure white */
+    --color-text-muted: #CCCCCC;      /* Secondary text - light gray but still readable */
+    --color-heading: #FFFFFF;         /* Headings - pure white for emphasis */
+    --color-link: #55AAFF;            /* Links - bright blue with high contrast on dark */
+    --color-link-hover: #99CCFF;      /* Link hover - lighter blue */
+    
+    /* Background colors - dark with high contrast */
+    --color-background: #000000;      /* Main background - pure black */
+    --color-surface: #1A1A1A;         /* Cards, sections - very dark gray */
+    --color-border: #FFFFFF;          /* Borders - pure white for visibility */
+    
+    /* Action colors - bright on dark for maximum visibility */
+    --color-primary: #55AAFF;         /* Primary actions - bright blue */
+    --color-secondary: #55DD55;       /* Secondary actions - bright green */
+    --color-secondary-dark: #33AA33;  /* Secondary hover - slightly darker green */
+    
+    /* Status colors - bright, recognizable, high contrast on dark */
+    --color-success: #55DD55;         /* Success - bright green */
+    --color-warning: #FFAA33;         /* Warning - bright orange */
+    --color-error: #FF5555;           /* Error - bright red */
+    --color-error-light: #550000;     /* Error backgrounds - dark red */
+    --color-info: #55AAFF;            /* Information - bright blue */
+    
+    /* Theme colors - bright primary colors for dark background visibility */
+    --color-theme-primary: #55AAFF;   /* Primary - bright blue */
+    --color-theme-secondary: #FF5555; /* Secondary - bright red */
+    --color-theme-tertiary: #55DD55;  /* Tertiary - bright green */
+    --color-theme-quaternary: #FF55FF;/* Quaternary - bright purple */
+    --color-theme-quinary: #FFAA33;   /* Quinary - bright orange */
+
+    /* RGB versions for opacity variations */
+    --color-theme-primary-rgb: 85, 170, 255;   /* RGB for theme-primary */
+    --color-theme-secondary-rgb: 255, 85, 85;  /* RGB for theme-secondary */
+    --color-theme-tertiary-rgb: 85, 221, 85;   /* RGB for theme-tertiary */
+    --color-theme-quaternary-rgb: 255, 85, 255; /* RGB for theme-quaternary */
+    --color-theme-quinary-rgb: 255, 170, 51;   /* RGB for theme-quinary */
+    --color-info-rgb: 85, 170, 255;            /* RGB for info color */
+    
+    /* UI Component colors - high contrast for dark theme accessibility */
+    --color-ui-overlay: rgba(0, 0, 0, 0.95);              /* Overlay backgrounds - nearly opaque */
+    --color-ui-accent: rgba(85, 170, 255, 0.4);           /* UI accent elements */
+    --color-ui-control: rgba(85, 221, 85, 0.8);           /* UI controls */
+    --color-ui-panel-bg: #1A1A1A;                         /* UI panel backgrounds */
+    --color-ui-panel-shadow: rgba(0, 0, 0, 0.8);          /* UI panel shadows - more defined */
+    
+    /* Orbit system colors - brighter on dark */
+    --color-orbit-central: rgba(255, 255, 255, 0.8);      /* Central orbit border - nearly white */
+    --color-orbit-inner: rgba(255, 255, 255, 0.7);        /* Inner orbit path - very light */
+    --color-orbit-satellite: rgba(255, 255, 255, 0.6);    /* Satellite orbit paths - light */
+    --color-orbit-shadow: rgba(255, 255, 255, 0.4);       /* Orbit shadows - medium light */
+    
+    /* Gradients - simplified, high contrast for dark theme */
+    --gradient-hero: linear-gradient(to right, #55AAFF, #FF5555);  /* Blue to Red */
+    --gradient-1: linear-gradient(to right, #55AAFF, #99CCFF);     /* Blue to lighter blue */
+    --gradient-2: linear-gradient(to right, #55DD55, #55AAFF);     /* Green to blue */
+    --gradient-3: linear-gradient(to right, #FF55FF, #FFAA33);     /* Purple to orange */
+    --gradient-page: linear-gradient(to bottom right, #000000, #1A1A1A); /* Black to very dark gray */
+    
+    /* Section backgrounds - dark but contrasting */
+    --gradient-section-1: linear-gradient(to bottom right, #000033, #000066); /* Very dark blue */
+    --gradient-section-2: linear-gradient(to bottom right, #003300, #006600); /* Very dark green */
+    --gradient-section-3: linear-gradient(to bottom right, #330033, #660066); /* Very dark purple */
+    
+    /* Enhanced focus indicators for keyboard navigation in dark mode */
+    *:focus {
+        outline: 3px solid #55AAFF !important;
+        outline-offset: 2px !important;
+    }
+}
+
+/* Specific component overrides for both light and dark high contrast modes */
+html.high-contrast {
+    /* Enhance component outlines */
+    .shadow-lg, .shadow-md {
+        box-shadow: 0 0 0 2px var(--color-border) !important;
+    }
+    
+    /* Improve chat message contrast */
+    .message-bubble {
+        border: 2px solid var(--color-border) !important;
+    }
+    
+    /* Make buttons more prominent */
+    button, .btn, [role="button"] {
+        border: 2px solid currentColor !important;
+    }
+    
+    /* Improve form field visibility */
+    input, select, textarea {
+        background-color: var(--color-background) !important;
+        border: 2px solid var(--color-border) !important;
+    }
+    
+    /* Toggle switch enhancements */
+    .toggle-switch-track {
+        border: 2px solid var(--color-border) !important;
+    }
+    
+    /* Navigation emphasis */
+    .nav-link, .menu-item {
+        font-weight: bold !important;
+    }
+    
+    /* Table borders */
+    table, th, td {
+        border: 2px solid var(--color-border) !important;
+    }
+    
+    /* Card emphasis */
+    .card, .feature-card {
+        border: 2px solid var(--color-border) !important;
+    }
+    
+    /* Tab enhancements */
+    .border-b-2 {
+        border-width: 3px !important;
+    }
+}

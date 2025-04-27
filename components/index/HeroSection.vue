@@ -4,7 +4,7 @@
     <div class="bg-surface absolute inset-0 z-0" aria-hidden="true"> <!-- Removed incorrect closing div from previous edit -->
       <!-- Subtle backdrop for better particle visibility -->
       <div class="absolute inset-0 particle-backdrop"></div>
-      <canvas ref="canvasRef" class="absolute inset-0 w-full h-full block"></canvas>
+      <canvas ref="canvasRef" class="absolute inset-0 w-full h-full block" :class="{ 'hidden': !animationControl.animationsEnabled.value }"></canvas>
     </div> <!-- Correct closing div for background container -->
 
     <!-- Settings menu -->
@@ -121,6 +121,7 @@ import {
   getPresetStyleById 
 } from '@/assets/ts/animation/heroAnimationConstants';
 import type { AnimationSettings } from '@/assets/ts/animation/types';
+import { animationControl } from '~/composables/decorative/useAnimationControl';
 
 // Settings menu state
 const settingsOpen = ref(false);
@@ -135,6 +136,7 @@ const settings = reactive<AnimationSettings>({...defaultAnimationSettings});
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const heroRootRef = ref<HTMLDivElement | null>(null);
 let particleNetworkInstance: ParticleNetwork | null = null;
+let unregisterAnimation: (() => void) | null = null;
 
 // Store user preferences in localStorage
 const saveSettings = () => {
@@ -173,7 +175,24 @@ const initParticleNetwork = () => {
         interactionColor: settings.interactionColor
       });
       
-      particleNetworkInstance.start();
+      // Register with animation control system
+      if (unregisterAnimation) {
+        unregisterAnimation();
+      }
+      
+      unregisterAnimation = animationControl.registerAnimation({
+        start: () => {
+          if (particleNetworkInstance) particleNetworkInstance.start();
+        },
+        stop: () => {
+          if (particleNetworkInstance) particleNetworkInstance.stop();
+        }
+      });
+      
+      // Start animation only if animations are enabled
+      if (animationControl.animationsEnabled.value) {
+        particleNetworkInstance.start();
+      }
     } catch (error) {
       console.error("Failed to initialize Particle Network:", error);
     }
@@ -223,6 +242,17 @@ watch(() => settings.selectedParticlePreset, (newPresetId) => {
 watch(() => settings.selectedInteractionPreset, (newPresetId) => {
   settings.interactionColor = getPresetStyleById(newPresetId, interactionPresetOptions);
   applySettings();
+}, { immediate: true });
+
+// Watch for changes to animation enabled state and clear canvas when animations are disabled
+watch(() => animationControl.animationsEnabled.value, (enabled) => {
+  if (!enabled && canvasRef.value && particleNetworkInstance) {
+    // Clear the canvas when animations are disabled
+    const ctx = canvasRef.value.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
+    }
+  }
 }, { immediate: true });
 
 // Load saved settings if they exist
@@ -311,6 +341,12 @@ onUnmounted(() => {
   if (particleNetworkInstance) {
     particleNetworkInstance.stop();
     particleNetworkInstance = null;
+  }
+  
+  // Unregister from animation control system
+  if (unregisterAnimation) {
+    unregisterAnimation();
+    unregisterAnimation = null;
   }
   
   // Remove click outside listener

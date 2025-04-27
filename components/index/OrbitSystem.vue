@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full h-[800px] mt-4 mb-4 z-10 overflow-visible" aria-hidden="true">
+  <div v-if="animationControl.animationsEnabled.value" class="relative w-full h-[800px] mt-4 mb-4 z-10 overflow-visible" aria-hidden="true">
     <div class="central-orb shadow-xl">
       <!-- Logo inside central orb -->
       <div class="central-orb-logo">
@@ -93,11 +93,18 @@
       </div>
     </div>
   </div>
+  <div v-else class="w-full py-12 text-center">
+    <div class="bg-background rounded-lg p-8 shadow-md border border-border inline-block">
+      <fa :icon="['fas', 'satellite']" class="text-theme-primary text-4xl mb-3" />
+      <p class="text-text">Orbit visualization is hidden for improved accessibility.</p>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue';
 import SatellitePulse from '../../assets/ts/animation/satellite-pulse';
+import { animationControl } from '~/composables/decorative/useAnimationControl';
 
 const emit = defineEmits<{
   (e: 'satellitePulse', data: { profileImage: string, type: string }): void
@@ -105,9 +112,20 @@ const emit = defineEmits<{
 
 const pulseController = SatellitePulse.setup();
 
+let unregisterAnimation: (() => void) | null = null;
+
 // Start animations when component is mounted
 onMounted(() => {
-  pulseController.startAnimations();
+  // Register with animation control system
+  unregisterAnimation = animationControl.registerAnimation({
+    start: pulseController.startAnimations,
+    stop: pulseController.stopAnimations
+  });
+  
+  // Start animations if enabled
+  if (animationControl.animationsEnabled.value) {
+    pulseController.startAnimations();
+  }
   
   // Listen for satellite pulse events and forward them to parent
   pulseController.on('satellitePulse', (data: { profileImage: string, type: string }) => {
@@ -115,8 +133,11 @@ onMounted(() => {
   });
 });
 
-// Stop animations when component is unmounted
+// Stop animations and clean up when component is unmounted
 onBeforeUnmount(() => {
   pulseController.stopAnimations();
+  if (unregisterAnimation) {
+    unregisterAnimation();
+  }
 });
 </script>

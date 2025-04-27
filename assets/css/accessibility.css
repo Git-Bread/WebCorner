@@ -1,2 +1,54 @@
 /* Accessibility-related styles */
-/* TBD - High Contrast And Animation Ban */
+
+/* Animation Disabling */
+html.disable-animations * {
+  /* Disable CSS animations */
+  animation-duration: 0.001s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+
+  /* Disable CSS transitions */
+  transition-duration: 0.001s !important;
+  transition-delay: 0s !important;
+
+  /* Stop animations in progress */
+  animation-play-state: paused !important;
+
+  /* Prevent transforms that might be used in animations */
+  transform: none !important;
+
+  /* Stop scrolling animations */
+  scroll-behavior: auto !important;
+}
+
+/* Essential transforms and visibility exceptions for the triangles, their positioning is a bit weird */
+html.disable-animations .preserve-transform.triangle-1 {
+  bottom: -700px !important;
+  right: -700px !important;
+  transform: rotate(45deg) !important;
+}
+html.disable-animations .preserve-transform.triangle-2 {
+  bottom: -700px !important;
+  right: -630px !important;
+  transform: rotate(45deg) !important;
+}
+
+/* Ensure form elements are visible when animations are disabled */
+html.disable-animations .form-fade-in,
+html.disable-animations .form-field-1,
+html.disable-animations .form-field-2,
+html.disable-animations .form-field-3 {
+  opacity: 1 !important;
+}
+
+/* Ensure hero section elements are visible when animations are disabled */
+html.disable-animations .animate-title,
+html.disable-animations .animate-subtitle,
+html.disable-animations .animate-card-1,
+html.disable-animations .animate-card-2,
+html.disable-animations .animate-card-3,
+html.disable-animations .animate-buttons,
+html.disable-animations .feature-card {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}

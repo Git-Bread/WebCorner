@@ -15,7 +15,6 @@
       <div class="flex items-center mb-1">
         <span class="font-medium" :class="userColorClass">{{ username }}</span> 
         <div class="text-text-muted ml-2 text-sm flex items-center">
-          <fa :icon="['fas', 'clock']" class="mr-1 text-xs" :class="userColorClass" />
           <span>{{ formattedTime }}</span>
         </div>
       </div>
