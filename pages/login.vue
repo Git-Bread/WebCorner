@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 relative z-10 pb-28 form-fade-in">
+  <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-page">
+    <div class="max-w-md w-full space-y-8 relative z-10 form-fade-in bg-background p-8 rounded-lg shadow-lg">
       <h1 id="login-heading" class="mt-6 font-extrabold text-center text-heading">Sign in to your account</h1>
       
       <form class="mt-8 space-y-4" @submit.prevent="handleLogin" aria-labelledby="login-heading">
@@ -21,7 +21,7 @@
           </div>
           <div class="text-right">
             <!-- Forgot Password Button -->
-            <NuxtLink to="/forgot-password" class="text-link hover:underline hover:text-link-hover  mt-0">
+            <NuxtLink to="/forgot-password" class="text-link hover:text-link-hover hover:underline mt-0">
               Forgot your password?
             </NuxtLink>
           </div>

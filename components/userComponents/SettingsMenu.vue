@@ -105,7 +105,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { setupEscapeHandler } from '~/utils/settingsUtils';
 import { useSettingsManager } from '~/composables/useSettingsManager';
-import { type UserSettings } from '~/composables/useUserSettings';
 
 // Import UI components
 import ToggleSwitch from '~/components/userComponents/ui/ToggleSwitch.vue';

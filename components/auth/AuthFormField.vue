@@ -2,7 +2,7 @@
   <div :class="fieldClass">
     <label :for="id" class="block font-medium text-text">{{ label }}</label>
     <div class="flex items-center relative">
-      <fa :icon="['fas', icon]" class="text-text-muted absolute left-3 z-20" aria-hidden="true" />
+      <fa :icon="['fas', icon]" class="absolute left-3 z-20 text-theme-primary" aria-hidden="true" />
       <input 
         :id="id" 
         :name="name" 
@@ -39,7 +39,7 @@ defineProps({
   fieldClass: { type: String, default: '' },
   baseInputClass: {
     type: String,
-    default: 'appearance-none rounded relative block w-full px-3 py-2 border text-text focus:outline-none focus:z-10'
+    default: 'appearance-none rounded relative block w-full px-3 py-2 border bg-surface text-text focus:outline-none focus:z-10'
   },
   errorClass: {
     type: String,
@@ -47,7 +47,7 @@ defineProps({
   },
   normalClass: {
     type: String,
-    default: 'border-border placeholder-text-muted focus:ring-link focus:border-link'
+    default: 'border-border placeholder-text-muted dark:placeholder-opacity-70 focus:ring-theme-primary focus:border-theme-primary'
   }
 });
 

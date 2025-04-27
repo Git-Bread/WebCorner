@@ -1,7 +1,7 @@
 <template>
     <div class="relative" :class="fieldClass">
       <button type="submit" 
-        class="w-full flex justify-center items-center py-2 px-4 border border-transparent font-medium rounded-md text-background bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
+        class="w-full flex justify-center items-center py-2 px-4 border border-transparent font-medium rounded-md text-background bg-theme-primary hover:bg-theme-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-primary"
         :disabled="disabled || loading"
         :class="{ 'opacity-50 cursor-not-allowed': disabled || loading, 'submit-button-pulse': !disabled && !loading }"
         :aria-busy="loading"

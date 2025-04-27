@@ -1,20 +1,20 @@
 <template>
-  <div class="default-layout min-h-screen flex flex-col">
-    <HeadersNonAuthedHeader />
+  <div class="default-layout min-h-screen flex flex-col bg-gradient-page">
+    <HeadersNonAuthedHeader class="border-b border-border" />
     <ClientOnly>
-    <main class="flex-grow">      
+    <main class="flex-grow relative">      
       <!-- Decorative triangles (squares rotated 45deg) that extend offscreen -->
-      <div class="absolute inset-0 overflow-hidden" aria-hidden="true" role="presentation">
+      <div class="absolute hidden md:block inset-0 overflow-hidden bottom-0" aria-hidden="true" role="presentation">
         <!-- First triangle with hover animation -->
         <div class="absolute w-[1200px] h-[1200px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-30 hover:scale-105 bg-accent-1 opacity-40"></div>
+        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-30 hover:scale-105 bg-theme-tertiary opacity-40"></div>
         <!-- Second triangle with hover animation -->
         <div class="absolute w-[1100px] h-[1100px] transform rotate-45 translate-x-1/3 translate-y-1/3 
-        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-80 hover:scale-105 bg-accent-2 opacity-50"></div>
+        bottom-[-300px] right-[-300px] transition-all duration-700 hover:opacity-80 hover:scale-105 bg-theme-secondary opacity-50"></div>
       </div>
       <slot />
     </main>
-    <StandardFooter />
+    <StandardFooter class="relative z-10" />
     
     <!-- Settings Button -->
     <button 
