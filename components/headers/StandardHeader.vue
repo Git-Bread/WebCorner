@@ -44,9 +44,9 @@
             <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface"
             role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" @blur="closeMenu">
               <div class="py-1" role="none">
-                <button @click="toggleProfilePanel" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
+                <NuxtLink to="/profile" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
                   Your Profile
-                </button>
+                </NuxtLink>
                 <button @click="toggleSettingsPanel" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
                   Settings
                 </button>
@@ -61,9 +61,6 @@
     </div>
   </header>
 
-  <!-- Profile Panel -->
-  <UserComponentsProfile v-if="profileOpen" @close="closeProfilePanel" />
-
   <!-- Settings Panel -->
   <SettingsMenu v-if="settingsOpen" mode="user" @close-settings="closeSettingsPanel" />
 </template>
@@ -71,7 +68,6 @@
 <script setup lang="ts">
 import { ClientOnly } from '#components';
 import { doc, getDoc } from 'firebase/firestore'
-import UserComponentsProfile from '~/components/userComponents/Profile.vue';
 import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
@@ -85,8 +81,6 @@ const { user, logout, isAuthenticated } = useAuth()
 const menuOpen = ref(false)
 const userDoc = ref<UserDocument | null>(null)
 
-// Local state for Profile panel visibility
-const profileOpen = ref(false);
 // Local state for Settings panel visibility
 const settingsOpen = ref(false);
 
@@ -130,16 +124,6 @@ const closeMenu = () => {
   menuOpen.value = false
 }
 
-// Profile Panel show/close functions
-const toggleProfilePanel = () => {
-  profileOpen.value = !profileOpen.value;
-  menuOpen.value = false; // Close menu when toggling panel
-}
-
-const closeProfilePanel = () => {
-  profileOpen.value = false;
-}
-
 // Settings Panel toggle function
 const toggleSettingsPanel = () => {
   settingsOpen.value = !settingsOpen.value;
@@ -172,11 +156,8 @@ onMounted(() => {
   // Close panels with escape key
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      if (profileOpen.value) {
-        closeProfilePanel();
-      }
       if (settingsOpen.value) {
-        closeSettingsPanel(); // Use the new function here too
+        closeSettingsPanel();
       }
     }
   })

@@ -6,7 +6,9 @@ import {
   createUserWithEmailAndPassword, 
   browserLocalPersistence, 
   browserSessionPersistence,
-  setPersistence 
+  setPersistence,
+  sendEmailVerification,
+  reload
 } from 'firebase/auth'
 
 export const useAuth = () => {
@@ -146,11 +148,43 @@ export const useAuth = () => {
         }
       }),
       
-    register: (email: string, password: string) => authAction(async () => {await createUserWithEmailAndPassword(auth, email, password)}),
+    register: (email: string, password: string) => authAction(async () => {
+      // Create the user account
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Send verification email
+      if (userCredential.user) {
+        await sendEmailVerification(userCredential.user)
+      }
+      
+      return userCredential
+    }),
+    
     logout: () => authAction(async () => {
       await signOut(auth)
       localStorage.removeItem('lastActiveTime')
       localStorage.removeItem('rememberMe')
+    }),
+    
+    // New methods for email verification
+    sendVerificationEmail: () => authAction(async () => {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser)
+      } else {
+        throw new Error('No user is currently signed in')
+      }
+    }),
+    
+    refreshUserProfile: () => authAction(async () => {
+      if (auth.currentUser) {
+        await reload(auth.currentUser)
+        return auth.currentUser
+      }
+      throw new Error('No user is currently signed in')
+    }),
+    
+    isEmailVerified: computed(() => {
+      return user.value?.emailVerified || false
     })
   }
 }

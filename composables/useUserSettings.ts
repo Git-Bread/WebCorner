@@ -31,10 +31,6 @@ export interface AppearanceSettings {
   theme: ThemeOption;
   fontSize: FontSizeOption;
 }
-export interface NotificationSettings {
-  email: boolean;
-  desktop: boolean;
-}
 export interface PrivacySettings {
   onlineStatus: boolean;
 }
@@ -44,7 +40,6 @@ export interface AccessibilitySettings {
 }
 export interface UserSettings {
   appearance: AppearanceSettings;
-  notifications: NotificationSettings;
   privacy: PrivacySettings;
   accessibility: AccessibilitySettings;
 }
@@ -54,10 +49,6 @@ export const defaultSettings: UserSettings = {
   appearance: {
     theme: 'light',
     fontSize: 'medium',
-  },
-  notifications: {
-    email: true,
-    desktop: true,
   },
   privacy: {
     onlineStatus: true,
@@ -126,10 +117,6 @@ export const useUserSettings = () => {
             appearance: { 
               ...defaultSettings.appearance, 
               ...userPreferences.appearance 
-            },
-            notifications: { 
-              ...defaultSettings.notifications,
-              ...userPreferences.notifications 
             },
             privacy: { 
               ...defaultSettings.privacy, 

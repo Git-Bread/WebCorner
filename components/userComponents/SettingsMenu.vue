@@ -33,7 +33,6 @@
         :settings="tabSettings"
         @update:theme="settingsManager.updateTheme"
         @update:font-size="settingsManager.updateFontSize"
-        @update:notification="(key: keyof NotificationSettings, value: boolean) => settingsManager.updateNotificationSetting(key, value)"
         @update:privacy="(key: keyof PrivacySettings, value: boolean) => settingsManager.updatePrivacySetting(key, value)"
         @update:accessibility="(key: keyof AccessibilitySettings, value: boolean) => settingsManager.updateAccessibilitySetting(key, value)">
       </component>
@@ -62,7 +61,6 @@ import { setupEscapeHandler } from '~/utils/settingsUtils';
 import { useSettingsManager } from '~/composables/useSettingsManager';
 import { 
   type AccessibilitySettings, 
-  type NotificationSettings, 
   type PrivacySettings 
 } from '~/composables/useUserSettings';
 
@@ -72,16 +70,6 @@ import TabNavigation from '~/components/userComponents/ui/TabNavigation.vue';
 // Lazily load tab components with loading and error states
 const AppearanceTab = defineAsyncComponent({
   loader: () => import('~/components/userComponents/settings/AppearanceTab.vue'),
-  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
-  errorComponent: {
-    template: '<div class="text-red-500 p-4">Failed to load component</div>'
-  },
-  delay: 200,
-  timeout: 5000
-});
-
-const NotificationsTab = defineAsyncComponent({
-  loader: () => import('~/components/userComponents/settings/NotificationsTab.vue'),
   loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
   errorComponent: {
     template: '<div class="text-red-500 p-4">Failed to load component</div>'
@@ -134,7 +122,6 @@ const emit = defineEmits(['close-settings']);
 // Configure tabs based on mode
 const allTabs: TabConfig[] = [
   { id: 'appearance', name: 'Appearance', icon: 'palette', modes: ['visitor', 'user'], component: AppearanceTab },
-  { id: 'notifications', name: 'Notifications', icon: 'bell', modes: ['user'], component: NotificationsTab },
   { id: 'privacy', name: 'Privacy', icon: 'shield', modes: ['user'], component: PrivacyTab },
   { id: 'accessibility', name: 'Accessibility', icon: 'universal-access', modes: ['visitor', 'user'], component: AccessibilityTab }
 ];
@@ -168,10 +155,6 @@ const tabSettings = computed(() => {
       return {
         appearance: settings.value.appearance,
         accessibility: settings.value.accessibility
-      };
-    case 'notifications':
-      return {
-        notifications: userSettings.value.notifications || {}
       };
     case 'privacy':
       return {

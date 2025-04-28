@@ -5,7 +5,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const { isAuthenticated, waitForAuthReady } = useAuth()
   await waitForAuthReady()
   
-  const isPublicPage = ['/login', '/register', '/'].includes(to.path)
+  const isPublicPage = ['/login', '/register', '/forgot-password', '/'].includes(to.path)
 
   if (!isPublicPage && !isAuthenticated.value) {
     return navigateTo('/login', { replace: true })

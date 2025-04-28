@@ -149,12 +149,14 @@ const handleRegister = async () => {
       }
       
       await setDoc(doc(firestore, 'users', uid), userData)
-      showToast('Register successful! Redirecting...', 'success', 3000)
+      
+      // Show a notification about email verification
+      showToast('Registration successful! Please check your email to verify your account.', 'success', 5000)
       
       // Redirect to dashboard after registration
       setTimeout(() => {
         navigateTo('/dashboard')
-      }, 1000)
+      }, 2000)
     } catch (err) {
       generalError.value = handleDatabaseError(err)
     }

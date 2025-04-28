@@ -48,6 +48,13 @@ export default defineNuxtConfig({
         'save',
         'sun',
         'moon',
+        'comment-alt',
+        'key',
+        'trash-alt',
+        'arrow-left',
+        'pen',
+        'comment-alt',
+        'paper-plane',
       ],
       brands: [
         'Github', 
@@ -72,7 +79,9 @@ export default defineNuxtConfig({
   // since the transitions and authentication shenanigans generate alot of hydration errors and its not needed for SEO
   routeRules: {
     '/login': { ssr: false },
-    '/register': { ssr: false }
+    '/register': { ssr: false },
+    '/forgot-password': { ssr: false },
+    '/profile': { ssr: false },
   },
 
   // Add Firebase configuration
