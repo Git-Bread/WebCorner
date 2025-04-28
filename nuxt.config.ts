@@ -9,6 +9,7 @@ export default defineNuxtConfig({
     component: 'fa',
     icons: {
       // fontawsome icons, only the free tiers sadly, can use pro but it requires a license
+      // TODO CLEAN UP THIS LIST; ITS BAAAD
       solid: [
         'Users', 
         'Code', 
@@ -55,6 +56,7 @@ export default defineNuxtConfig({
         'pen',
         'comment-alt',
         'paper-plane',
+        'plus',
       ],
       brands: [
         'Github', 

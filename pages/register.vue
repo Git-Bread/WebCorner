@@ -141,7 +141,7 @@ const handleRegister = async () => {
         },
         components: {}
       }
-      
+
       // Validate and save user
       const userValidation = safeValidateUser(userData)
       if (!userValidation.success) {
