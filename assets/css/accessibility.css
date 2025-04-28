@@ -1,7 +1,7 @@
 /* Accessibility-related styles */
 
 /* Animation Disabling */
-html.disable-animations * {
+html.disable-animations *:not(.toggle-exempt) {
   /* Disable CSS animations */
   animation-duration: 0.001s !important;
   animation-delay: 0s !important;

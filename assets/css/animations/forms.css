@@ -7,7 +7,7 @@
   /* Form submit button pulse effect */
   @keyframes buttonPulse {
     0% {
-      box-shadow: 0 0 0 0 var(--color-decoration-1);
+      box-shadow: 0 0 0 0 var(--color-accent-1);
     }
     70% {
       box-shadow: 0 0 0 10px transparent;

@@ -3,9 +3,10 @@
     <span class="font-medium text-text">{{ label }}</span>
     <button 
       type="button" 
+      class="toggle-exempt"
       :class="getToggleTrackClasses(modelValue)" 
       @click="$emit('update:modelValue', !modelValue)">
-      <span :class="getToggleThumbClasses(modelValue)"></span>
+      <span class="toggle-exempt" :class="getToggleThumbClasses(modelValue)"></span>
     </button>
   </div>
 </template>

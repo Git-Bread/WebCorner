@@ -1,5 +1,12 @@
 <template>
-  <div class="fixed bottom-4 right-1 sm:right-4 p-4 rounded-lg shadow-lg bg-ui-panel border border-border w-full max-w-lg z-50">
+  <div 
+    class="fixed bottom-4 right-1 sm:right-4 p-4 rounded-lg shadow-lg bg-ui-panel border border-border w-full max-w-lg z-50"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="settings-title">
+    <!-- Header with title -->
+    <h2 id="settings-title" class="sr-only">Settings Menu</h2>
+    
     <!-- Close Button -->
     <button 
       @click="$emit('close-settings')"
@@ -9,78 +16,27 @@
     </button>
 
     <!-- Settings Navigation Tabs -->
-    <div class="mb-6 border-b border-border">
-      <div class="flex flex-wrap gap-2">
-        <button 
-          v-for="tab in filteredTabs" 
-          :key="tab.id" 
-          @click="activeTab = tab.id" 
-          :class="['px-3 py-2 font-medium focus:outline-none whitespace-nowrap border-b-2', 
-          activeTab === tab.id ? 'text-theme-primary border-theme-primary' : 'text-text hover:text-heading border-transparent']">
-          <fa :icon="['fas', tab.icon]" class="mr-1" aria-hidden="true" />{{ tab.name }}
-        </button>
-      </div>
-    </div>
+    <TabNavigation 
+      :tabs="filteredTabs" 
+      :active-tab="activeTab" 
+      @update:active-tab="activeTab = $event" />
 
     <!-- Content Area Wrapper with fixed height/width and overflow -->
-    <div class="h-[20em] overflow-y-auto overflow-x-auto">
-      <!-- Appearance Tab -->
-      <SettingsTab 
-        v-show="activeTab === 'appearance'" 
-        title="Appearance">
-        <AppearanceTab 
-          :settings="{
-            appearance: settings.appearance,
-            accessibility: settings.accessibility
-          }"
-          @update:theme="settingsManager.updateTheme"
-          @update:fontSize="settingsManager.updateFontSize" />
-      </SettingsTab>
-
-      <!-- Notifications Tab (User Only) -->
-      <SettingsTab 
-        v-show="activeTab === 'notifications'" 
-        title="Notifications">
-        <!-- Email Notifications -->
-        <ToggleSwitch 
-          label="Email Notifications"
-          :model-value="userSettings.notifications?.email"
-          @update:model-value="(value) => settingsManager.updateNotificationSetting('email', value)" />
-
-        <!-- Desktop Notifications -->
-        <ToggleSwitch 
-          label="Desktop Notifications"
-          :model-value="userSettings.notifications?.desktop" 
-          @update:model-value="(value) => settingsManager.updateNotificationSetting('desktop', value)" />
-      </SettingsTab>
-
-      <!-- Privacy Tab (User Only) -->
-      <SettingsTab 
-        v-show="activeTab === 'privacy'" 
-        title="Privacy">
-        <!-- Online Status -->
-        <ToggleSwitch 
-          label="Show Online Status"
-          :model-value="userSettings.privacy?.onlineStatus"
-          @update:model-value="(value) => settingsManager.updatePrivacySetting('onlineStatus', value)" />
-      </SettingsTab>
-
-      <!-- Accessibility Tab -->
-      <SettingsTab 
-        v-show="activeTab === 'accessibility'" 
-        title="Accessibility">
-        <!-- Disable Animations -->
-        <ToggleSwitch 
-          label="Disable Animations"
-          :model-value="settings.accessibility.disableAnimations"
-          @update:model-value="(value) => settingsManager.updateAccessibilitySetting('disableAnimations', value)" />
-
-        <!-- High Contrast -->
-        <ToggleSwitch 
-          label="High Contrast"
-          :model-value="settings.accessibility.highContrast" 
-          @update:model-value="(value) => settingsManager.updateAccessibilitySetting('highContrast', value)" />
-      </SettingsTab>
+    <div 
+      class="h-[20em] overflow-y-auto overflow-x-auto pr-2 pl-2"
+      role="tabpanel"
+      :id="`panel-${activeTab}`"
+      :aria-labelledby="`tab-${activeTab}`">
+      <!-- Dynamic Component Loading -->
+      <component 
+        :is="currentTabComponent" 
+        :settings="tabSettings"
+        @update:theme="settingsManager.updateTheme"
+        @update:font-size="settingsManager.updateFontSize"
+        @update:notification="(key: keyof NotificationSettings, value: boolean) => settingsManager.updateNotificationSetting(key, value)"
+        @update:privacy="(key: keyof PrivacySettings, value: boolean) => settingsManager.updatePrivacySetting(key, value)"
+        @update:accessibility="(key: keyof AccessibilitySettings, value: boolean) => settingsManager.updateAccessibilitySetting(key, value)">
+      </component>
     </div>
 
     <!-- Save Button (User Mode Only) -->
@@ -88,7 +44,8 @@
       <button 
         @click="settingsManager.saveUserSettings"
         :disabled="isSaving"
-        class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-background bg-theme-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-primary disabled:bg-opacity-50 disabled:cursor-not-allowed">
+        class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent font-medium rounded-md shadow-sm text-background bg-theme-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-primary disabled:bg-opacity-50 disabled:cursor-not-allowed"
+        aria-live="polite">
         <fa v-if="!isSaving" :icon="['fas', 'save']" class="mr-2" aria-hidden="true" />
         <span v-else class="mr-2 animate-spin">
           <fa :icon="['fas', 'spinner']" aria-hidden="true" />
@@ -100,16 +57,67 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue';
 import { setupEscapeHandler } from '~/utils/settingsUtils';
 import { useSettingsManager } from '~/composables/useSettingsManager';
+import { 
+  type AccessibilitySettings, 
+  type NotificationSettings, 
+  type PrivacySettings 
+} from '~/composables/useUserSettings';
 
 // Import UI components
-import ToggleSwitch from '~/components/userComponents/ui/ToggleSwitch.vue';
-import ThemeSelector from '~/components/userComponents/ui/ThemeSelector.vue';
-import FontSizeSelector from '~/components/userComponents/ui/FontSizeSelector.vue';
-import SettingsTab from '~/components/userComponents/ui/SettingsTab.vue';
-import AppearanceTab from '~/components/userComponents/settings/AppearanceTab.vue';
+import TabNavigation from '~/components/userComponents/ui/TabNavigation.vue';
+
+// Lazily load tab components with loading and error states
+const AppearanceTab = defineAsyncComponent({
+  loader: () => import('~/components/userComponents/settings/AppearanceTab.vue'),
+  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
+  errorComponent: {
+    template: '<div class="text-red-500 p-4">Failed to load component</div>'
+  },
+  delay: 200,
+  timeout: 5000
+});
+
+const NotificationsTab = defineAsyncComponent({
+  loader: () => import('~/components/userComponents/settings/NotificationsTab.vue'),
+  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
+  errorComponent: {
+    template: '<div class="text-red-500 p-4">Failed to load component</div>'
+  },
+  delay: 200,
+  timeout: 5000
+});
+
+const PrivacyTab = defineAsyncComponent({
+  loader: () => import('~/components/userComponents/settings/PrivacyTab.vue'),
+  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
+  errorComponent: {
+    template: '<div class="text-red-500 p-4">Failed to load component</div>'
+  },
+  delay: 200,
+  timeout: 5000
+});
+
+const AccessibilityTab = defineAsyncComponent({
+  loader: () => import('~/components/userComponents/settings/AccessibilityTab.vue'),
+  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
+  errorComponent: {
+    template: '<div class="text-red-500 p-4">Failed to load component</div>'
+  },
+  delay: 200,
+  timeout: 5000
+});
+
+// Define types for tab configuration
+interface TabConfig {
+  id: string;
+  name: string;
+  icon: string;
+  modes: string[];
+  component: Component;
+}
 
 // Define props
 const props = defineProps({
@@ -124,11 +132,11 @@ const props = defineProps({
 const emit = defineEmits(['close-settings']);
 
 // Configure tabs based on mode
-const allTabs = [
-  { id: 'appearance', name: 'Appearance', icon: 'palette', modes: ['visitor', 'user'] },
-  { id: 'notifications', name: 'Notifications', icon: 'bell', modes: ['user'] },
-  { id: 'privacy', name: 'Privacy', icon: 'shield', modes: ['user'] },
-  { id: 'accessibility', name: 'Accessibility', icon: 'universal-access', modes: ['visitor', 'user'] }
+const allTabs: TabConfig[] = [
+  { id: 'appearance', name: 'Appearance', icon: 'palette', modes: ['visitor', 'user'], component: AppearanceTab },
+  { id: 'notifications', name: 'Notifications', icon: 'bell', modes: ['user'], component: NotificationsTab },
+  { id: 'privacy', name: 'Privacy', icon: 'shield', modes: ['user'], component: PrivacyTab },
+  { id: 'accessibility', name: 'Accessibility', icon: 'universal-access', modes: ['visitor', 'user'], component: AccessibilityTab }
 ];
 
 // Filter tabs based on current mode
@@ -146,6 +154,37 @@ const settingsManager = useSettingsManager(props.mode as 'visitor' | 'user');
 const settings = computed(() => settingsManager.currentSettings.value);
 const userSettings = computed(() => settingsManager.userModeSettings.value);
 const isSaving = computed(() => settingsManager.isSaving.value);
+
+// Determine the current tab component dynamically
+const currentTabComponent = computed(() => {
+  const tab = allTabs.find(t => t.id === activeTab.value);
+  return tab?.component || null;
+});
+
+// Prepare settings to pass to the current tab
+const tabSettings = computed(() => {
+  switch (activeTab.value) {
+    case 'appearance':
+      return {
+        appearance: settings.value.appearance,
+        accessibility: settings.value.accessibility
+      };
+    case 'notifications':
+      return {
+        notifications: userSettings.value.notifications || {}
+      };
+    case 'privacy':
+      return {
+        privacy: userSettings.value.privacy || {}
+      };
+    case 'accessibility':
+      return {
+        accessibility: settings.value.accessibility || {}
+      };
+    default:
+      return {};
+  }
+});
 
 // Setup and cleanup keyboard event handler for Escape key
 let cleanupEscHandler: (() => void) | undefined;

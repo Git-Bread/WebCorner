@@ -7,7 +7,7 @@
       <ToggleSwitch 
         label="Show Online Status"
         :model-value="settings.privacy.onlineStatus"
-        @update:model-value="updateSetting('onlineStatus', $event)" />
+        @update:model-value="(value) => $emit('update:privacy', 'onlineStatus', value)" />
     </div>
   </div>
 </template>
@@ -15,14 +15,17 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
 import { type PrivacySettings } from '~/composables/useUserSettings';
+import ToggleSwitch from '~/components/userComponents/ui/ToggleSwitch.vue';
 
-const props = defineProps<{
-  settings: { privacy: PrivacySettings };
+interface PrivacyTabProps {
+  settings: {
+    privacy: PrivacySettings;
+  };
+}
+
+const props = defineProps<PrivacyTabProps>();
+
+defineEmits<{
+  'update:privacy': [key: keyof PrivacySettings, value: boolean];
 }>();
-
-const emit = defineEmits(['update:setting']);
-
-const updateSetting = (key: keyof PrivacySettings, value: boolean) => {
-  emit('update:setting', { key, value });
-};
 </script>

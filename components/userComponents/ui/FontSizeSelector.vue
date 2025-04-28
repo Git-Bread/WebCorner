@@ -1,11 +1,12 @@
 <template>
   <div>
-    <label class="block font-medium text-text mb-1">Font Size</label>
-    <div class="flex space-x-2">
+    <label class="block font-medium text-text mb-1" id="font-size-label">Font Size</label>
+    <div class="flex space-x-2" role="group" aria-labelledby="font-size-label">
       <button 
         v-for="size in fontSizes" 
         :key="size.value"
-        @click="$emit('update:fontSize', size.value)"
+        @click="$emit('update:font-size', size.value)"
+        :aria-pressed="modelValue === size.value"
         :class="[
           'p-3 border rounded-md w-24 h-24 flex flex-col items-center justify-center',
           modelValue === size.value 
@@ -29,7 +30,9 @@ defineProps<{
   modelValue: FontSizeOption;
 }>();
 
-defineEmits(['update:fontSize']);
+defineEmits<{
+  'update:font-size': [fontSize: FontSizeOption];
+}>();
 
 // Function to get the appropriate CSS class for each font size option
 const getFontSizeClass = (size: FontSizeOption) => {

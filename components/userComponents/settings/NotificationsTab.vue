@@ -7,13 +7,13 @@
       <ToggleSwitch 
         label="Email Notifications"
         :model-value="settings.notifications.email"
-        @update:model-value="updateSetting('email', $event)" />
+        @update:model-value="(value) => $emit('update:notification', 'email', value)" />
 
       <!-- Desktop Notifications -->
       <ToggleSwitch 
         label="Desktop Notifications"
         :model-value="settings.notifications.desktop" 
-        @update:model-value="updateSetting('desktop', $event)" />
+        @update:model-value="(value) => $emit('update:notification', 'desktop', value)" />
     </div>
   </div>
 </template>
@@ -21,14 +21,17 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue';
 import { type NotificationSettings } from '~/composables/useUserSettings';
+import ToggleSwitch from '~/components/userComponents/ui/ToggleSwitch.vue';
 
-const props = defineProps<{
-  settings: { notifications: NotificationSettings };
+interface NotificationsTabProps {
+  settings: {
+    notifications: NotificationSettings;
+  };
+}
+
+const props = defineProps<NotificationsTabProps>();
+
+defineEmits<{
+  'update:notification': [key: keyof NotificationSettings, value: boolean];
 }>();
-
-const emit = defineEmits(['update:setting']);
-
-const updateSetting = (key: keyof NotificationSettings, value: boolean) => {
-  emit('update:setting', { key, value });
-};
 </script>

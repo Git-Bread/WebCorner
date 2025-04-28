@@ -30,7 +30,7 @@ import { useUserSettings, type ThemeOption } from '~/composables/useUserSettings
 
 const { themeOptions } = useUserSettings();
 
-defineProps<{
+const props = defineProps<{
   modelValue: ThemeOption;
   disabled?: boolean;
 }>();

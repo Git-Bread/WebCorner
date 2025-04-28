@@ -108,16 +108,16 @@ export const useSettingsManager = (mode: 'visitor' | 'user') => {
   };
 
   // Update notification settings (user mode only)
-  const updateNotificationSetting = (key: string, value: boolean) => {
+  const updateNotificationSetting = (key: keyof typeof userModeSettings.value.notifications, value: boolean) => {
     if (mode === 'user') {
-      userModeSettings.value.notifications[key as keyof typeof userModeSettings.value.notifications] = value;
+      userModeSettings.value.notifications[key] = value;
     }
   };
 
   // Update privacy settings (user mode only)
-  const updatePrivacySetting = (key: string, value: boolean) => {
+  const updatePrivacySetting = (key: keyof typeof userModeSettings.value.privacy, value: boolean) => {
     if (mode === 'user') {
-      userModeSettings.value.privacy[key as keyof typeof userModeSettings.value.privacy] = value;
+      userModeSettings.value.privacy[key] = value;
     }
   };
 
