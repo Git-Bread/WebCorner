@@ -66,7 +66,32 @@
       <div>
         <label class="block text-heading font-medium mb-2 text-sm">Select Profile Image</label>
         <div class="grid grid-cols-4 sm:grid-cols-6 gap-3">
-          <div v-for="image in profileImages" :key="image" @click="selectProfileImage(image)"
+          <!-- Loading state for user images -->
+          <div v-if="isLoadingUserImages" class="col-span-4 sm:col-span-6 flex justify-center py-2">
+            <div class="flex items-center space-x-2">
+              <fa :icon="['fas', 'spinner']" class="animate-spin text-theme-primary" />
+              <span class="text-text-muted text-sm">Loading your saved images...</span>
+            </div>
+          </div>
+          
+          <!-- User's custom saved images (shown first) -->
+          <template v-if="userCustomImages.length > 0">
+            <div v-for="image in userCustomImages" :key="image" @click="selectProfileImage(image)"
+              class="w-16 h-16 rounded-full overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 relative"
+              :class="profileData.profileImage === image ? 'border-theme-primary' : 'border-transparent'">
+              <img :src="image" alt="Your saved image" class="w-full h-full object-cover" />
+            </div>
+          </template>
+          
+          <!-- Separator between user and default images -->
+          <div v-if="userCustomImages.length > 0" class="col-span-4 sm:col-span-6 pt-1 pb-2">
+            <div class="border-t border-border relative">
+              <span class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-text-muted text-xs">Default options</span>
+            </div>
+          </div>
+          
+          <!-- Default profile images -->
+          <div v-for="image in defaultProfileImages" :key="image" @click="selectProfileImage(image)"
             class="w-16 h-16 rounded-full overflow-hidden border-2 cursor-pointer transition-all hover:scale-105"
             :class="profileData.profileImage === image ? 'border-theme-primary' : 'border-transparent'">
             <img :src="image" alt="Profile option" class="w-full h-full object-cover" />
@@ -89,20 +114,22 @@
                   @change="handleFileUpload" class="hidden" />
           </div>
           
-          <!-- Preview custom image if present -->
-          <div v-if="profileData.profileImage && !profileImages.includes(profileData.profileImage)" 
-               class="w-16 h-16 rounded-full overflow-hidden border-2 border-theme-primary cursor-pointer transition-all">
-            <img :src="profileData.profileImage" alt="Custom profile image" class="w-full h-full object-cover" />
-          </div>
+          <!-- Preview custom image section removed -->
         </div>
         
         <!-- Error message for image upload -->
         <p v-if="uploadError" class="text-error text-xs mt-2">{{ uploadError }}</p>
         
-        <!-- Image requirements -->
-        <p class="text-text-muted text-xs mt-2">
-          Supported formats: JPEG, PNG, WebP. Maximum size: {{ maxSizeInMB }}.
-        </p>
+        <!-- Image requirements and limits -->
+        <div class="flex justify-between items-center mt-2">
+          <p class="text-text-muted text-xs">
+            Supported formats: JPEG, PNG, WebP. Max size: {{ maxSizeInMB }}MB.
+          </p>
+          <p class="text-text-muted text-xs">
+            <fa :icon="['fas', 'info-circle']" class="mr-1" />
+            Limit: {{ userCustomImages.length }}/5 images
+          </p>
+        </div>
       </div>
       
       <!-- Bio section -->
@@ -134,11 +161,14 @@ const { user } = useAuth();
 const { 
   profileData,
   profileImages, 
+  defaultProfileImages, // Added for access to default images separately
+  userCustomImages, // Added for access to user's custom images
   isEditing,
   isSaving,
   isEmailVerified,
   isResendingEmail,
   isImageUploading,
+  isLoadingUserImages, // Added loading state for user images
   saveProfile,
   selectProfileImage,
   uploadCustomImage,
@@ -148,7 +178,7 @@ const {
 // For file upload
 const fileInput = ref<HTMLInputElement | null>(null);
 const uploadError = ref<string | null>(null);
-const maxSizeInMB = 5;
+const maxSizeInMB = 5; // Setting to 5MB to match upload limit in useProfile.ts
 
 // Open file dialog
 function triggerFileInput() {

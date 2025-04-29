@@ -105,3 +105,59 @@ export function handleDatabaseError(error: any): string {
       return 'An error occurred while saving your information. Please try again';
   }
 }
+
+/**
+ * Handles Firebase Storage errors for image upload operations
+ */
+export function handleStorageError(error: any): string {
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Storage error:', error)
+  }
+
+  const errorCode = typeof error === 'object' && error?.code 
+    ? error.code
+    : 'unknown-error';
+  
+  const errorMessage = error?.message || '';
+  
+  switch (true) {
+    // Permission errors
+    case errorCode.includes('storage/unauthorized'):
+    case errorMessage.includes('permission-denied'):
+    case errorMessage.includes('PERMISSION_DENIED'):
+      return 'You do not have permission to upload this file';
+      
+    // User quota exceeded
+    case errorCode.includes('storage/quota-exceeded'):
+      return 'Storage quota exceeded. Please contact support';
+    
+    // Invalid file issues
+    case errorCode.includes('storage/invalid-format'):
+      return 'The specified file format is not supported';
+      
+    // Network issues
+    case errorCode.includes('storage/network-error'):
+    case errorCode.includes('storage/server-error'):
+      return 'Network connection problem. Please check your internet connection';
+      
+    // Canceled uploads
+    case errorCode.includes('storage/canceled'):
+      return 'Upload was canceled';
+      
+    // Retry limit exceeded
+    case errorCode.includes('storage/retry-limit-exceeded'):
+      return 'Upload failed repeatedly. Please try again later';
+      
+    // Invalid file name or path
+    case errorCode.includes('storage/invalid-path'):
+      return 'Invalid file path specified';
+      
+    // File size issues
+    case errorCode.includes('storage/blob-too-large'):
+      return 'File size exceeds the allowed limit';
+      
+    // Default fallback
+    default:
+      return 'An error occurred during file upload. Please try again';
+  }
+}

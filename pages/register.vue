@@ -41,12 +41,13 @@ import { ref, computed, nextTick } from 'vue'
 import { userSchema, safeValidateUser } from '~/schemas/userSchemas'
 import { doc, setDoc } from 'firebase/firestore'
 import { showToast } from '~/utils/toast'
-import { getRandomProfileImage } from '~/utils/profileImageUtils'
+import { getRandomProfileImage } from '~/utils/imageUtils/randomImageUtil'
 import { handleAuthError, handleDatabaseError } from '~/utils/errorHandler'
 import { calculatePasswordStrength, validatePassword } from '~/utils/passwordUtils'
 import useFormValidation from '~/composables/useFormValidation'
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue'
 import { defaultSettings } from '~/composables/useUserSettings'
+import { useSettingsManager } from '~/composables/useSettingsManager'
 
 definePageMeta({ layout: 'auth' })
 
@@ -128,6 +129,25 @@ const handleRegister = async () => {
       
       if (!uid) throw new Error('User ID not found after registration')
       
+      // Get visitor settings from localStorage if they exist
+      const visitorSettingsManager = useSettingsManager('visitor');
+      const visitorPrefs = visitorSettingsManager.visitorSettings.value;
+      
+      // Create user settings by merging default settings with visitor preferences
+      const mergedSettings = {
+        ...defaultSettings,
+        appearance: {
+          ...defaultSettings.appearance,
+          // Transfer the theme if it exists in visitor settings
+          ...(visitorPrefs?.appearance?.theme && { theme: visitorPrefs.appearance.theme })
+        },
+        accessibility: {
+          ...defaultSettings.accessibility,
+          // Transfer any accessibility settings that exist
+          ...(visitorPrefs?.accessibility && visitorPrefs.accessibility)
+        }
+      };
+      
       // Prepare user data according to userSchema
       const userData = {
         id: uid,
@@ -139,7 +159,7 @@ const handleRegister = async () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         settings: {
-          userPreferences: defaultSettings
+          userPreferences: mergedSettings
         },
         components: {}
       }

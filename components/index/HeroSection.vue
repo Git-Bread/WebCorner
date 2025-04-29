@@ -8,7 +8,7 @@
     </div> <!-- Correct closing div for background container -->
 
     <!-- Settings menu -->
-    <div class="absolute top-4 right-2 sm:right-4 flex space-x-2 z-10 settings-menu">
+    <div class="absolute top-4 right-2 sm:right-4 flex space-x-2 z-20 settings-menu"> <!-- Increased z-index to z-20 -->
       <!-- Dark mode toggle button -->
       <button @click="toggleDarkMode" aria-label="Toggle dark mode" 
         class="bg-ui-overlay hover:bg-background text-heading p-3 rounded-full shadow-md transition-all duration-300 hover:scale-110"
@@ -24,7 +24,7 @@
       </button>
       
       <!-- Settings submenu -->
-      <div v-if="settingsOpen" class="absolute top-full right-0 mt-2 bg-background rounded-lg shadow-lg p-4 z-20 w-64 animate-fade-in border border-border">
+      <div v-if="settingsOpen" class="absolute top-full right-0 mt-2 bg-background rounded-lg shadow-lg p-4 z-50 w-64 animate-fade-in border border-border">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-border">
           <h3 class="font-bold text-heading">Animation Settings</h3>
           <button @click="settingsOpen = false" aria-label="Close" class="text-text-muted hover:text-heading">

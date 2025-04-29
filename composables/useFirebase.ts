@@ -1,9 +1,10 @@
 export const useFirebase = () => {
-    const { $firebase, $auth, $firestore } = useNuxtApp()
+    const { $firebase, $auth, $firestore, $storage } = useNuxtApp()
     
     return {
       firebase: $firebase,
       auth: $auth,
-      firestore: $firestore
+      firestore: $firestore,
+      storage: $storage
     }
   }

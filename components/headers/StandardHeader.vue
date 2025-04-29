@@ -32,7 +32,7 @@
             <div>
               <button @click="toggleMenu" type="button" class="flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-link rounded-full" aria-expanded="false">
                 <!-- Use tempProfileImage when in edit mode, otherwise use userPhotoUrl -->
-                <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 hover:border-accent-1">
+                <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 border-border hover:border-accent-1">
                   <ClientOnly>
                     <img :src="isEditing && tempProfileImage ? tempProfileImage : userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
                   </ClientOnly>
@@ -41,16 +41,16 @@
             </div>
             
             <!-- Profile dropdown menu -->
-            <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface"
+            <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface dark:bg-surface border border-border"
             role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" @blur="closeMenu">
               <div class="py-1" role="none">
-                <NuxtLink :to="isOnProfilePage ? '/dashboard' : '/profile'" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
+                <NuxtLink :to="isOnProfilePage ? '/dashboard' : '/profile'" class="block px-4 py-2 text-sm text-text hover:bg-background dark:hover:bg-background transition-colors" role="menuitem">
                   {{ isOnProfilePage ? 'Back to Dashboard' : 'Your Profile' }}
                 </NuxtLink>
-                <button @click="toggleSettingsPanel" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
+                <button @click="toggleSettingsPanel" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background dark:hover:bg-background transition-colors" role="menuitem">
                   Settings
                 </button>
-                <button @click="handleLogout" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
+                <button @click="handleLogout" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background dark:hover:bg-background transition-colors" role="menuitem">
                   Sign out
                 </button>
               </div>

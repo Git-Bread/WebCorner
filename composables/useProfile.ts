@@ -4,7 +4,10 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { showToast } from '~/utils/toast'
 import { handleAuthError } from '~/utils/errorHandler'
 import { validatePassword, validatePasswordsMatch } from '~/utils/passwordUtils'
-import { useImageUpload } from '~/utils/imageUploadUtils'
+import { useImageUpload } from '~/utils/imageUtils/imageUploadUtils'
+import { getUserImages } from '~/utils/imageUtils/imageLimitUtil'
+import { getDownloadURL } from 'firebase/storage'
+import { formatDate } from '~/utils/dateUtil'
 
 // Define type for user document
 interface UserDocument {
@@ -17,13 +20,14 @@ interface UserDocument {
 
 export const useProfile = () => {
   const { user } = useAuth()
-  const { firestore, auth } = useFirebase()
+  const { firestore, auth, storage } = useFirebase()
   const { uploadImage, isUploading, uploadError } = useImageUpload()
 
   // shared UI state
   const isEditing = useState('profile-isEditing', () => false)
   const isSaving = useState('profile-isSaving', () => false)
   const isImageUploading = useState('profile-isImageUploading', () => false)
+  const isLoadingUserImages = useState('profile-isLoadingUserImages', () => false)
 
   // shared data state
   const userName = useState('profile-userName', () => '')
@@ -47,8 +51,8 @@ export const useProfile = () => {
     confirmPassword: ''
   })
 
-  // Available profile images
-  const profileImages = [
+  // Available profile images (default + user saved images)
+  const defaultProfileImages = [
     '/images/Profile_Pictures/fox_profile.webp',
     '/images/Profile_Pictures/coldfox_profile.webp',
     '/images/Profile_Pictures/eagle_profile.webp',
@@ -61,6 +65,49 @@ export const useProfile = () => {
     '/images/Profile_Pictures/orangebird_profile.webp',
     '/images/Profile_Pictures/parrot_profile.webp'
   ]
+  
+  // User's custom uploaded profile images from Firebase Storage
+  const userCustomImages = useState('profile-userCustomImages', () => [] as string[])
+  
+  // Combined profile images (default + user custom)
+  const profileImages = computed(() => {
+    return [...userCustomImages.value, ...defaultProfileImages]
+  })
+  
+  // Fetch user's custom images from Firebase Storage
+  async function fetchUserCustomImages() {
+    if (!user.value || !storage) return
+    
+    isLoadingUserImages.value = true
+    
+    try {
+      // Get the path for this user's profile images
+      const userImagesPath = `profile_pictures/${user.value.uid}`
+      
+      // Get the list of image references
+      const userImagesData = await getUserImages(storage, userImagesPath)
+      
+      // Get download URLs for all images
+      const imageUrls = await Promise.all(
+        userImagesData.map(async (imageData) => {
+          try {
+            // Get download URL directly from StorageReference
+            return await getDownloadURL(imageData.ref)
+          } catch (error) {
+            console.error(`Error getting download URL for ${imageData.ref.fullPath}:`, error)
+            return null
+          }
+        })
+      )
+      
+      // Filter out any nulls and update the state
+      userCustomImages.value = imageUrls.filter((url): url is string => url !== null)
+    } catch (error) {
+      console.error('Error fetching user images:', error)
+    } finally {
+      isLoadingUserImages.value = false
+    }
+  }
 
   // Calculate profile completion percentage - recalculates when relevant data changes
   const profileCompletionPercentage = computed(() => {
@@ -104,6 +151,9 @@ export const useProfile = () => {
           bio: userDoc.value.bio || '',
           profileImage: userDoc.value.profile_image_url || ''
         }
+        
+        // Load user's custom images
+        await fetchUserCustomImages()
       }
     } catch (error) {
       console.error('Error loading user data:', error)
@@ -172,7 +222,7 @@ export const useProfile = () => {
       const downloadURL = await uploadImage(
         file, 
         `profile_pictures/${user.value.uid}`,
-        2, // 2MB max
+        5, // 5MB max (increased from 2MB)
         ['image/jpeg', 'image/png', 'image/webp']
       );
       
@@ -184,6 +234,10 @@ export const useProfile = () => {
         };
         
         tempProfileImage.value = downloadURL;
+        
+        // Refresh the user's custom images list
+        await fetchUserCustomImages();
+        
         showToast('Image uploaded successfully', 'success');
         return downloadURL;
       } else {
@@ -322,11 +376,14 @@ export const useProfile = () => {
     passwordError,
     isResendingEmail,
     isImageUploading,
+    isLoadingUserImages,
     userName,
     userPhotoUrl,
     profileData,
     passwordData,
     profileImages,
+    userCustomImages,
+    defaultProfileImages,
     tempProfileImage,
     
     // Computed
@@ -341,5 +398,6 @@ export const useProfile = () => {
     uploadCustomImage,
     updatePassword,
     resendVerificationEmail,
+    fetchUserCustomImages,
   }
 }
