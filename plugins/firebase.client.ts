@@ -2,20 +2,12 @@ import { initializeApp, type FirebaseApp } from "firebase/app";
 import { 
     getAuth, 
     connectAuthEmulator, 
-    setPersistence, 
-    browserLocalPersistence,
-    browserSessionPersistence,
-    inMemoryPersistence,
     type Auth,
-    type Persistence
 } from "firebase/auth";
 import { 
     connectFirestoreEmulator, 
     type Firestore, 
-    CACHE_SIZE_UNLIMITED,
-    initializeFirestore,
-    persistentLocalCache,
-    persistentMultipleTabManager
+    initializeFirestore
 } from "firebase/firestore";
 import { getStorage, connectStorageEmulator, type FirebaseStorage } from "firebase/storage";
 
@@ -67,30 +59,12 @@ const createMocks = () => {
   };
 };
 
-/**
- * Get the appropriate persistence mechanism based on configuration
- * @param persistenceType The type of persistence to use
- * @returns The Firebase persistence mechanism
- */
-const getPersistenceType = (persistenceType?: string): Persistence => {
-  switch (persistenceType?.toLowerCase()) {
-    case 'session':
-      return browserSessionPersistence;
-    case 'none':
-      return inMemoryPersistence;
-    case 'local':
-    default:
-      return browserLocalPersistence;
-  }
-};
-
 // Nuxt 3 Firebase Plugin
 export default defineNuxtPlugin<FirebaseInjections>(() => {    
     try {
         const config = useRuntimeConfig();
         const firebaseConfig = config.public.firebaseConfig;
         const isDevelopment = config.public.isDevelopment || false;
-        const persistenceType = config.public.firebasePersistence || 'local';
 
         // Validate required configuration
         if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
@@ -100,26 +74,9 @@ export default defineNuxtPlugin<FirebaseInjections>(() => {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         
-        // Initialize Firestore with persistence configuration
-        const firestore = initializeFirestore(app, {
-          // Use persistent local cache with unlimited size for offline support
-          localCache: persistentLocalCache({
-            cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-            tabManager: persistentMultipleTabManager()
-          })
-        });
-
+        // Initialize Firestore without any persistence configuration
+        const firestore = initializeFirestore(app, {});
         const storage = getStorage(app);
-
-        // Setup persistence for authentication
-        const persistence = getPersistenceType();
-        setPersistence(auth, persistence)
-            .then(() => {
-                console.log(`Firebase auth persistence set to: ${persistenceType}`);
-            })
-            .catch(error => {
-                console.error('Auth persistence error:', error);
-            });
 
         // Connect to emulators in development mode
         if (isDevelopment) {

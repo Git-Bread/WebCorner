@@ -11,7 +11,8 @@
         
         <!-- Password field -->
         <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" 
-        autocomplete="current-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" fieldClass="form-field-2"/>
+        autocomplete="current-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" fieldClass="form-field-2"
+        @blur="validateField('password')" @update:modelValue="validateField('password')"/>
 
         <!-- Remember Me checkbox -->
         <div class="flex items-center justify-between mt-2 form-field-2">
@@ -60,6 +61,17 @@ const loginSchema = {
       }
       return { success: true }
     }
+  },
+  password: {
+    safeParse: (value: string) => {
+      if (!value || value.trim() === '') {
+        return {
+          success: false,
+          error: { errors: [{ message: "Password is required" }] }
+        }
+      }
+      return { success: true }
+    }
   }
 }
 
@@ -88,6 +100,7 @@ const focusFirstError = () => {
 
 const handleLogin = async () => {
   validateField('email')
+  validateField('password')
   if (!isFormValid.value) {
     focusFirstError()
     return

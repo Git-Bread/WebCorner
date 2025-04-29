@@ -26,9 +26,6 @@
       "enabled": true,
       "port": 4000
     },
-    "singleProjectMode": true,
-    "export-on-exit": {
-      "directory": "./firebase-emulator-data"
-    }
+    "singleProjectMode": true
   }
 }

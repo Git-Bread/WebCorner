@@ -86,8 +86,6 @@ export default defineNuxtConfig({
     public: {
       // Add isDevelopment flag for client-side use
       isDevelopment: process.env.NODE_ENV !== 'production',
-      // Set default persistence method ('local', 'session', or 'none')
-      firebasePersistence: process.env.FIREBASE_PERSISTENCE || 'local',
       firebaseConfig: {
         apiKey: process.env.FIREBASE_API_KEY,
         authDomain: process.env.FIREBASE_AUTH_DOMAIN,
