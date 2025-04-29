@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { showToast } from '~/utils/toast'
 import { handleAuthError } from '~/utils/errorHandler'
 import { validatePassword, validatePasswordsMatch } from '~/utils/passwordUtils'
+import { useImageUpload } from '~/utils/imageUploadUtils'
 
 // Define type for user document
 interface UserDocument {
@@ -17,10 +18,12 @@ interface UserDocument {
 export const useProfile = () => {
   const { user } = useAuth()
   const { firestore, auth } = useFirebase()
+  const { uploadImage, isUploading, uploadError } = useImageUpload()
 
   // shared UI state
   const isEditing = useState('profile-isEditing', () => false)
   const isSaving = useState('profile-isSaving', () => false)
+  const isImageUploading = useState('profile-isImageUploading', () => false)
 
   // shared data state
   const userName = useState('profile-userName', () => '')
@@ -158,6 +161,44 @@ export const useProfile = () => {
     tempProfileImage.value = image
   }
 
+  // Upload custom profile image
+  async function uploadCustomImage(file: File) {
+    if (!user.value) return null;
+    
+    try {
+      isImageUploading.value = true;
+      
+      // Call the upload utility function
+      const downloadURL = await uploadImage(
+        file, 
+        `profile_pictures/${user.value.uid}`,
+        2, // 2MB max
+        ['image/jpeg', 'image/png', 'image/webp']
+      );
+      
+      if (downloadURL) {
+        // Update profile data with new image URL
+        profileData.value = {
+          ...profileData.value,
+          profileImage: downloadURL
+        };
+        
+        tempProfileImage.value = downloadURL;
+        showToast('Image uploaded successfully', 'success');
+        return downloadURL;
+      } else {
+        showToast(uploadError.value || 'Failed to upload image', 'error');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showToast('Failed to upload image', 'error');
+      return null;
+    } finally {
+      isImageUploading.value = false;
+    }
+  }
+
   // Update password
   async function updatePassword(passwordFormData?: any) {
     if (!user.value || !auth.currentUser) return
@@ -280,6 +321,7 @@ export const useProfile = () => {
     isPasswordUpdating,
     passwordError,
     isResendingEmail,
+    isImageUploading,
     userName,
     userPhotoUrl,
     profileData,
@@ -296,6 +338,7 @@ export const useProfile = () => {
     loadUserData,
     saveProfile,
     selectProfileImage,
+    uploadCustomImage,
     updatePassword,
     resendVerificationEmail,
   }

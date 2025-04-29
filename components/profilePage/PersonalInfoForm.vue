@@ -71,10 +71,38 @@
             :class="profileData.profileImage === image ? 'border-theme-primary' : 'border-transparent'">
             <img :src="image" alt="Profile option" class="w-full h-full object-cover" />
           </div>
-          <div class="w-16 h-16 rounded-full border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-theme-primary">
-            <fa :icon="['fas', 'plus']" class="text-xl text-text-muted hover:text-theme-primary" />
+          
+          <!-- Custom upload button -->
+          <div @click="triggerFileInput" 
+               class="w-16 h-16 rounded-full border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-theme-primary relative overflow-hidden">
+            <template v-if="isImageUploading">
+              <fa :icon="['fas', 'spinner']" class="animate-spin text-theme-primary text-xl" />
+              <span class="text-xs mt-1 text-text-muted">Uploading</span>
+            </template>
+            <template v-else>
+              <fa :icon="['fas', 'plus']" class="text-xl text-text-muted group-hover:text-theme-primary" />
+              <span class="text-xs mt-1 text-text-muted">Custom</span>
+            </template>
+            
+            <!-- Hidden file input -->
+            <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" 
+                  @change="handleFileUpload" class="hidden" />
+          </div>
+          
+          <!-- Preview custom image if present -->
+          <div v-if="profileData.profileImage && !profileImages.includes(profileData.profileImage)" 
+               class="w-16 h-16 rounded-full overflow-hidden border-2 border-theme-primary cursor-pointer transition-all">
+            <img :src="profileData.profileImage" alt="Custom profile image" class="w-full h-full object-cover" />
           </div>
         </div>
+        
+        <!-- Error message for image upload -->
+        <p v-if="uploadError" class="text-error text-xs mt-2">{{ uploadError }}</p>
+        
+        <!-- Image requirements -->
+        <p class="text-text-muted text-xs mt-2">
+          Supported formats: JPEG, PNG, WebP. Maximum size: {{ maxSizeInMB }}.
+        </p>
       </div>
       
       <!-- Bio section -->
@@ -89,10 +117,10 @@
       
       <!-- Save button -->
       <div class="flex justify-end pt-2">
-        <button type="submit" class="bg-theme-primary text-background px-6 py-2 rounded hover:bg-theme-secondary transition duration-200 flex items-center" :disabled="isSaving">
-          <span v-if="isSaving" class="mr-2 animate-spin"><fa :icon="['fas', 'spinner']" /></span>
+        <button type="submit" class="bg-theme-primary text-background px-6 py-2 rounded hover:bg-theme-secondary transition duration-200 flex items-center" :disabled="isSaving || isImageUploading">
+          <span v-if="isSaving || isImageUploading" class="mr-2 animate-spin"><fa :icon="['fas', 'spinner']" /></span>
           <fa v-else :icon="['fas', 'save']" class="mr-2" />
-          {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          {{ isSaving || isImageUploading ? 'Saving...' : 'Save Changes' }}
         </button>
       </div>
     </form>
@@ -110,10 +138,61 @@ const {
   isSaving,
   isEmailVerified,
   isResendingEmail,
+  isImageUploading,
   saveProfile,
   selectProfileImage,
+  uploadCustomImage,
   resendVerificationEmail,
 } = useProfile();
+
+// For file upload
+const fileInput = ref<HTMLInputElement | null>(null);
+const uploadError = ref<string | null>(null);
+const maxSizeInMB = 5;
+
+// Open file dialog
+function triggerFileInput() {
+  if (fileInput.value) {
+    fileInput.value.click();
+  }
+}
+
+// Handle file selection and upload
+async function handleFileUpload(event: Event) {
+  uploadError.value = null;
+  
+  const target = event.target as HTMLInputElement;
+  const files = target.files;
+  
+  if (!files || files.length === 0) {
+    return;
+  }
+  
+  const file = files[0];
+  
+  // Validate file size before upload (client-side validation)
+  const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+  
+  if (file.size > maxSizeInBytes) {
+    uploadError.value = `File size exceeds maximum allowed size of ${maxSizeInMB}MB`;
+    return;
+  }
+  
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    uploadError.value = 'Invalid file type. Allowed types: JPEG, PNG, WebP';
+    return;
+  }
+  
+  // Upload the image
+  await uploadCustomImage(file);
+  
+  // Reset the input to allow uploading the same file again if needed
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+}
 
 // Submit handler to directly save profile
 function handleSubmit() {
