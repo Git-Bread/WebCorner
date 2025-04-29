@@ -8,8 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "emulate": "firebase emulators:start",
-    "emulate:persistent": "firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data"
+    "emulate": "firebase emulators:start"
   },
   "dependencies": {
     "@nuxtjs/tailwindcss": "^6.13.2",

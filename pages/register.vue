@@ -43,7 +43,7 @@ import { doc, setDoc } from 'firebase/firestore'
 import { showToast } from '~/utils/toast'
 import { getRandomProfileImage } from '~/utils/profileImageUtils'
 import { handleAuthError, handleDatabaseError } from '~/utils/errorHandler'
-import { calculatePasswordStrength } from '~/utils/passwordUtils'
+import { calculatePasswordStrength, validatePassword } from '~/utils/passwordUtils'
 import useFormValidation from '~/composables/useFormValidation'
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue'
 import { defaultSettings } from '~/composables/useUserSettings'
@@ -56,13 +56,15 @@ const registrationSchema = {
   username: userSchema.shape.username,
   password: {
     safeParse: (value: string) => {
-      if (value.length < 6) {
+      // Use the centralized password validation
+      const validation = validatePassword(value);
+      if (!validation.valid) {
         return { 
           success: false, 
-          error: { errors: [{ message: "Password must be at least 6 characters" }] }
-        }
+          error: { errors: [{ message: validation.message }] }
+        };
       }
-      return { success: true }
+      return { success: true };
     }
   }
 }

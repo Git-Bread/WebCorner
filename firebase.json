@@ -6,15 +6,22 @@
   "emulators": {
     "auth": {
       "port": 9099,
-      "host": "0.0.0.0"
+      "host": "0.0.0.0",
+      "options": {
+        "disableWarnings": true
+      }
     },
     "firestore": {
       "port": 8080,
       "host": "0.0.0.0"
     },
     "ui": {
-      "enabled": true
+      "enabled": true,
+      "port": 4000
     },
-    "singleProjectMode": true
+    "singleProjectMode": true,
+    "export-on-exit": {
+      "directory": "./firebase-emulator-data"
+    }
   }
 }

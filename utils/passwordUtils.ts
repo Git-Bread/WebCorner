@@ -1,4 +1,3 @@
-
 //Calculate password strength on a scale of 0-100
 export function calculatePasswordStrength(password: string) {
   if (!password) return 0
@@ -56,4 +55,60 @@ export function getStrengthText(strength: number) {
     case 'strong': return 'Strong password'
     default: return ''
   }
+}
+
+/**
+ * Validates a password against security requirements
+ * @param password The password to validate
+ * @param options Optional configuration for validation requirements
+ * @returns Object with valid flag and error message if invalid
+ */
+export function validatePassword(
+  password: string, 
+  options = { 
+    minLength: 6,
+    requireUppercase: false,
+    requireLowercase: false,
+    requireNumber: false,
+    requireSpecial: false
+  }
+): { valid: boolean, message: string } {
+  if (!password) {
+    return { valid: false, message: 'Please enter a password' };
+  }
+  
+  if (password.length < options.minLength) {
+    return { valid: false, message: `Password must be at least ${options.minLength} characters` };
+  }
+  
+  if (options.requireUppercase && !/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one uppercase letter' };
+  }
+  
+  if (options.requireLowercase && !/[a-z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one lowercase letter' };
+  }
+  
+  if (options.requireNumber && !/[0-9]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one number' };
+  }
+  
+  if (options.requireSpecial && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one special character' };
+  }
+  
+  return { valid: true, message: '' };
+}
+
+/**
+ * Checks if passwords match
+ * @param password The password
+ * @param confirmPassword The confirmation password
+ * @returns Object with valid flag and error message if invalid
+ */
+export function validatePasswordsMatch(password: string, confirmPassword: string): { valid: boolean, message: string } {
+  if (password !== confirmPassword) {
+    return { valid: false, message: 'Passwords do not match' };
+  }
+  return { valid: true, message: '' };
 }

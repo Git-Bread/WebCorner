@@ -31,10 +31,10 @@
           <div class="ml-3 relative">
             <div>
               <button @click="toggleMenu" type="button" class="flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-link rounded-full" aria-expanded="false">
-                <!-- Use user's photoURL if available, otherwise default image -->
+                <!-- Use tempProfileImage when in edit mode, otherwise use userPhotoUrl -->
                 <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 hover:border-accent-1">
                   <ClientOnly>
-                    <img :src="userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
+                    <img :src="isEditing && tempProfileImage ? tempProfileImage : userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
                   </ClientOnly>
                 </picture>
               </button>
@@ -44,8 +44,8 @@
             <div v-if="menuOpen" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface"
             role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" @blur="closeMenu">
               <div class="py-1" role="none">
-                <NuxtLink to="/profile" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
-                  Your Profile
+                <NuxtLink :to="isOnProfilePage ? '/dashboard' : '/profile'" class="block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
+                  {{ isOnProfilePage ? 'Back to Dashboard' : 'Your Profile' }}
                 </NuxtLink>
                 <button @click="toggleSettingsPanel" class="w-full text-left block px-4 py-2 text-sm text-text hover:bg-background transition-colors" role="menuitem">
                   Settings
@@ -67,53 +67,30 @@
 
 <script setup lang="ts">
 import { ClientOnly } from '#components';
-import { doc, getDoc } from 'firebase/firestore'
 import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-
-interface UserDocument {
-  username: string;
-  email: string;
-  profile_image_url?: string;
-}
+import { useRoute } from 'vue-router';
 
 const { user, logout, isAuthenticated } = useAuth()
+const profileState = useProfile() // Use the profile composable
 const menuOpen = ref(false)
-const userDoc = ref<UserDocument | null>(null)
 
 // Local state for Settings panel visibility
 const settingsOpen = ref(false);
 
-onMounted(async () => {
-  if (user.value) {
-    const { firestore } = useFirebase()
-    try {
-      const docRef = doc(firestore, 'users', user.value.uid)
-      const docSnap = await getDoc(docRef)
-      if (docSnap.exists()) {
-        userDoc.value = docSnap.data() as UserDocument
-      }
-    } catch (error) {
-      console.error('Error fetching user document:', error)
-    }
-  }
-})
+// Get user name from the profile state
+const userName = computed(() => profileState.userName.value)
 
-// Get user name from username in Firestore or fallback to email/uid
-const userName = computed(() => {
-  if (userDoc.value?.username) {
-    return userDoc.value.username
-  }
-  return user.value?.email?.split('@')[0] || 'User'
-})
+// Get user photo URL from profile state
+const userPhotoUrl = computed(() => profileState.userPhotoUrl.value)
 
-// Get user photo URL from Firestore or fallback to default
-const userPhotoUrl = computed(() => {
-  if (userDoc.value?.profile_image_url) {
-    return userDoc.value.profile_image_url
-  }
-  return '/images/Profile_Pictures/default_profile.jpg'
-})
+// Get editing state and tempProfileImage for preview functionality
+const isEditing = computed(() => profileState.isEditing.value)
+const tempProfileImage = computed(() => profileState.tempProfileImage.value)
+
+// Detect if the current route is the profile page
+const route = useRoute();
+const isOnProfilePage = computed(() => route.path === '/profile');
 
 // Menu toggle
 const toggleMenu = () => {
@@ -145,6 +122,11 @@ const handleLogout = async () => {
 
 // Close menu when clicking outside & handle Escape key
 onMounted(() => {
+  // Load user data on component mount
+  if (user.value) {
+    profileState.loadUserData()
+  }
+
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLElement
     // Close menu if click is outside the relative container of the dropdown

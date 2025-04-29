@@ -1,8 +1,32 @@
 rules_version = '2';
 
 service cloud.firestore {
-  //TODO implement rules
-  match /{document=**} {
-    allow read, write: if true;
+  match /databases/{database}/documents {
+    // check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // check if the user is accessing their own document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update, delete: if isOwner(userId);
+      
+      // User settings subcollection
+      match /settings/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+    
+    // Deny access to everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

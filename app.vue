@@ -34,7 +34,7 @@ const { applySettings, settings, loadVisitorSettings, loadSettings } = useUserSe
 // Display appropriate loading message
 const loadingMessage = computed(() => {
   if (!authInitialized.value) return 'Initializing...';
-  if (isAuthenticated.value && !settingsLoaded.value) return 'Loading your preferences...';
+  if (isAuthenticated.value && !settingsLoaded.value) return 'Loading...';
   return 'Loading...';
 });
 
@@ -74,10 +74,7 @@ onMounted(() => {
           applySettings(settings.value);
         }
         
-        // Small delay to ensure UI updates are visible
-        setTimeout(() => {
-          settingsLoaded.value = true;
-        }, 500);
+        settingsLoaded.value = true;
       } else {
         console.log('Applying visitor settings on app load');
         // For visitors, apply settings from localStorage
@@ -86,17 +83,12 @@ onMounted(() => {
           applySettings(visitorSettings);
         }
         
-        // Small delay to ensure loading spinner is visible
-        setTimeout(() => {
-          settingsLoaded.value = true;
-        }, 500);
+        settingsLoaded.value = true;
       }
     } catch (e) {
       console.error('Error applying settings on app load:', e);
       // Even if there's an error, mark as loaded to avoid blocking UI
-      setTimeout(() => {
-        settingsLoaded.value = true;
-      }, 500);
+      settingsLoaded.value = true;
     } finally {
       settingsLoading.value = false;
       // Unwatch after first attempt, successful or not
