@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col bg-gradient-page overflow-hidden relative">
+  <div class="flex flex-col overflow-hidden relative">
     <!-- Hero Section -->
     <section id="nav-section-1" class="min-h-[96vh] flex items-center m-0 p-0">
       <HeroSection />

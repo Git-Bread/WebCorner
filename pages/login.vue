@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-page">
+  <div class="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8 relative z-10 form-fade-in bg-background p-8 rounded-lg shadow-lg">
       <h1 id="login-heading" class="mt-6 font-extrabold text-center text-heading">Sign in to your account</h1>
       

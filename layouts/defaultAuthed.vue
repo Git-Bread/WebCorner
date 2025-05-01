@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col min-h-screen">
+    <div class="flex flex-col min-h-screen bg-gradient-page">
         <HeadersStandardHeader />
         <main class="flex-grow">
             <slot />

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-page py-8 px-4">
+  <div class="min-h-screen py-8 px-4">
     <div class="container mx-auto">
       <!-- Page header with user's name -->
       <ProfileHeader 
