@@ -179,6 +179,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue';
 import { useImageUpload, deleteUploadedImage } from '~/utils/imageUtils/imageUploadUtils';
+import { useAuth } from '~/composables/useAuth';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTimes, faImage, faSpinner, faExchangeAlt, faUpload, faTrashAlt, faServer } from '@fortawesome/free-solid-svg-icons';
 
@@ -232,10 +233,20 @@ const onFileSelected = async (event: Event) => {
     // Create temporary preview
     imagePreview.value = URL.createObjectURL(file);
     
-    // Upload the image to Firebase Storage
+    // Get current user ID for the temp storage path
+    const { user } = useAuth();
+    const userId = user.value?.uid;
+    
+    if (!userId) {
+      uploadError.value = "You must be logged in to upload images";
+      clearImage();
+      return;
+    }
+    
+    // Upload the image to Firebase Storage in temp folder with user ID
     const downloadUrl = await uploadImage(
       file,
-      'server_images',
+      `temp_server_images/${userId}`,
       5, // 5MB max
       ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
       1280, // width 
@@ -286,7 +297,7 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
-const handleCreate = () => {
+const handleCreate = async () => {
   emit('create', {
     name: serverData.name,
     description: serverData.description,

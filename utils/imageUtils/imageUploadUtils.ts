@@ -3,39 +3,14 @@ import {
   ref as storageRef, 
   getDownloadURL, 
   uploadBytesResumable,
-  deleteObject
+  deleteObject,
+  listAll,
+  getBlob,
 } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { useNuxtApp } from '#app';
 import { handleStorageError } from '../errorHandler';
-import { enforceImageLimit, deletePreviousServerImage } from './imageLimitUtil';
-
-/**
- * Deletes an image from Firebase Storage by its download URL
- * @param downloadUrl - The full download URL of the image to delete
- * @returns Promise indicating success or failure
- */
-export const deleteUploadedImage = async (downloadUrl: string): Promise<boolean> => {
-  if (!downloadUrl) return false;
-  
-  try {
-    const { $storage } = useNuxtApp();
-    
-    // Extract the file path from the download URL
-    // Format: https://firebasestorage.googleapis.com/v0/b/[bucket]/o/[path]?[token]
-    const path = decodeURIComponent(downloadUrl.split('/o/')[1].split('?')[0]);
-    
-    const fileRef = storageRef($storage, path);
-    
-    // For server images, we use the same deletion method now
-    await deleteObject(fileRef);
-    console.log('Image deleted successfully');
-    return true;
-  } catch (error) {
-    console.error('Error deleting image:', error);
-    return false;
-  }
-};
+import { enforceImageLimit } from './imageLimitUtil';
 
 export const useImageUpload = () => {
   // Access Firebase storage via the provided composable
@@ -152,7 +127,7 @@ export const useImageUpload = () => {
     let sanitized = filename.replace(/\s+/g, '_');
     // Remove special characters except underscores, hyphens, and periods
     sanitized = sanitized.replace(/[^\w\-\.]/g, '');
-    // Ensure the filename isn't too long
+    // Ensure the filename is bellow 50 characters
     return sanitized.substring(0, 50);
   };
 
@@ -173,9 +148,9 @@ export const useImageUpload = () => {
     path: string = 'profile_pictures',
     maxSizeInMB: number = 5,
     allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-    targetWidth: number = 512, 
-    targetHeight: number = 512, 
-    compressionQuality: number = 0.8
+    targetWidth: number = 512, // Added parameter
+    targetHeight: number = 512, // Added parameter
+    compressionQuality: number = 0.8 // Added parameter
   ): Promise<string | null> => {
     // Reset states
     isUploading.value = true;
@@ -231,9 +206,9 @@ export const useImageUpload = () => {
           'originalName': file.name,
           'originalType': file.type,
           'compressed': 'true',
-          'compressionQuality': compressionQuality.toString(), // Use actual quality
-          'dimensions': `${targetWidth}x${targetHeight}`, // Use actual dimensions
-          'uploadedAt': new Date().toISOString() // Add upload timestamp for better sorting
+          'compressionQuality': compressionQuality.toString(), 
+          'dimensions': `${targetWidth}x${targetHeight}`, 
+          'uploadedAt': new Date().toISOString()
         }
       };
       
@@ -248,7 +223,7 @@ export const useImageUpload = () => {
             // Calculate and update progress percentage
             const progress = Math.round(
               (snapshot.bytesTransferred / snapshot.totalBytes) * 80
-            ) + 20; // Add 20% for the preprocessing
+            ) + 20; // Add 20% for the preprocessing we've already done
             
             uploadProgress.value = progress;
           },
@@ -257,7 +232,7 @@ export const useImageUpload = () => {
             const friendlyErrorMessage = handleStorageError(error);
             uploadError.value = friendlyErrorMessage;
             console.error('Upload error:', error);
-            resolve(null); // Resolve with null on error as per original logic
+            resolve(null); 
           },
           async () => {
             // Handle successful upload
@@ -267,20 +242,19 @@ export const useImageUpload = () => {
               uploadProgress.value = 100;
               resolve(downloadURL);
             } catch (error) {
-              // Use error utility for download URL errors too
+              // Use error utility for download error
               const friendlyErrorMessage = handleStorageError(error);
               uploadError.value = friendlyErrorMessage;
               console.error('Download URL error:', error);
-              resolve(null); // Resolve with null on error
+              resolve(null);
             }
           }
         );
       });
       
     } catch (error) {
-      // Use error utility for all other errors in the try block
       uploadError.value = error instanceof Error && error.message.includes("Invalid file type") 
-        ? error.message  // Keep the detailed message for validation errors
+        ? error.message  // detailed message for validation errors, ease of debugging
         : handleStorageError(error);
       console.error('Upload error:', error);
       return null; 
@@ -295,4 +269,111 @@ export const useImageUpload = () => {
     uploadProgress,
     uploadError
   };
+};
+
+/**
+ * Deletes an uploaded image from Firebase Storage by URL
+ * @param imageUrl - The URL of the image to delete
+ * @returns Promise resolved when deletion is complete
+ */
+export const deleteUploadedImage = async (imageUrl: string): Promise<void> => {
+  try {
+    // Extract the path from the URL
+    const urlObj = new URL(imageUrl);
+    const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+    
+    if (!pathMatch || !pathMatch[1]) {
+      console.error('Invalid Firebase Storage URL format:', imageUrl);
+      return;
+    }
+    
+    // Decode the path component
+    const path = decodeURIComponent(pathMatch[1]);
+    
+    // Get storage instance
+    const { $storage } = useNuxtApp();
+    const fileRef = storageRef($storage, path);
+    
+    // Delete the file
+    await deleteObject(fileRef);
+  } catch (error) {
+    console.error('Error deleting image:', error);
+  }
+};
+
+/**
+ * Cleans up temporary server images for a specific user
+ * @param userId - The ID of the user whose temporary images should be cleaned up
+ * @returns Promise resolved when cleanup is complete
+ */
+export const cleanupTempServerImages = async (userId: string): Promise<void> => {
+  if (!userId) return;
+  
+  try {
+    // Get storage instance
+    const { $storage } = useNuxtApp();
+    const tempFolderRef = storageRef($storage, `temp_server_images/${userId}`);
+    
+    // List all files in the folder
+    const fileList = await listAll(tempFolderRef);
+    
+    // Delete all files in parallel
+    await Promise.all(fileList.items.map(fileRef => deleteObject(fileRef)));
+    
+    console.log(`Cleaned up ${fileList.items.length} temporary server images for user ${userId}`);
+  } catch (error) {
+    console.error('Error cleaning up temporary server images:', error);
+  }
+};
+
+/**
+ * Moves a server image from temporary location to permanent server images folder
+ * @param tempImageUrl - The URL of the temporary image
+ * @param serverId - The ID of the server
+ * @returns Promise with the new URL of the image in permanent location or null if failed
+ */
+export const moveServerImageToPermanent = async (tempImageUrl: string, serverId: string): Promise<string | null> => {
+  if (!tempImageUrl || !serverId) return null;
+  
+  try {
+    // Extract path from URL
+    const urlObj = new URL(tempImageUrl);
+    const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+    
+    if (!pathMatch || !pathMatch[1]) {
+      console.error('Invalid Firebase Storage URL format:', tempImageUrl);
+      return tempImageUrl;
+    }
+    
+    // Decode the path component
+    const path = decodeURIComponent(pathMatch[1]);
+    
+    // Skip if not a temp image
+    if (!path.includes('temp_server_images')) {
+      return tempImageUrl;
+    }
+    
+    // Get storage instance
+    const { $storage } = useNuxtApp();
+    
+    // Get references
+    const tempRef = storageRef($storage, path);
+    const fileName = path.split('/').pop() || `${uuidv4()}.jpg`;
+    const permanentPath = `server_images/${serverId}/${fileName}`;
+    const permanentRef = storageRef($storage, permanentPath);
+    
+    // Get blob from temp location
+    const blob = await getBlob(tempRef);
+    
+    // Upload to permanent location
+    const uploadTask = await uploadBytesResumable(permanentRef, blob);
+    const newUrl = await getDownloadURL(uploadTask.ref);
+    
+    console.log(`Moved server image from ${path} to ${permanentPath}`);
+    
+    return newUrl;
+  } catch (error) {
+    console.error('Error moving server image to permanent location:', error);
+    return tempImageUrl; // Return original URL if move fails
+  }
 };

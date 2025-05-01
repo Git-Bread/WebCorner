@@ -107,13 +107,6 @@ export const useSettingsManager = (mode: 'visitor' | 'user') => {
     applyCurrentSettings();
   };
 
-  // Update notification settings (user mode only)
-  const updateNotificationSetting = (key: keyof typeof userModeSettings.value.notifications, value: boolean) => {
-    if (mode === 'user') {
-      userModeSettings.value.notifications[key] = value;
-    }
-  };
-
   // Update privacy settings (user mode only)
   const updatePrivacySetting = (key: keyof typeof userModeSettings.value.privacy, value: boolean) => {
     if (mode === 'user') {
@@ -173,7 +166,6 @@ export const useSettingsManager = (mode: 'visitor' | 'user') => {
     updateTheme,
     updateFontSize,
     updateAccessibilitySetting,
-    updateNotificationSetting,
     updatePrivacySetting,
     saveUserSettings,
     initialize

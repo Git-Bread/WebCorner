@@ -106,18 +106,17 @@ const handleCreateServer = async (serverInfo: {
     
     // Wait briefly for server data to be updated, then select the new server
     setTimeout(async () => {
-      // Refresh server list to ensure we have the latest data
-      await serverActions.loadUserServers();
-      
       // Find and select the newly created server using server data
-      const newServerData = serverActions.serverData.value[serverInfo.name];
-      if (newServerData) {
-        const newServer = serverActions.userServers.value.find(s => s.serverId === newServerData.serverId);
-        if (newServer) {
-          selectedServerId.value = newServer.serverId;
-        }
+      // Find the server ID based on the name (assuming names are unique for now, or use a better method if not)
+      // This part might need refinement if names aren't unique or if createServer returns the ID
+      const newServer = serverActions.userServers.value.find(s => 
+        serverActions.serverData.value[s.serverId]?.name === serverInfo.name &&
+        serverActions.serverData.value[s.serverId]?.ownerId === useAuth().user.value?.uid // Add owner check for more robustness
+      );
+      if (newServer) {
+        selectedServerId.value = newServer.serverId;
       }
-    }, 500);
+    }, 500); // Keep a small delay to allow reactivity to settle
   }
 };
 

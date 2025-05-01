@@ -10,7 +10,12 @@ service firebase.storage {
       return request.resource.size < maxSizeMB * 1024 * 1024;
     }
 
-    
+    // Helper function to check server ownership by fetching from Firestore
+    function isServerOwner(serverId) {
+      return request.auth != null && 
+             firestore.get(/databases/(default)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
+    }
+
     // Profile Images
     match /profile_pictures/{userId}/{fileName} {
       allow read: if true;  // Allow read access to all users
@@ -22,16 +27,29 @@ service firebase.storage {
                     && request.auth.uid == userId;  // Allow users to delete their own profile images
     }
     
-    // Server Images - Simplified rules to allow authenticated users to upload
-    match /server_images/{imageId} {
+    // Temporary server images (stored before server creation)
+    match /temp_server_images/{userId}/{fileName} {
       allow read: if true;  // Allow read access to all users
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && isImageType(request.resource.contentType)
+                   && isFileSizeUnder(5);  // Limit to 5MB image uploads
+      allow delete: if request.auth != null
+                    && request.auth.uid == userId;  // Only allow users to delete their own temp images
+    }
+    
+    // Server Images - Updated to support server-specific folders
+    match /server_images/{serverId}/{fileName} {
+      // Only allow server owner to read images
+      allow read: if isServerOwner(serverId);
       
-      allow write: if request.auth != null
+      // Only allow server owner to write images (still checking type and size)
+      allow write: if isServerOwner(serverId)
                    && isImageType(request.resource.contentType)
                    && isFileSizeUnder(5);  // Limit to 5MB image uploads
                    
-      // For deletion, still require authentication but don't enforce ownership
-      allow delete: if request.auth != null;
+      // Only allow server owner to delete images
+      allow delete: if isServerOwner(serverId);
     }
     
     // User documents - private files

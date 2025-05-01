@@ -16,13 +16,13 @@ service cloud.firestore {
     function isServerMember(serverId) {
       return isAuthenticated() && 
         (exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) ||
-         get(/databases/$(database)/documents/servers/$(serverId)).data.creatorId == request.auth.uid);
+         get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid);
     }
     
     // check if user is server owner
     function isServerOwner(serverId) {
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/servers/$(serverId)).data.creatorId == request.auth.uid;
+        get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
     }
     
     // User profiles
