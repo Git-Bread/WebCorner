@@ -3,7 +3,8 @@ import {
   listAll,
   deleteObject,
   type StorageReference,
-  getMetadata
+  getMetadata,
+  getDownloadURL
 } from 'firebase/storage';
 
 /**
@@ -120,5 +121,47 @@ export const hasReachedImageLimit = async (
   } catch (error) {
     console.error('Error checking image limit:', error);
     return false; // Fail open to allow upload attempt
+  }
+};
+
+/**
+ * Deletes a server's previous image when a new one is uploaded
+ * Note: The actual serverId/ownershipId isn't needed for deletion - the Storage rules
+ * just check that some serverId exists in the metadata and that the user is the uploader
+ * @param storage Firebase Storage instance
+ * @param previousImageUrl URL of the previous server image to delete
+ * @returns Boolean indicating if deletion was successful
+ */
+export const deletePreviousServerImage = async (
+  storage: any,
+  previousImageUrl: string | null
+): Promise<boolean> => {
+  // If no previous image, nothing to delete
+  if (!previousImageUrl) return true;
+  
+  try {
+    // Extract the image path from the URL
+    // Firebase storage URLs typically look like:
+    // https://firebasestorage.googleapis.com/v0/b/[project-id].appspot.com/o/server_images%2F[filename]?alt=media&token=[token]
+    
+    const urlObject = new URL(previousImageUrl);
+    const path = decodeURIComponent(urlObject.pathname.split('/o/')[1]?.split('?')[0]);
+    
+    if (!path) {
+      console.error('Could not extract path from URL:', previousImageUrl);
+      return false;
+    }
+    
+    // Create a reference to the file
+    const imageRef = storageRef(storage, path);
+    
+    // Delete the file - Storage rules will check that the current user has permission
+    // based on the metadata that was set when the file was uploaded
+    await deleteObject(imageRef);
+    console.log(`Successfully deleted previous server image: ${path}`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting previous server image:', error);
+    return false;
   }
 };

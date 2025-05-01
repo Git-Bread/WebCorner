@@ -2,12 +2,40 @@ import { ref } from 'vue';
 import { 
   ref as storageRef, 
   getDownloadURL, 
-  uploadBytesResumable
+  uploadBytesResumable,
+  deleteObject
 } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { useNuxtApp } from '#app';
 import { handleStorageError } from '../errorHandler';
-import { enforceImageLimit } from './imageLimitUtil';
+import { enforceImageLimit, deletePreviousServerImage } from './imageLimitUtil';
+
+/**
+ * Deletes an image from Firebase Storage by its download URL
+ * @param downloadUrl - The full download URL of the image to delete
+ * @returns Promise indicating success or failure
+ */
+export const deleteUploadedImage = async (downloadUrl: string): Promise<boolean> => {
+  if (!downloadUrl) return false;
+  
+  try {
+    const { $storage } = useNuxtApp();
+    
+    // Extract the file path from the download URL
+    // Format: https://firebasestorage.googleapis.com/v0/b/[bucket]/o/[path]?[token]
+    const path = decodeURIComponent(downloadUrl.split('/o/')[1].split('?')[0]);
+    
+    const fileRef = storageRef($storage, path);
+    
+    // For server images, we use the same deletion method now
+    await deleteObject(fileRef);
+    console.log('Image deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    return false;
+  }
+};
 
 export const useImageUpload = () => {
   // Access Firebase storage via the provided composable
@@ -145,9 +173,9 @@ export const useImageUpload = () => {
     path: string = 'profile_pictures',
     maxSizeInMB: number = 5,
     allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-    targetWidth: number = 512, // Added parameter
-    targetHeight: number = 512, // Added parameter
-    compressionQuality: number = 0.8 // Added parameter
+    targetWidth: number = 512, 
+    targetHeight: number = 512, 
+    compressionQuality: number = 0.8
   ): Promise<string | null> => {
     // Reset states
     isUploading.value = true;
@@ -220,7 +248,7 @@ export const useImageUpload = () => {
             // Calculate and update progress percentage
             const progress = Math.round(
               (snapshot.bytesTransferred / snapshot.totalBytes) * 80
-            ) + 20; // Add 20% for the preprocessing we've already done
+            ) + 20; // Add 20% for the preprocessing
             
             uploadProgress.value = progress;
           },

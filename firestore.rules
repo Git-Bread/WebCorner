@@ -12,6 +12,19 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    // check if user is server member
+    function isServerMember(serverId) {
+      return isAuthenticated() && 
+        (exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) ||
+         get(/databases/$(database)/documents/servers/$(serverId)).data.creatorId == request.auth.uid);
+    }
+    
+    // check if user is server owner
+    function isServerOwner(serverId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/servers/$(serverId)).data.creatorId == request.auth.uid;
+    }
+    
     // User profiles
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -22,6 +35,42 @@ service cloud.firestore {
       match /settings/{document=**} {
         allow read, write: if isOwner(userId);
       }
+    }
+    
+    // Server collection
+    match /servers/{serverId} {
+      // Anyone authenticated can read basic server info and create servers
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      
+      // Only server owners can update or delete servers
+      allow update, delete: if isServerOwner(serverId);
+      
+      // Server members subcollection
+      match /members/{userId} {
+        allow read: if isServerMember(serverId);
+        allow create, update: if isServerOwner(serverId);
+        allow delete: if isServerOwner(serverId) || isOwner(userId);
+      }
+      
+      // Channels subcollection
+      match /channels/{channelId} {
+        allow read: if isServerMember(serverId);
+        allow create, update, delete: if isServerOwner(serverId);
+        
+        // Messages in channels
+        match /messages/{messageId} {
+          allow read: if isServerMember(serverId);
+          allow create: if isServerMember(serverId);
+          allow update, delete: if request.auth.uid == resource.data.userId || isServerOwner(serverId);
+        }
+      }
+    }
+    
+    // User servers collection (for quick access to servers a user belongs to)
+    match /user_servers/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
     }
     
     // Deny access to everything else
