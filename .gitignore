@@ -25,3 +25,6 @@ logs
 
 # Firebase
 firebase-export*
+
+# Firebase Functions
+functions/lib
