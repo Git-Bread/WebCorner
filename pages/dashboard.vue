@@ -2,9 +2,9 @@
   <div class="flex h-screen bg-background">
     <!-- Server Sidebar Component -->
     <ServerSidebar 
-      :servers="serverActions.userServers.value" 
-      :server-data="serverActions.serverData.value" 
-      :is-loading="serverActions.isLoading.value" 
+      :servers="userServers" 
+      :server-data="serverData" 
+      :is-loading="isLoading" 
       :selected-server-id="selectedServerId"
       @server-selected="handleServerSelection"
       @add-server="showCreateServerDialog = true"
@@ -16,7 +16,7 @@
       
       <!-- No servers message -->
       <NoServersMessage 
-        v-if="!serverActions.isLoading.value && (!hasServers)"
+        v-if="!isLoading && (!hasServers)"
         @create-server="showCreateServerDialog = true"
         @join-server="showJoinServerDialog = true"
       />
@@ -25,7 +25,7 @@
       <DashboardContent 
         v-else-if="hasServers" 
         :selected-server-id="selectedServerId"
-        :server-data="serverActions.serverData.value"
+        :server-data="serverData"
       />
       
       <!-- Loading state -->
@@ -39,7 +39,7 @@
   <!-- Create Server Dialog -->
   <CreateServerDialog 
     :is-open="showCreateServerDialog"
-    :is-creating="serverActions.isCreatingServer.value"
+    :is-creating="isCreatingServer"
     @close="showCreateServerDialog = false"
     @create="handleCreateServer"
   />
@@ -47,9 +47,10 @@
   <!-- Join Server Dialog -->
   <JoinServerDialog 
     :is-open="showJoinServerDialog"
-    :is-joining="serverActions.isJoiningServer.value"
+    :is-joining="isJoiningServer"
     @close="showJoinServerDialog = false"
     @join="handleJoinServer"
+    @join-with-invite="handleJoinWithInvite"
   />
 </template>
 
@@ -63,17 +64,22 @@ import DashboardContent from '~/components/dashboard/DashboardContent.vue';
 import LoadingIndicator from '~/components/dashboard/LoadingIndicator.vue';
 import CreateServerDialog from '~/components/dashboard/CreateServerDialog.vue';
 import JoinServerDialog from '~/components/dashboard/JoinServerDialog.vue';
+// Import specific server composables instead of the combined useServerActions
+import { useServerCore, useServerJoining, useServerInvitations } from '~/composables/server';
 
 // Define page meta with authenticated layout
 definePageMeta({ layout: 'default-authed' });
 
-// Use the server actions composable
-const serverActions = useServerActions();
+// Use the specific server composables
+const { userServers, serverData, isLoading, isCreatingServer, loadUserServers, createServer } = useServerCore();
+const { isJoiningServer, joinServer } = useServerJoining();
+const { joinServerWithInvite } = useServerInvitations();
+
 const selectedServerId = ref<string | null>(null);
 
 // Computed property to check if user has servers
 const hasServers = computed(() => {
-  return serverActions.userServers.value && serverActions.userServers.value.length > 0;
+  return userServers.value && userServers.value.length > 0;
 });
 
 // Dialog states
@@ -93,9 +99,9 @@ const handleCreateServer = async (serverInfo: {
   maxMembers: number;
   components: Record<string, boolean>;
 }) => {
-  const result = await serverActions.createServer(serverInfo);
+  const result = await createServer(serverInfo);
   
-  if (result) {
+  if (result === null) { // null means success
     // Show success toast notification
     import('~/utils/toast').then(({ showToast }) => {
       showToast(`Server "${serverInfo.name}" created successfully!`, 'success', 3000);
@@ -109,9 +115,9 @@ const handleCreateServer = async (serverInfo: {
       // Find and select the newly created server using server data
       // Find the server ID based on the name (assuming names are unique for now, or use a better method if not)
       // This part might need refinement if names aren't unique or if createServer returns the ID
-      const newServer = serverActions.userServers.value.find(s => 
-        serverActions.serverData.value[s.serverId]?.name === serverInfo.name &&
-        serverActions.serverData.value[s.serverId]?.ownerId === useAuth().user.value?.uid // Add owner check for more robustness
+      const newServer = userServers.value.find(s => 
+        serverData.value[s.serverId]?.name === serverInfo.name &&
+        serverData.value[s.serverId]?.ownerId === useAuth().user.value?.uid // Add owner check for more robustness
       );
       if (newServer) {
         selectedServerId.value = newServer.serverId;
@@ -120,9 +126,17 @@ const handleCreateServer = async (serverInfo: {
   }
 };
 
-// Handle joining a server
+// Handle joining a server directly with server ID
 const handleJoinServer = async (serverId: string) => {
-  const success = await serverActions.joinServer(serverId);
+  const success = await joinServer(serverId);
+  if (success) {
+    showJoinServerDialog.value = false;
+  }
+};
+
+// Handle joining a server with an invitation code
+const handleJoinWithInvite = async (inviteCode: string) => {
+  const success = await joinServerWithInvite(inviteCode);
   if (success) {
     showJoinServerDialog.value = false;
   }
@@ -130,6 +144,6 @@ const handleJoinServer = async (serverId: string) => {
 
 // Load user's servers on component mount
 onMounted(async () => {
-  await serverActions.loadUserServers();
+  await loadUserServers();
 });
 </script>

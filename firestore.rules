@@ -72,6 +72,25 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow write: if isOwner(userId);
     }
+
+    // Server invitations collection
+    match /serverInvites/{inviteCode} {
+      // Anyone can read an invitation to validate it
+      allow read: if isAuthenticated();
+      
+      // Only the server owner can create invitations
+      allow create: if isAuthenticated() && isServerOwner(request.resource.data.serverId);
+      
+      // For updating, only allow incrementing the useCount field
+      allow update: if isAuthenticated() && 
+        (
+          // Server owner can update any fields
+          isServerOwner(resource.data.serverId) || 
+          // Other users can only increment the useCount
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount']) &&
+          request.resource.data.useCount == resource.data.useCount + 1)
+        );
+    }
     
     // Deny access to everything else
     match /{document=**} {
