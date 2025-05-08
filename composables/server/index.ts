@@ -9,3 +9,4 @@ export { useServerJoining } from './useServerJoining';
 export { useServerPermissions } from './useServerPermissions';
 export { useServerInvitations } from './useServerInvitations';
 export { useServerMembers } from './useServerMembers';
+export { useServerLayouts } from './useServerLayouts';

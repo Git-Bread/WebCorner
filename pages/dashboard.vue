@@ -33,8 +33,9 @@
           <!-- Field Container for customizable grid layout with full height when server selected -->
           <fieldContainer
             :serverId="selectedServerId"
-            :initialConfig="getServerFieldConfig()"
-            @save-config="saveServerFieldConfig"
+            :initialConfig="currentUserLayout"
+            :isLoadingLayout="isLoadingLayout"
+            @save-config="saveUserLayoutConfig"
             class="h-full"
           />
         </div>
@@ -99,8 +100,8 @@ import CreateServerDialog from '~/components/dashboard/CreateServerDialog.vue';
 import JoinServerDialog from '~/components/dashboard/JoinServerDialog.vue';
 import fieldContainer from '~/components/dashboard/field/fieldContainer.vue';
 
-// Import specific server composables instead of the combined useServerActions
-import { useServerCore, useServerJoining, useServerInvitations } from '~/composables/server';
+// Import specific server composables
+import { useServerCore, useServerJoining, useServerInvitations, useServerLayouts } from '~/composables/server';
 // Import server storage utilities
 import { saveLastSelectedServer, getLastSelectedServer } from '~/utils/serverStorageUtils';
 
@@ -113,7 +114,11 @@ const { isJoiningServer, joinServer } = useServerJoining();
 const { joinServerWithInvite } = useServerInvitations();
 const { user } = useAuth();
 
+// User-specific layout management
+const { userLayouts, isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
+
 const selectedServerId = ref<string | null>(null);
+const currentUserLayout = ref<FieldConfig[]>([]);
 
 // Computed property to check if user has servers
 const hasServers = computed(() => {
@@ -124,13 +129,22 @@ const hasServers = computed(() => {
 const showCreateServerDialog = ref(false);
 const showJoinServerDialog = ref(false);
 
-// Handle server selection and save to localStorage
-const handleServerSelection = (serverId: string | null) => {
+// Handle server selection, save to localStorage, and load user layout
+const handleServerSelection = async (serverId: string | null) => {
   selectedServerId.value = serverId;
   
   // Save to localStorage when user is logged in
-  if (user.value) {
+  if (user.value && serverId) {
     saveLastSelectedServer(serverId, user.value.uid);
+    
+    // Load the user-specific layout for this server
+    const layout = await loadUserLayout(serverId);
+    if (layout) {
+      currentUserLayout.value = layout;
+    } else {
+      // If no layout is found, use an empty array
+      currentUserLayout.value = [];
+    }
   }
 };
 
@@ -144,39 +158,19 @@ interface FieldConfig {
   id: string;
   title: string;
   componentType: string;
-  size: 'small' | 'medium' | 'large';
+  size: { width: number; height: number };
   position: FieldPosition;
   props?: Record<string, any>;
   placeholder?: string;
 }
 
-// Get field configuration for the selected server
-const getServerFieldConfig = () => {
-  if (selectedServerId.value && serverData.value[selectedServerId.value]) {
-    return serverData.value[selectedServerId.value].fieldConfig || [];
-  }
-  return [];
-};
-
-// Save field configuration to the server
-const saveServerFieldConfig = async (config: FieldConfig[]) => {
-  if (selectedServerId.value) {
-    try {
-      await updateServerMetadata(selectedServerId.value, {
-        fieldConfig: config
-      });
-      
-      // Show success toast notification
-      import('~/utils/toast').then(({ showToast }) => {
-        showToast('Dashboard layout saved successfully!', 'success', 3000);
-      });
-    } catch (error) {
-      console.error('Error saving field configuration:', error);
-      
-      // Show error toast notification
-      import('~/utils/toast').then(({ showToast }) => {
-        showToast('Failed to save dashboard layout', 'error', 3000);
-      });
+// Save user-specific layout configuration
+const saveUserLayoutConfig = async (config: FieldConfig[]) => {
+  if (selectedServerId.value && user.value) {
+    const success = await saveUserLayout(selectedServerId.value, config);
+    if (success) {
+      // Update the current layout
+      currentUserLayout.value = config;
     }
   }
 };
@@ -236,6 +230,22 @@ const handleJoinWithInvite = async (inviteCode: string) => {
   }
 };
 
+// Watch for server selection changes
+watch(() => selectedServerId.value, async (newServerId) => {
+  if (newServerId && user.value) {
+    // Load user layout when server selection changes
+    const layout = await loadUserLayout(newServerId);
+    if (layout) {
+      currentUserLayout.value = layout;
+    } else {
+      currentUserLayout.value = [];
+    }
+  } else {
+    // Clear current layout when no server is selected
+    currentUserLayout.value = [];
+  }
+});
+
 // Load user's servers on component mount
 onMounted(async () => {
   // Single loading operation to get all server data
@@ -247,11 +257,11 @@ onMounted(async () => {
     
     // Verify that the server exists in the user's server list before selecting it
     if (lastSelectedServerId && userServers.value.some(s => s.serverId === lastSelectedServerId)) {
-      // Set the selected server without reloading data
-      selectedServerId.value = lastSelectedServerId;
+      // Set the selected server and load user layout
+      await handleServerSelection(lastSelectedServerId);
     } else if (userServers.value.length > 0) {
       // If no last selected server, default to the first one
-      selectedServerId.value = userServers.value[0].serverId;
+      await handleServerSelection(userServers.value[0].serverId);
     }
   }
 });

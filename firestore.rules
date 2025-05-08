@@ -63,6 +63,11 @@ service cloud.firestore {
         allow delete: if isServerOwner(serverId) || isOwner(userId);
       }
       
+      match /userLayouts/{userId} {
+        // Allow users to read, write and delete only their own layouts
+        allow read, write, delete: if isServerMember(serverId) && isOwner(userId);
+      }
+      
       // Channels subcollection
       match /channels/{channelId} {
         allow read: if isServerMember(serverId);

@@ -1,7 +1,12 @@
 <template>
   <div class="field-container pl-2 pr-2">
+    <!-- Loading indicator -->
+    <div v-if="isLoadingLayout" class="loading-overlay">
+      <LoadingIndicator message="Loading your layout..." />
+    </div>
+    
     <!-- Scrollable grid layout container -->
-    <div class="grid-container">
+    <div class="grid-container" :class="{ 'blur-sm': isLoadingLayout }">
       <div 
         class="grid-layout" 
         :style="gridTemplateStyle"
@@ -67,8 +72,9 @@
     <div class="edit-mode-toggle">
       <button 
         @click="toggleEditMode"
+        :disabled="isLoadingLayout"
         class="bg-background border border-border rounded-md px-4 py-2 flex items-center"
-        :class="{ 'bg-theme-primary text-text border-theme-primary': isEditMode }"
+        :class="{ 'bg-theme-primary text-text border-theme-primary': isEditMode, 'opacity-50 cursor-not-allowed': isLoadingLayout }"
       >
         <fa :icon="['fas', 'edit']" class="mr-2 text-lg" :class="{ 'text-theme-primary': !isEditMode }" /> 
         <span class="text-text">{{ isEditMode ? 'Exit Edit Mode' : 'Edit Layout' }}</span>
@@ -88,16 +94,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useFieldGrid } from './composables/useFieldGrid';
 import { useFieldResize } from './composables/useFieldResize';
 import FieldItem from './FieldItem.vue';
+import LoadingIndicator from '../LoadingIndicator.vue';
 import type { Direction, FieldConfig } from './types/fieldTypes';
 
 // Define props and emits
 const props = defineProps<{
   initialConfig?: FieldConfig[];
   serverId?: string;
+  isLoadingLayout?: boolean;
 }>();
 
 const emit = defineEmits(['update:config', 'save-config']);
@@ -188,21 +196,40 @@ const shrinkComponentHandler = (id: string, direction: Direction) => {
   saveLayout();
 };
 
+// Watch for changes in initial config from parent component
+watch(() => props.initialConfig, (newConfig) => {
+  if (newConfig && newConfig.length > 0) {
+    fieldConfiguration.value = [...newConfig];
+  } else {
+    fieldConfiguration.value = [];
+  }
+}, { immediate: true });
+
 // Add server-specific loading/saving of field configuration
 onMounted(() => {
-  // Here you would typically load the configuration from a database
-  // based on the serverId prop
-  if (props.serverId) {
-    // This is where you'd load the layout from your database
-    // For now, we'll use the initial config or default settings
-    if (!props.initialConfig || props.initialConfig.length === 0) {
-      // No default components - start with an empty grid
-      fieldConfiguration.value = [];
-    }
+  // Initialize the configuration based on props
+  if (props.initialConfig && props.initialConfig.length > 0) {
+    fieldConfiguration.value = [...props.initialConfig];
+  } else {
+    // No default components - start with an empty grid
+    fieldConfiguration.value = [];
   }
 });
 </script>
 
 <style scoped>
 @import './styles/fieldStyles.css';
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(var(--color-background-rgb), 0.7);
+  z-index: 10;
+}
 </style>

@@ -1,12 +1,11 @@
 // This file serves as a central registry for all field components
 // that can be used in the field container
 
-import { markRaw, defineAsyncComponent } from 'vue'
+import { markRaw } from 'vue'
 import NewsComponent from './fieldComponents/NewsComponent.vue'
 import ActivityComponent from './fieldComponents/ActivityComponent.vue'
 import ChatComponent from './fieldComponents/ChatComponent.vue'
 import GroupsComponent from './fieldComponents/GroupsComponent.vue'
-// Import any future components here
 
 // Component registry - maps component types to their implementations
 export const componentRegistry: Record<string, any> = {
@@ -14,7 +13,6 @@ export const componentRegistry: Record<string, any> = {
   activity: ActivityComponent, 
   chat: ChatComponent,
   groups: GroupsComponent,
-  // Future components will be added here
 }
 
 // Component metadata for UI display
@@ -48,8 +46,6 @@ export const componentMetadata: Record<string, {
     description: 'Organize members into different groups with custom permissions.',
     category: 'admin'
   }
-  // Removed calendar and tasks since they don't have implementations yet
-  // Add them back when the components are created
 }
 
 // Helper function to get all available component types
