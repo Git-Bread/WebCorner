@@ -177,6 +177,52 @@ export const useServerCore = () => {
     }
   };
 
+  /**
+   * Update server metadata like settings, components, or field configuration
+   * @param serverId - The ID of the server to update
+   * @param metadata - Object containing the metadata to update
+   * @returns Promise<boolean> - Returns true on success, false on failure
+   */
+  const updateServerMetadata = async (
+    serverId: string,
+    metadata: Record<string, any>
+  ): Promise<boolean> => {
+    if (!user.value || !serverId) return false;
+    
+    try {
+      // Check if the server exists
+      const serverRef = doc(firestore, 'servers', serverId);
+      const serverDoc = await getDoc(serverRef);
+      
+      if (!serverDoc.exists()) {
+        showToast('Server not found', 'error');
+        return false;
+      }
+      
+      // Update the metadata with the current timestamp
+      await updateDoc(serverRef, {
+        ...metadata,
+        updatedAt: new Date()
+      });
+      
+      // Update the local state to reflect changes
+      if (serverData.value[serverId]) {
+        serverData.value[serverId] = {
+          ...serverData.value[serverId],
+          ...metadata,
+          updatedAt: new Date()
+        };
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating server metadata:', error);
+      const userMessage = handleDatabaseError(error);
+      showToast(`Failed to update server: ${userMessage}`, 'error');
+      return false;
+    }
+  };
+
   return {
     // State
     userServers,
@@ -186,6 +232,7 @@ export const useServerCore = () => {
     
     // Methods
     loadUserServers,
-    createServer
+    createServer,
+    updateServerMetadata
   };
 };

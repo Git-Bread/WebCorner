@@ -1,0 +1,246 @@
+/* Field Container Styles */
+.field-container {
+  height: 94vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.grid-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 2rem;
+}
+
+.grid-layout {
+  display: grid;
+  gap: 16px;
+  padding: 1rem 0;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Add Field Button Styles */
+.add-field-button {
+  height: 100%;
+  min-height: 150px;
+  transition: border-color 0.2s ease;
+}
+
+.add-row-button {
+  transition: border-color 0.2s ease;
+  margin-top: 1rem;
+}
+
+/* Edit Mode Toggle */
+.edit-mode-toggle {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 40;
+}
+
+.edit-mode-toggle button {
+  transition: all 0.2s ease;
+}
+
+.edit-mode-toggle button.active {
+  background-color: var(--color-theme-primary);
+  color: white;
+  border-color: var(--color-theme-primary);
+}
+
+/* Available Spots */
+.available-spot {
+  border: 2px dashed var(--color-border);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(var(--color-theme-primary-rgb), 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.available-spot:hover {
+  border-color: var(--color-theme-primary);
+  background-color: rgba(var(--color-theme-primary-rgb), 0.1);
+  transform: translateY(-2px);
+}
+
+/* Small (1x1) Available Spots */
+.available-spot-small {
+  border: 1px dashed var(--color-border);
+  background-color: rgba(var(--color-theme-primary-rgb), 0.02);
+}
+
+.available-spot-small:hover {
+  background-color: rgba(var(--color-theme-primary-rgb), 0.08);
+}
+
+/* Save Indicator */
+.save-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: white;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.3s ease;
+  z-index: 50;
+}
+
+.save-indicator.fade-out {
+  opacity: 0;
+}
+
+/* Field Item Styles */
+.field-item {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  height: 100%;
+  width: 100%;
+}
+
+.field-content {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.field-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+/* Edit mode styles */
+.edit-mode-active {
+  cursor: default;
+  box-shadow: 0 0 0 2px rgba(var(--color-theme-primary-rgb), 0.4);
+}
+
+/* Field Controls Styles */
+/* Expansion arrow styles */
+.expansion-arrow {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: var(--color-theme-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
+  transition: all 0.2s ease;
+}
+
+.expansion-arrow:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.down-arrow {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.right-arrow {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.up-arrow {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.left-arrow {
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Shrink arrow styles */
+.shrink-arrow {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: var(--color-theme-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
+  transition: all 0.2s ease;
+}
+
+.shrink-arrow:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.down-shrink-arrow {
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.right-shrink-arrow {
+  right: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.up-shrink-arrow {
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.left-shrink-arrow {
+  left: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Delete button */
+.delete-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.delete-button-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.delete-button-circle:hover {
+  transform: scale(1.1);
+}

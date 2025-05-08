@@ -56,6 +56,13 @@ export default defineNuxtConfig({
         'copy',
         'newspaper',
         'plus-circle',
+        'edit',
+        'comment-dots',
+        'chart-bar',
+        'chevron-right',
+        'chevron-left',
+        'trash',
+        'compress-alt',
       ],
       brands: [
         'github',
