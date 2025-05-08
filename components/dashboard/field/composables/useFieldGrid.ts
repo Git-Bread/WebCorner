@@ -240,7 +240,7 @@ export function useFieldGrid(props: {
     // Add a special "picker" component type
     fieldConfiguration.value.push({
       id: generateId(),
-      title: 'Select Component',
+      title: 'Select Category',
       componentType: 'picker',
       size: { width: 2, height: 2 }, // Default to 2x2 now
       position: position,
@@ -253,7 +253,7 @@ export function useFieldGrid(props: {
     // Add a special "picker" component type for small components
     fieldConfiguration.value.push({
       id: generateId(),
-      title: 'Select Component',
+      title: 'Select Category',
       componentType: 'picker',
       size: { width: 1, height: 1 }, // 1x1 size
       position: position,

@@ -122,17 +122,20 @@ const handleLogin = async () => {
     
     if (!result.success) {
       generalError.value = handleAuthError(result.error)
+      loading.value = false
     } else {
       showToast('Login successful! Redirecting...', 'success', 3000)
       
       setTimeout(() => {
         navigateTo('/dashboard')
       }, 1000)
+      
+      return
     }
   } catch (error) {
     generalError.value = handleAuthError(error)
-  } finally {
     loading.value = false
+  } finally {
     if (loadingTimeout.value) {
       clearTimeout(loadingTimeout.value);
       loadingTimeout.value = null;

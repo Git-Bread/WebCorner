@@ -8,11 +8,17 @@
     <h2 class="text-xl font-semibold text-heading mb-2">Welcome to WebCorner!</h2>
     <p class="text-text-muted mb-6">You're not connected to any servers yet. Create a new one or join an existing server to get started.</p>
     
-    <div class="flex justify-center space-x-4">
-      <button @click="$emit('create-server')" class="px-4 py-2 bg-theme-primary text-background rounded-md hover:bg-opacity-90 transition-all">
+    <div class="flex justify-center space-x-4 animate-buttons">
+      <button 
+        @click="$emit('create-server')" 
+        class="px-4 py-2 border border-theme-primary text-theme-primary rounded-md cta-button cta-secondary animate-button-pulse"
+      >
         Create Server
       </button>
-      <button @click="$emit('join-server')" class="px-4 py-2 border border-theme-primary text-theme-primary rounded-md hover:bg-surface transition-all">
+      <button 
+        @click="$emit('join-server')" 
+        class="px-4 py-2 bg-theme-primary text-background rounded-md cta-button hover-grow"
+      >
         Join Server
       </button>
     </div>

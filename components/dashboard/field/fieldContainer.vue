@@ -39,6 +39,7 @@
             :isEditMode="isEditMode"
             :canExpand="(field, direction) => canComponentExpand(field, direction)"
             :canShrink="(field, direction) => canComponentShrink(field, direction)"
+            :serverId="props.serverId"
             @select-component="handleComponentSelection"
             @remove-picker="removePicker"
             @expand="expandComponentHandler"
@@ -67,10 +68,10 @@
       <button 
         @click="toggleEditMode"
         class="bg-background border border-border rounded-md px-4 py-2 flex items-center"
-        :class="{ 'active': isEditMode }"
+        :class="{ 'bg-theme-primary text-text border-theme-primary': isEditMode }"
       >
-        <fa :icon="['fas', 'edit']" class="mr-2" /> 
-        <span>{{ isEditMode ? 'Exit Edit Mode' : 'Edit Layout' }}</span>
+        <fa :icon="['fas', 'edit']" class="mr-2 text-lg" :class="{ 'text-theme-primary': !isEditMode }" /> 
+        <span class="text-text">{{ isEditMode ? 'Exit Edit Mode' : 'Edit Layout' }}</span>
       </button>
     </div>
     
@@ -80,7 +81,7 @@
       class="save-indicator"
       :class="{ 'fade-out': isSaveIndicatorFading }"
     >
-      <fa :icon="['fas', isSaving ? 'spinner' : 'check']" class="mr-2" :spin="isSaving" />
+      <fa :icon="['fas', isSaving ? 'spinner' : 'check']" class="mr-2 text-lg text-theme-primary" :spin="isSaving" />
       <span>{{ isSaving ? 'Saving layout...' : 'Layout saved!' }}</span>
     </div>
   </div>

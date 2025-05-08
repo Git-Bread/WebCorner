@@ -9,6 +9,7 @@
       v-if="field.componentType === 'picker'"
       :position="field.position"
       :availableComponentTypes="availableComponentTypes"
+      :serverId="serverId"
       @select-component="$emit('select-component', $event, field.id)"
       @cancel="$emit('remove-picker', field.id)"
       class="field-content"
@@ -51,6 +52,7 @@ const props = defineProps<{
   isEditMode: boolean;
   canExpand: (field: FieldConfig, direction: Direction) => boolean;
   canShrink: (field: FieldConfig, direction: Direction) => boolean;
+  serverId?: string; // Serverid optional for server-specific components
 }>();
 
 // Define emits

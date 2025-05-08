@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { serverSchema } from '~/schemas/serverSchemas';
 import type { ServerRef } from '~/schemas/userSchemas';
@@ -12,12 +12,36 @@ import { handleDatabaseError, handleStorageError } from '~/utils/errorHandler';
 export const useServerCore = () => {
   const { firestore } = useFirebase();
   const { user } = useAuth();
+  const route = useRoute();
   
   // State
   const userServers = ref<ServerRef[]>([]);
   const serverData = ref<Record<string, any>>({});
   const isLoading = ref(false);
   const isCreatingServer = ref(false);
+  
+  // Current server state with auto-detection from route
+  const currentServer = ref<{ id: string; data?: Record<string, any> } | null>(null);
+  
+  // Computed property to get current server ID from route or stored value
+  const currentServerId = computed(() => {
+    // First check if we have a server ID in the route
+    if (route.params.serverId) {
+      return route.params.serverId as string;
+    }
+    
+    // Then check if we have a stored current server
+    if (currentServer.value?.id) {
+      return currentServer.value.id;
+    }
+    
+    // If user has servers, default to the first one
+    if (userServers.value.length > 0) {
+      return userServers.value[0].serverId;
+    }
+    
+    return null;
+  });
   
   /**
    * Load user's servers from Firestore
@@ -34,16 +58,36 @@ export const useServerCore = () => {
         const userData = userDoc.data();
         userServers.value = userData.servers || [];
         
-        // Load server details for each server
-        serverData.value = {};
-        for (const server of userServers.value) {
-          try {
-            const serverDoc = await getDoc(doc(firestore, 'servers', server.serverId));
-            if (serverDoc.exists()) {
-              serverData.value[server.serverId] = serverDoc.data();
+        // Load server details for each server in parallel
+        if (userServers.value.length > 0) {
+          const serverPromises = userServers.value.map(server => 
+            getDoc(doc(firestore, 'servers', server.serverId))
+              .then(doc => ({
+                serverId: server.serverId,
+                data: doc.exists() ? doc.data() : null
+              }))
+              .catch(error => {
+                console.error(`Error loading server ${server.serverId}:`, error);
+                return { serverId: server.serverId, data: null };
+              })
+          );
+          
+          // Wait for all server data to be fetched in parallel
+          const serversData = await Promise.all(serverPromises);
+          
+          // Update server data state
+          const newServerData: Record<string, any> = {};
+          serversData.forEach(server => {
+            if (server.data) {
+              newServerData[server.serverId] = server.data;
             }
-          } catch (error) {
-            console.error(`Error loading server ${server.serverId}:`, error);
+          });
+          
+          serverData.value = newServerData;
+          
+          // After loading servers, try to set the current server if needed
+          if (!currentServer.value && currentServerId.value) {
+            await setCurrentServer(currentServerId.value);
           }
         }
       }
@@ -53,6 +97,43 @@ export const useServerCore = () => {
     } finally {
       isLoading.value = false;
     }
+  };
+  
+  /**
+   * Set the current active server
+   * @param serverId - ID of the server to set as current
+   */
+  const setCurrentServer = async (serverId: string | null): Promise<void> => {
+    if (!serverId) {
+      currentServer.value = null;
+      return;
+    }
+    
+    // Check if we already have the server data loaded
+    let serverInfo = serverData.value[serverId];
+    
+    // If not, try to load it from Firestore
+    if (!serverInfo && user.value) {
+      try {
+        const serverDoc = await getDoc(doc(firestore, 'servers', serverId));
+        if (serverDoc.exists()) {
+          serverInfo = serverDoc.data();
+          // Update the server data cache
+          serverData.value = {
+            ...serverData.value,
+            [serverId]: serverInfo
+          };
+        }
+      } catch (error) {
+        console.error(`Error loading server ${serverId}:`, error);
+        return;
+      }
+    }
+    
+    currentServer.value = {
+      id: serverId,
+      data: serverInfo
+    };
   };
   
   /**
@@ -223,16 +304,35 @@ export const useServerCore = () => {
     }
   };
 
+  // Watch for route changes to update current server
+  if (process.client) {
+    watch(() => route.params.serverId, async (newServerId) => {
+      if (newServerId && typeof newServerId === 'string') {
+        await setCurrentServer(newServerId);
+      }
+    }, { immediate: true });
+  }
+
+  // On client-side mount, initialize the current server from route or stored value
+  if (process.client) {
+    onMounted(async () => {
+      if (currentServerId.value) {
+        await setCurrentServer(currentServerId.value);
+      }
+    });
+  }
+
   return {
-    // State
     userServers,
     serverData,
     isLoading,
     isCreatingServer,
+    currentServer,
+    currentServerId,
     
-    // Methods
     loadUserServers,
     createServer,
-    updateServerMetadata
+    updateServerMetadata,
+    setCurrentServer
   };
 };

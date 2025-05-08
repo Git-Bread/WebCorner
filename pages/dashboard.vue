@@ -238,6 +238,7 @@ const handleJoinWithInvite = async (inviteCode: string) => {
 
 // Load user's servers on component mount
 onMounted(async () => {
+  // Single loading operation to get all server data
   await loadUserServers();
   
   // After servers are loaded, check if we have a previously selected server in localStorage
@@ -246,7 +247,11 @@ onMounted(async () => {
     
     // Verify that the server exists in the user's server list before selecting it
     if (lastSelectedServerId && userServers.value.some(s => s.serverId === lastSelectedServerId)) {
+      // Set the selected server without reloading data
       selectedServerId.value = lastSelectedServerId;
+    } else if (userServers.value.length > 0) {
+      // If no last selected server, default to the first one
+      selectedServerId.value = userServers.value[0].serverId;
     }
   }
 });

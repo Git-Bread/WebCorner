@@ -63,6 +63,10 @@ export default defineNuxtConfig({
         'chevron-left',
         'trash',
         'compress-alt',
+        'tools',
+        'paint-brush',
+        'hashtag',
+        'comment',
       ],
       brands: [
         'github',

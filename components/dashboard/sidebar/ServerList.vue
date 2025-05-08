@@ -40,7 +40,7 @@
     <div class="mt-4 pt-4 border-t border-border space-y-2">
       <button 
         @click="$emit('add-server')"
-        class="w-full flex items-center justify-center p-2 rounded-md bg-surface hover:bg-background text-text-muted hover:text-text transition-all"
+        class="w-full flex items-center justify-center p-2 rounded-md bg-surface hover:bg-background text-text-muted hover:text-text transition-all cta-button hover-grow"
       >
         <fa :icon="['fas', 'plus']" class="mr-2" />
         Create Server
@@ -49,7 +49,7 @@
       <!-- Join Server Button -->
       <button 
         @click="$emit('join-server')"
-        class="w-full flex items-center justify-center p-2 rounded-md bg-surface hover:bg-background text-text-muted hover:text-text transition-all"
+        class="w-full flex items-center justify-center p-2 rounded-md bg-surface hover:bg-background text-text-muted hover:text-text transition-all cta-button"
       >
         <fa :icon="['fas', 'sign-in-alt']" class="mr-2" />
         Join Server
