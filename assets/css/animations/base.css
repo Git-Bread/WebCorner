@@ -53,6 +53,17 @@
     }
   }
   
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+  }
+  
   @keyframes float {
     0% {
       transform: translate(0, 0) rotate(0deg);
@@ -96,6 +107,10 @@
 
   .animate-fade-in {
     animation: fadeIn 0.2s ease-out forwards;
+  }
+  
+  .animate-fade-out {
+    animation: fadeOut 0.3s ease-in forwards;
   }
 
   /* Sidebar specific animations with slower timings */

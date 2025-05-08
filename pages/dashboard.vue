@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 
 // Import components
 import ServerSidebar from '~/components/dashboard/ServerSidebar.vue';
@@ -67,6 +67,8 @@ import CreateServerDialog from '~/components/dashboard/CreateServerDialog.vue';
 import JoinServerDialog from '~/components/dashboard/JoinServerDialog.vue';
 // Import specific server composables instead of the combined useServerActions
 import { useServerCore, useServerJoining, useServerInvitations } from '~/composables/server';
+// Import server storage utilities
+import { saveLastSelectedServer, getLastSelectedServer } from '~/utils/serverStorageUtils';
 
 // Define page meta with authenticated layout
 definePageMeta({ layout: 'default-authed' });
@@ -75,6 +77,7 @@ definePageMeta({ layout: 'default-authed' });
 const { userServers, serverData, isLoading, isCreatingServer, loadUserServers, createServer } = useServerCore();
 const { isJoiningServer, joinServer } = useServerJoining();
 const { joinServerWithInvite } = useServerInvitations();
+const { user } = useAuth();
 
 const selectedServerId = ref<string | null>(null);
 
@@ -87,9 +90,14 @@ const hasServers = computed(() => {
 const showCreateServerDialog = ref(false);
 const showJoinServerDialog = ref(false);
 
-// Handle server selection
+// Handle server selection and save to localStorage
 const handleServerSelection = (serverId: string | null) => {
   selectedServerId.value = serverId;
+  
+  // Save to localStorage when user is logged in
+  if (user.value) {
+    saveLastSelectedServer(serverId, user.value.uid);
+  }
 };
 
 // Handle server creation
@@ -121,7 +129,7 @@ const handleCreateServer = async (serverInfo: {
         serverData.value[s.serverId]?.ownerId === useAuth().user.value?.uid // Add owner check for more robustness
       );
       if (newServer) {
-        selectedServerId.value = newServer.serverId;
+        handleServerSelection(newServer.serverId); // Use handleServerSelection to also save to localStorage
       }
     }, 500); // Keep a small delay to allow reactivity to settle
   }
@@ -133,7 +141,7 @@ const handleJoinServer = async (serverId: string) => {
   if (joinedServerId) {
     showJoinServerDialog.value = false;
     // Select the newly joined server
-    selectedServerId.value = joinedServerId;
+    handleServerSelection(joinedServerId); // Use handleServerSelection to also save to localStorage
   }
 };
 
@@ -143,12 +151,22 @@ const handleJoinWithInvite = async (inviteCode: string) => {
   if (joinedServerId) {
     showJoinServerDialog.value = false;
     // Select the newly joined server
-    selectedServerId.value = joinedServerId;
+    handleServerSelection(joinedServerId); // Use handleServerSelection to also save to localStorage
   }
 };
 
 // Load user's servers on component mount
 onMounted(async () => {
   await loadUserServers();
+  
+  // After servers are loaded, check if we have a previously selected server in localStorage
+  if (user.value && hasServers.value && !selectedServerId.value) {
+    const lastSelectedServerId = getLastSelectedServer(user.value.uid);
+    
+    // Verify that the server exists in the user's server list before selecting it
+    if (lastSelectedServerId && userServers.value.some(s => s.serverId === lastSelectedServerId)) {
+      selectedServerId.value = lastSelectedServerId;
+    }
+  }
 });
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4 max-h-72 overflow-y-auto pb-2"> <!-- Removed 'relative' class -->
+  <div class="space-y-4 max-h-72 overflow-y-auto overflow-x-hidden pb-2"> <!-- Added overflow-x-hidden -->
     <!-- Loading state -->
     <div v-if="isLoadingMembers" class="flex justify-center py-4">
       <div class="w-4 h-4 border-2 border-t-theme-primary rounded-full animate-spin"></div>
@@ -12,7 +12,7 @@
         <div 
           v-for="(member, index) in adminAndOwnerMembers" 
           :key="member.userId" 
-          class="flex items-center pl-2 p-0.5 rounded-md hover:bg-background transition-colors duration-300 sidebar-hover-grow relative cursor-pointer member-list-item-trigger"
+          class="flex items-center pl-2 p-0.5 rounded-md hover:bg-background transition-colors duration-300 sidebar-hover-grow relative cursor-pointer member-list-item-trigger w-full"
           :class="[
             index === 0 ? 'member-item-1' : 
             index === 1 ? 'member-item-2' : 
@@ -40,13 +40,13 @@
             <fa 
               v-if="member.role === 'owner'" 
               :icon="['fas', 'crown']" 
-              class="text-theme-primary ml-1 text-xs"
+              class="text-theme-primary ml-1 text-xs flex-shrink-0"
               title="Server Owner"
             />
             <fa 
               v-else-if="member.role === 'admin'" 
               :icon="['fas', 'shield-alt']" 
-              class="text-accent-1 ml-1 text-xs"
+              class="text-accent-1 ml-1 text-xs flex-shrink-0"
               title="Admin"
             />
           </div>
@@ -59,7 +59,7 @@
         <div 
           v-for="(member, index) in regularMembers" 
           :key="member.userId" 
-          class="flex items-center pl-2 p-0.5 rounded-md hover:bg-background transition-colors duration-300 sidebar-hover-grow relative cursor-pointer member-list-item-trigger"
+          class="flex items-center pl-2 p-0.5 rounded-md hover:bg-background transition-colors duration-300 sidebar-hover-grow relative cursor-pointer member-list-item-trigger w-full"
           :class="[
             index === 0 ? 'member-item-1' : 
             index === 1 ? 'member-item-2' : 
@@ -82,7 +82,9 @@
             />
             <span v-else>{{ getUserInitial(member.displayName) }}</span>
           </div>
-          <span class="text-text truncate w-full">{{ member.displayName || 'Unknown User' }}</span>
+          <div class="flex-1 min-w-0">
+            <span class="text-text truncate block">{{ member.displayName || 'Unknown User' }}</span>
+          </div>
         </div>
       </div>
       

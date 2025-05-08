@@ -52,3 +52,21 @@ html.disable-animations .feature-card {
   opacity: 1 !important;
   transform: translateY(0) !important;
 }
+
+/* Ensure dashboard and sidebar elements are visible when animations are disabled */
+html.disable-animations .sidebar-fade-in,
+html.disable-animations .invite-form-fade-in,
+html.disable-animations .member-item-1,
+html.disable-animations .member-item-2,
+html.disable-animations .member-item-3,
+html.disable-animations .member-item-4,
+html.disable-animations .member-item-5,
+html.disable-animations .server-item {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* Ensure hover effects still work in sidebar when animations are disabled */
+html.disable-animations .sidebar-hover-grow:hover {
+  transform: scale(1.03) !important;
+}
