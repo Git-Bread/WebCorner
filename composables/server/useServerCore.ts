@@ -70,6 +70,12 @@ export const useServerCore = () => {
       return "User not authenticated.";
     }
 
+    // Check if the user has reached the maximum server limit (3)
+    if (userServers.value.length >= 3) {
+      showToast('You have reached the maximum limit of 3 servers', 'error');
+      return "Maximum server limit reached. You can only create up to 3 servers.";
+    }
+
     isCreatingServer.value = true;
     const tempImageUrl = serverInfo.server_img_url;
     let serverRef;

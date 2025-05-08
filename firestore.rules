@@ -25,11 +25,19 @@ service cloud.firestore {
         get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
     }
     
+    // Function to check if a request is only updating the servers array
+    function isOnlyAddingServer(userId) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servers']) &&
+             request.auth.uid == userId;
+    }
+    
     // User profiles
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId);
-      allow update, delete: if isOwner(userId);
+      // User updates to their own document
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
       
       // User settings subcollection
       match /settings/{document=**} {
@@ -43,12 +51,14 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       
-      // Only server owners can update or delete servers
+      // Only server owner can update or delete server info
       allow update, delete: if isServerOwner(serverId);
       
       // Server members subcollection
       match /members/{userId} {
         allow read: if isServerMember(serverId);
+        // Only server owners can directly modify the members collection
+        // Cloud Functions handle member joining with admin privileges
         allow create, update: if isServerOwner(serverId);
         allow delete: if isServerOwner(serverId) || isOwner(userId);
       }
@@ -81,15 +91,9 @@ service cloud.firestore {
       // Only the server owner can create invitations
       allow create: if isAuthenticated() && isServerOwner(request.resource.data.serverId);
       
-      // For updating, only allow incrementing the useCount field
-      allow update: if isAuthenticated() && 
-        (
-          // Server owner can update any fields
-          isServerOwner(resource.data.serverId) || 
-          // Other users can only increment the useCount
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount']) &&
-          request.resource.data.useCount == resource.data.useCount + 1)
-        );
+      // For updating, only allow server owners to modify invites
+      // Cloud Functions handle invite usage tracking
+      allow update: if isAuthenticated() && isServerOwner(resource.data.serverId);
     }
     
     // Deny access to everything else

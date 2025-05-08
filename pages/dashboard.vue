@@ -8,6 +8,7 @@
       :selected-server-id="selectedServerId"
       @server-selected="handleServerSelection"
       @add-server="showCreateServerDialog = true"
+      @join-server="showJoinServerDialog = true"
     />
     
     <!-- Main content area -->
@@ -128,17 +129,21 @@ const handleCreateServer = async (serverInfo: {
 
 // Handle joining a server directly with server ID
 const handleJoinServer = async (serverId: string) => {
-  const success = await joinServer(serverId);
-  if (success) {
+  const joinedServerId = await joinServer(serverId);
+  if (joinedServerId) {
     showJoinServerDialog.value = false;
+    // Select the newly joined server
+    selectedServerId.value = joinedServerId;
   }
 };
 
 // Handle joining a server with an invitation code
 const handleJoinWithInvite = async (inviteCode: string) => {
-  const success = await joinServerWithInvite(inviteCode);
-  if (success) {
+  const joinedServerId = await joinServerWithInvite(inviteCode);
+  if (joinedServerId) {
     showJoinServerDialog.value = false;
+    // Select the newly joined server
+    selectedServerId.value = joinedServerId;
   }
 };
 

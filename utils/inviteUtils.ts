@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { collection, doc, setDoc, getDoc, query, where, getDocs, updateDoc, increment } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { showToast } from './toast';
 import { validateServerInvite, type ServerInvite } from '~/schemas/serverInviteSchemas';
 import { handleDatabaseError } from './errorHandler';
@@ -108,7 +108,7 @@ export const getInviteByCode = async (firestore: any, inviteCode: string): Promi
  * @param serverId - ID of the server to get invites for
  * @returns Array of valid invitations
  */
-export const getServerInvites = async (firestore: any, serverId: string) => {
+export const getServerInvites = async (firestore: any, serverId: string): Promise<ServerInvite[]> => {
   try {
     const invitesQuery = query(
       collection(firestore, 'serverInvites'),
@@ -117,15 +117,22 @@ export const getServerInvites = async (firestore: any, serverId: string) => {
     );
     
     const querySnapshot = await getDocs(invitesQuery);
-    const invites = querySnapshot.docs.map(doc => {
+    const invites: ServerInvite[] = querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
+        code: data.code,
+        serverId: data.serverId,
+        creatorId: data.creatorId,
+        useCount: data.useCount || 0,
         // Convert Firestore timestamps to JS Dates
         createdAt: data.createdAt.toDate(),
-        expiresAt: data.expiresAt.toDate()
-      };
+        expiresAt: data.expiresAt.toDate(),
+        // Optional fields
+        serverName: data.serverName,
+        maxUses: data.maxUses
+      } as ServerInvite;
     });
     
     // Filter out expired invites on the client side
@@ -134,25 +141,6 @@ export const getServerInvites = async (firestore: any, serverId: string) => {
   } catch (error) {
     console.error('Error fetching server invitations:', error);
     return [];
-  }
-};
-
-/**
- * Use an invitation (increment use count)
- * @param firestore - Firestore instance
- * @param inviteCode - The invitation code being used
- * @returns true if successful, false otherwise
- */
-export const incrementInviteUseCount = async (firestore: any, inviteCode: string): Promise<boolean> => {
-  try {
-    const inviteRef = doc(firestore, 'serverInvites', inviteCode);
-    await updateDoc(inviteRef, {
-      useCount: increment(1)
-    });
-    return true;
-  } catch (error) {
-    console.error('Error incrementing invitation use count:', error);
-    return false;
   }
 };
 

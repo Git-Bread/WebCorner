@@ -52,6 +52,10 @@ export default defineNuxtConfig({
         'plus',
         'universal-access',
         'exclamation-triangle',
+        'crown',
+        'copy',
+        'newspaper',
+        'plus-circle',
       ],
       brands: [
         'github',

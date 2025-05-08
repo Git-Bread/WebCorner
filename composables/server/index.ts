@@ -8,3 +8,4 @@ export { useServerCore } from './useServerCore';
 export { useServerJoining } from './useServerJoining';
 export { useServerPermissions } from './useServerPermissions';
 export { useServerInvitations } from './useServerInvitations';
+export { useServerMembers } from './useServerMembers';

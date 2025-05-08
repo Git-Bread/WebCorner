@@ -57,21 +57,24 @@
       </div>
       
       <div v-else>
-        <h3 class="text-lg text-heading mb-3">Getting Started</h3>
-        <ul class="space-y-2 text-text-muted">
-          <li class="flex items-start">
-            <fa :icon="['fas', 'arrow-right']" class="text-theme-primary mr-2 mt-1" />
-            <span>Create a new server by clicking the "Add Server" button in the sidebar</span>
-          </li>
-          <li class="flex items-start">
-            <fa :icon="['fas', 'arrow-right']" class="text-theme-primary mr-2 mt-1" />
-            <span>Invite members to your server to start collaborating</span>
-          </li>
-          <li class="flex items-start">
-            <fa :icon="['fas', 'arrow-right']" class="text-theme-primary mr-2 mt-1" />
-            <span>Customize your server settings to match your team's needs</span>
-          </li>
-        </ul>
+        <h3 class="text-xl text-heading mb-4 font-semibold">Welcome to WebCorner!</h3>
+        <div class="bg-background p-4 border border-border rounded-md">
+          <h4 class="font-medium text-theme-primary mb-3">Getting Started</h4>
+          <ul class="space-y-3 text-text">
+            <li class="flex items-start">
+              <fa :icon="['fas', 'plus-circle']" class="text-theme-primary mr-2 mt-1 flex-shrink-0" />
+              <span><strong>Create a Server</strong> - Start your own collaborative workspace by clicking "Create Server" in the sidebar.</span>
+            </li>
+            <li class="flex items-start">
+              <fa :icon="['fas', 'sign-in-alt']" class="text-theme-primary mr-2 mt-1 flex-shrink-0" />
+              <span><strong>Join a Server</strong> - Connect to an existing server using an invitation code or server ID by clicking "Join Server".</span>
+            </li>
+            <li class="flex items-start">
+              <fa :icon="['fas', 'users']" class="text-theme-primary mr-2 mt-1 flex-shrink-0" />
+              <span><strong>Invite Team Members</strong> - Once in a server, you can invite colleagues to collaborate with you.</span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>

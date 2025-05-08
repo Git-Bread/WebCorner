@@ -10,6 +10,7 @@ import {
     initializeFirestore
 } from "firebase/firestore";
 import { getStorage, connectStorageEmulator, type FirebaseStorage } from "firebase/storage";
+import { getFunctions, connectFunctionsEmulator, type Functions } from "firebase/functions";
 
 // Define a type for the injected properties
 type FirebaseInjections = {
@@ -17,6 +18,7 @@ type FirebaseInjections = {
   auth: Auth;
   firestore: Firestore;
   storage: FirebaseStorage;
+  functions: Functions;
 }
 
 // Create mock objects that simulate Firebase interfaces
@@ -51,11 +53,19 @@ const createMocks = () => {
     maxOperationRetryTime: 0,
   };
 
+  // Mock Functions
+  const mockFunctions: Partial<Functions> = {
+    app: mockApp as FirebaseApp,
+    customDomain: null,
+    region: 'us-central1'
+  };
+
   return {
     firebase: mockApp as unknown as FirebaseApp,
     auth: mockAuth as unknown as Auth,
     firestore: mockFirestore as unknown as Firestore,
-    storage: mockStorage as unknown as FirebaseStorage
+    storage: mockStorage as unknown as FirebaseStorage,
+    functions: mockFunctions as unknown as Functions
   };
 };
 
@@ -77,18 +87,22 @@ export default defineNuxtPlugin<FirebaseInjections>(() => {
         // Initialize Firestore without any persistence configuration
         const firestore = initializeFirestore(app, {});
         const storage = getStorage(app);
+        const functions = getFunctions(app);
 
         // Connect to emulators in development mode
         if (isDevelopment) {
             try {
                 // Connect to emulators with explicit error handling
-                connectFirestoreEmulator(firestore, 'localhost', 8080);
-                connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+                connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
+                connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
                 
-                // Connect to storage emulator as defined in firebase.json
-                connectStorageEmulator(storage, 'localhost', 9199);
+                // Connect to storage emulator using 127.0.0.1
+                connectStorageEmulator(storage, '127.0.0.1', 9199);
                 
-                console.log('Using Firebase emulators');
+                // Connect to functions emulator using 127.0.0.1
+                connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+                
+                console.log('Using Firebase emulators with 127.0.0.1 address');
             } catch (emulatorError) {
                 console.error('Failed to connect to Firebase emulators:', emulatorError);
                 // Continue execution - for testing reasons
@@ -100,7 +114,8 @@ export default defineNuxtPlugin<FirebaseInjections>(() => {
                 firebase: app,
                 auth: auth,
                 firestore: firestore,
-                storage: storage
+                storage: storage,
+                functions: functions
             }
         };
     } catch (error) {

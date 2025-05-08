@@ -1,7 +1,7 @@
 import { ref } from 'vue';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { showToast } from '~/utils/toast';
-import { createServerInvite, getInviteByCode, incrementInviteUseCount } from '~/utils/inviteUtils';
+import { createServerInvite, getInviteByCode, getServerInvites } from '~/utils/inviteUtils';
 import { isInviteValid, type ServerInvite } from '~/schemas/serverInviteSchemas';
 import { useServerCore } from './useServerCore';
 import { useServerPermissions } from './useServerPermissions';
@@ -10,13 +10,47 @@ import { useServerPermissions } from './useServerPermissions';
  * Composable for server invitation operations
  */
 export const useServerInvitations = () => {
-  const { firestore } = useFirebase();
+  const { firestore, functions } = useFirebase();
   const { user } = useAuth();
   const { userServers, serverData, loadUserServers } = useServerCore();
   const { isServerAdminOrOwner } = useServerPermissions();
   
   // State
   const isJoiningServer = ref(false);
+  const activeInvites = ref<ServerInvite[]>([]);
+  const isLoadingInvites = ref(false);
+  
+  // Create references to Cloud Functions
+  const incrementInviteUsageFunction = httpsCallable(functions, 'incrementInviteUsage');
+  const joinServerMemberFunction = httpsCallable(functions, 'joinServerMember');
+  
+  /**
+   * Clear active invites array
+   */
+  const clearActiveInvites = () => {
+    activeInvites.value = [];
+  };
+  
+  /**
+   * Load all active invites for a server
+   */
+  const loadServerInvites = async (serverId: string): Promise<ServerInvite[]> => {
+    if (!user.value || !serverId) return [];
+    
+    isLoadingInvites.value = true;
+    
+    try {
+      const invites = await getServerInvites(firestore, serverId);
+      activeInvites.value = invites;
+      return invites;
+    } catch (error) {
+      console.error('Error loading server invites:', error);
+      showToast('Failed to load server invites', 'error');
+      return [];
+    } finally {
+      isLoadingInvites.value = false;
+    }
+  };
   
   /**
    * Generate a server invite
@@ -69,10 +103,10 @@ export const useServerInvitations = () => {
   
   /**
    * Join a server using an invitation code
+   * @returns Promise with the joined serverId if successful, or null on failure
    */
-  const joinServerWithInvite = async (inviteCode: string): Promise<boolean> => {
-    if (!user.value || !inviteCode) return false;
-    const currentUserId = user.value.uid;
+  const joinServerWithInvite = async (inviteCode: string): Promise<string | null> => {
+    if (!user.value || !inviteCode) return null;
     
     isJoiningServer.value = true;
     
@@ -82,13 +116,13 @@ export const useServerInvitations = () => {
       
       if (!invite) {
         showToast('Invalid invitation code', 'error');
-        return false;
+        return null;
       }
       
       // Check if the invitation is valid (not expired, not over max uses)
       if (!isInviteValid(invite)) {
         showToast('This invitation has expired or reached its usage limit', 'error');
-        return false;
+        return null;
       }
       
       // Check if user is already a member of this server
@@ -96,57 +130,59 @@ export const useServerInvitations = () => {
       
       if (isAlreadyMember) {
         showToast('You are already a member of this server', 'info');
-        return false;
+        return null;
       }
       
-      // Add user to server members
-      const now = new Date();
-      await setDoc(doc(firestore, 'servers', invite.serverId, 'members', currentUserId), {
-        userId: currentUserId,
-        role: 'member',
-        joinedAt: now,
-        groupIds: []
+      // Call the Cloud Function to handle all server joining operations
+      await joinServerMemberFunction({ serverId: invite.serverId });
+      
+      // Increment the invite use count separately
+      // This is done separately so that server joining can succeed even if this fails
+      incrementInviteCount(inviteCode).catch(error => {
+        console.warn('Failed to increment invite use count:', error);
+        // Non-blocking error - joining was still successful
       });
-      
-      // Add server to user's servers
-      await updateDoc(doc(firestore, 'users', currentUserId), {
-        servers: arrayUnion({
-          serverId: invite.serverId,
-          joinedAt: now
-        })
-      });
-      
-      // Update server member count
-      const serverRef = doc(firestore, 'servers', invite.serverId);
-      const serverDoc = await getDoc(serverRef);
-      
-      if (serverDoc.exists()) {
-        const currentMemberCount = serverDoc.data()?.memberCount || 0;
-        await updateDoc(serverRef, {
-          memberCount: currentMemberCount + 1
-        });
-      }
-      
-      // Increment the invitation use count
-      await incrementInviteUseCount(firestore, inviteCode);
       
       showToast('Server joined successfully!', 'success');
       
-      // Reload user servers
+      // Reload user servers to update UI
       await loadUserServers();
-      return true;
-    } catch (error) {
+      
+      // Return the serverId on success
+      return invite.serverId;
+    } catch (error: any) {
       console.error('Error joining server with invite:', error);
-      showToast('Failed to join server', 'error');
-      return false;
+      
+      // Extract the error message from the Cloud Function if available
+      let errorMessage = 'Failed to join server';
+      if (error.code === 'already-exists') {
+        errorMessage = 'You are already a member of this server';
+      } else if (error.details?.message) {
+        errorMessage = error.details.message;
+      }
+      
+      showToast(errorMessage, 'error');
+      return null;
     } finally {
       isJoiningServer.value = false;
     }
   };
   
+  /**
+   * Helper function to increment the invite use count
+   * This is separated to avoid blocking the main joining process
+   */
+  const incrementInviteCount = async (inviteCode: string): Promise<void> => {
+    return incrementInviteUsageFunction({ inviteCode }).then();
+  };
+  
   return {
     generateServerInvite,
     joinServerWithInvite,
+    loadServerInvites,
+    clearActiveInvites,
+    activeInvites,
+    isLoadingInvites,
     isJoiningServer
   };
 };
