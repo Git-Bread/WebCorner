@@ -10,14 +10,12 @@ const LAST_SELECTED_SERVER_KEY = 'webcorner_last_selected_server';
  * @param userId - The current user ID to scope the storage to the user
  */
 export const saveLastSelectedServer = (serverId: string | null, userId: string): void => {
-  if (!process.client) return; // Only run on client-side
+  if (!import.meta.client) return; // Only run on client-side
   
   try {
     if (serverId) {
-      // Store the server ID with user scope
       localStorage.setItem(`${LAST_SELECTED_SERVER_KEY}_${userId}`, serverId);
     } else {
-      // If null is passed, clear the saved server
       localStorage.removeItem(`${LAST_SELECTED_SERVER_KEY}_${userId}`);
     }
   } catch (error) {

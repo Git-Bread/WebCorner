@@ -44,6 +44,12 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
     }
+
+    //decorative counter collection
+    match /counters/{counterId} {
+      allow read: if true;
+      allow write: if false;  // Only updateable via Cloud Functions
+    }
     
     // Server collection
     match /servers/{serverId} {
