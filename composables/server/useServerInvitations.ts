@@ -12,15 +12,14 @@ import { useServerPermissions } from './useServerPermissions';
 export const useServerInvitations = () => {
   const { firestore, functions } = useFirebase();
   const { user } = useAuth();
-  const { userServers, serverData, loadUserServers } = useServerCore();
+  const { userServers, serverData, loadUserServers, setCurrentServer } = useServerCore();
   const { isServerAdminOrOwner } = useServerPermissions();
   
   // State
   const isJoiningServer = ref(false);
   const activeInvites = ref<ServerInvite[]>([]);
   const isLoadingInvites = ref(false);
-  
-  // Create references to Cloud Functions
+    // Create references to Cloud Functions
   const incrementInviteUsageFunction = httpsCallable(functions, 'incrementInviteUsage');
   const joinServerMemberFunction = httpsCallable(functions, 'joinServerMember');
   
@@ -125,55 +124,85 @@ export const useServerInvitations = () => {
         return null;
       }
       
-      // Check if user is already a member of this server
-      const isAlreadyMember = userServers.value.some(s => s.serverId === invite.serverId);
+      // IMPORTANT: Load the latest user servers before checking membership
+      await loadUserServers();
       
+      // Check if user is already a member of this server
+      const safeUserServers = Array.isArray(userServers.value) ? userServers.value : [];
+      const isAlreadyMember = safeUserServers.some(s => s.serverId === invite.serverId);
       if (isAlreadyMember) {
         showToast('You are already a member of this server', 'info');
-        return null;
+        // Add a small delay to show the loading state for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // If they're already a member, still return the ID so we can navigate to it
+        return invite.serverId;
       }
       
       // Call the Cloud Function to handle all server joining operations
-      await joinServerMemberFunction({ serverId: invite.serverId });
+      try {
+        await joinServerMemberFunction({ serverId: invite.serverId });
+      } catch (joinError: any) {
+        // Handle potential errors from joinServerMemberFunction
+        console.error('Error during server join operation:', joinError);
+        let errorMessage = 'Failed to join server';
+        if (joinError.code === 'already-exists' || 
+            (joinError.message && joinError.message.includes('already a member'))) {
+          errorMessage = 'You are already a member of this server';
+          // If they're already a member, still return the ID so we can navigate to it
+          await loadUserServers(); // Refresh user servers
+          return invite.serverId;
+        } else if (joinError.details?.message) {
+          errorMessage = joinError.details.message;
+        }
+        showToast(errorMessage, 'error', 3000);
+        return null; // Stop execution if join fails
+      }
       
       // Increment the invite use count separately
       // This is done separately so that server joining can succeed even if this fails
-      incrementInviteCount(inviteCode).catch(error => {
-        console.warn('Failed to increment invite use count:', error);
-        // Non-blocking error - joining was still successful
-      });
+      if (invite.id) {
+        incrementInviteCount(invite.id).catch(() => {
+          // Non-critical error, so we don't necessarily stop the whole process
+        });
+      }      showToast('Server joined successfully!', 'success');
+      console.log(`Successfully joined server with invite: ${invite.serverId}`);
       
-      showToast('Server joined successfully!', 'success');
-      
-      // Reload user servers to update UI
+      // Reload user servers to update UI with the new server data
       await loadUserServers();
+      console.log(`User servers reloaded after joining server ${invite.serverId} with invite`);
       
-      // Return the serverId on success
-      return invite.serverId;
+      // No navigation - let the caller handle UI updates
+      return invite.serverId; // Return the serverId on success
+
     } catch (error: any) {
       console.error('Error joining server with invite:', error);
-      
-      // Extract the error message from the Cloud Function if available
-      let errorMessage = 'Failed to join server';
-      if (error.code === 'already-exists') {
-        errorMessage = 'You are already a member of this server';
-      } else if (error.details?.message) {
+      // General error handling for the overall process
+      let errorMessage = 'Failed to join server using invite';
+      if (error.details?.message) { // Check if it's a Firebase Functions error
         errorMessage = error.details.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
-      
       showToast(errorMessage, 'error');
       return null;
     } finally {
       isJoiningServer.value = false;
     }
-  };
-  
-  /**
+  };  /**
    * Helper function to increment the invite use count
    * This is separated to avoid blocking the main joining process
    */
-  const incrementInviteCount = async (inviteCode: string): Promise<void> => {
-    return incrementInviteUsageFunction({ inviteCode }).then();
+  const incrementInviteCount = async (inviteCode: string): Promise<void> => {    
+    try {
+      // Additional validation check
+      if (!inviteCode || inviteCode.trim() === '') {
+        return;
+      }
+      
+      await incrementInviteUsageFunction({ inviteCode });
+    } catch {
+      // Non-blocking error, silently continue as this is non-critical
+    }
   };
   
   return {

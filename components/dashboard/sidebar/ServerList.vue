@@ -4,16 +4,18 @@
     
     <!-- Loading indicator -->
     <div v-if="isLoading" class="flex justify-center py-4">
-      <div class="w-6 h-6 border-2 border-t-theme-primary rounded-full animate-spin"></div>
+      <div class="w-6 h-6 border-2 border-t-theme-primary rounded-full animate-spin" aria-label="Loading servers"></div>
     </div>
     
-    <div v-else-if="servers && servers.length > 0" class="space-y-2">
-      <!-- Server list items -->
+    <div v-else-if="servers && servers.length > 0" class="space-y-2">      <!-- Server list items -->
       <div 
         v-for="server in servers" 
         :key="server.serverId" 
         class="flex items-center p-2 rounded-md hover:bg-background cursor-pointer"
+        :class="{'bg-background border border-theme-primary': selectedServerId === server.serverId}"
         @click="$emit('server-selected', server.serverId)"
+        role="button"
+        :aria-label="`Select server ${getServerName(server.serverId)}`"
       >
         <!-- Server Avatar - Image or Fallback Initial -->
         <div 
@@ -22,7 +24,7 @@
         >
           <img 
             v-if="getServerImageUrl(server.serverId)"
-            :src="getServerImageUrl(server.serverId) || ''"
+            :src="getServerImageUrl(server.serverId)"
             :alt="getServerName(server.serverId)"
             class="w-full h-full object-cover"
           />
@@ -41,6 +43,7 @@
       <button 
         @click="$emit('add-server')"
         class="w-full flex items-center justify-center p-2 rounded-md bg-surface hover:bg-background text-text-muted hover:text-text transition-all cta-button hover-grow"
+        aria-label="Create a new server"
       >
         <fa :icon="['fas', 'plus']" class="mr-2" />
         Create Server
@@ -50,6 +53,7 @@
       <button 
         @click="$emit('join-server')"
         class="w-full flex items-center justify-center p-2 rounded-md bg-surface hover:bg-background text-text-muted hover:text-text transition-all cta-button"
+        aria-label="Join an existing server"
       >
         <fa :icon="['fas', 'sign-in-alt']" class="mr-2" />
         Join Server
@@ -59,13 +63,13 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
 import type { ServerRef } from '~/schemas/userSchemas';
 
 const props = defineProps<{
   servers: ServerRef[];
   serverData: Record<string, any>;
   isLoading: boolean;
+  selectedServerId?: string | null;
 }>();
 
 const emit = defineEmits<{
