@@ -13,12 +13,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
 import { type PrivacySettings } from '~/composables/useUserSettings';
 import ToggleSwitch from '~/components/userComponents/ui/ToggleSwitch.vue';
 
 interface PrivacyTabProps {
-  settings: {
+  settings: { 
     privacy: PrivacySettings;
   };
 }

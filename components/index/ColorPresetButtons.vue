@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed } from 'vue';
+
 
 // Define the interface for color presets
 interface ColorPreset {

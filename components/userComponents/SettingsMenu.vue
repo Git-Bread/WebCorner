@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="fixed bottom-4 right-1 sm:right-4 p-4 rounded-lg shadow-lg bg-ui-panel border border-border w-full max-w-lg z-50"
+    class="fixed bottom-2 md:bottom-4 right-0 md:right-4 p-4 rounded-lg shadow-lg bg-ui-panel border border-border w-full max-w-lg z-50"
     role="dialog"
     aria-modal="true"
     aria-labelledby="settings-title">
@@ -23,19 +23,35 @@
 
     <!-- Content Area Wrapper with fixed height/width and overflow -->
     <div 
-      class="h-[20em] overflow-y-auto overflow-x-auto pr-2 pl-2"
+      class="h-[20em] overflow-y-auto overflow-x-auto pr-2 pl-2 bg-ui-panel"
       role="tabpanel"
       :id="`panel-${activeTab}`"
       :aria-labelledby="`tab-${activeTab}`">
-      <!-- Dynamic Component Loading -->
-      <component 
-        :is="currentTabComponent" 
-        :settings="tabSettings"
-        @update:theme="settingsManager.updateTheme"
-        @update:font-size="settingsManager.updateFontSize"
-        @update:privacy="(key: keyof PrivacySettings, value: boolean) => settingsManager.updatePrivacySetting(key, value)"
-        @update:accessibility="(key: keyof AccessibilitySettings, value: boolean) => settingsManager.updateAccessibilitySetting(key, value)">
-      </component>
+      
+      <!-- Using Suspense to handle async components -->
+      <Suspense>
+        <!-- Default slot - async content -->
+        <template #default>
+          <component 
+            :is="currentTabComponent" 
+            :settings="tabSettings"
+            @update:theme="settingsManager.updateTheme"
+            @update:font-size="settingsManager.updateFontSize"
+            @update:privacy="(key: keyof PrivacySettings, value: boolean) => settingsManager.updatePrivacySetting(key, value)"
+            @update:accessibility="(key: keyof AccessibilitySettings, value: boolean) => settingsManager.updateAccessibilitySetting(key, value)">
+          </component>
+        </template>
+        
+        <!-- Fallback slot - loading state -->
+        <template #fallback>
+          <div class="flex flex-col items-center justify-center h-full">
+            <div class="animate-spin mb-3">
+              <fa :icon="['fas', 'spinner']" size="2x" class="text-theme-primary" aria-hidden="true" />
+            </div>
+            <p class="text-text-muted">Loading settings...</p>
+          </div>
+        </template>
+      </Suspense>
     </div>
 
     <!-- Save Button (User Mode Only) -->
@@ -56,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, markRaw, defineComponent, h } from 'vue';
 import { setupEscapeHandler } from '~/utils/settingsUtils';
 import { useSettingsManager } from '~/composables/useSettingsManager';
 import { 
@@ -67,35 +83,32 @@ import {
 // Import UI components
 import TabNavigation from '~/components/userComponents/ui/TabNavigation.vue';
 
-// Lazily load tab components with loading and error states
-const AppearanceTab = defineAsyncComponent({
-  loader: () => import('~/components/userComponents/settings/AppearanceTab.vue'),
-  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
-  errorComponent: {
-    template: '<div class="text-red-500 p-4">Failed to load component</div>'
-  },
-  delay: 200,
-  timeout: 5000
+// Import tab components directly to make them work with Suspense
+import AppearanceTab from '~/components/userComponents/settings/AppearanceTab.vue';
+import PrivacyTab from '~/components/userComponents/settings/PrivacyTab.vue';
+import AccessibilityTab from '~/components/userComponents/settings/AccessibilityTab.vue';
+
+// Convert components to async for Suspense compatibility
+const AsyncAppearanceTab = defineComponent({
+  async setup() {
+    // Simulate network delay if needed for testing
+    // await new Promise(resolve => setTimeout(resolve, 100));
+    return () => h(AppearanceTab);
+  }
 });
 
-const PrivacyTab = defineAsyncComponent({
-  loader: () => import('~/components/userComponents/settings/PrivacyTab.vue'),
-  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
-  errorComponent: {
-    template: '<div class="text-red-500 p-4">Failed to load component</div>'
-  },
-  delay: 200,
-  timeout: 5000
+const AsyncPrivacyTab = defineComponent({
+  async setup() {
+    // await new Promise(resolve => setTimeout(resolve, 100));
+    return () => h(PrivacyTab);
+  }
 });
 
-const AccessibilityTab = defineAsyncComponent({
-  loader: () => import('~/components/userComponents/settings/AccessibilityTab.vue'),
-  loadingComponent: () => import('~/components/userComponents/ui/AsyncLoading.vue'),
-  errorComponent: {
-    template: '<div class="text-red-500 p-4">Failed to load component</div>'
-  },
-  delay: 200,
-  timeout: 5000
+const AsyncAccessibilityTab = defineComponent({
+  async setup() {
+    // await new Promise(resolve => setTimeout(resolve, 100));
+    return () => h(AccessibilityTab);
+  }
 });
 
 // Define types for tab configuration
@@ -104,7 +117,7 @@ interface TabConfig {
   name: string;
   icon: string;
   modes: string[];
-  component: Component;
+  component: any;
 }
 
 // Define props
@@ -121,9 +134,9 @@ const emit = defineEmits(['close-settings']);
 
 // Configure tabs based on mode
 const allTabs: TabConfig[] = [
-  { id: 'appearance', name: 'Appearance', icon: 'palette', modes: ['visitor', 'user'], component: AppearanceTab },
-  { id: 'privacy', name: 'Privacy', icon: 'shield', modes: ['user'], component: PrivacyTab },
-  { id: 'accessibility', name: 'Accessibility', icon: 'universal-access', modes: ['visitor', 'user'], component: AccessibilityTab }
+  { id: 'appearance', name: 'Appearance', icon: 'palette', modes: ['visitor', 'user'], component: markRaw(AsyncAppearanceTab) },
+  { id: 'privacy', name: 'Privacy', icon: 'shield', modes: ['user'], component: markRaw(AsyncPrivacyTab) },
+  { id: 'accessibility', name: 'Accessibility', icon: 'universal-access', modes: ['visitor', 'user'], component: markRaw(AsyncAccessibilityTab) }
 ];
 
 // Filter tabs based on current mode
@@ -142,7 +155,7 @@ const settings = computed(() => settingsManager.currentSettings.value);
 const userSettings = computed(() => settingsManager.userModeSettings.value);
 const isSaving = computed(() => settingsManager.isSaving.value);
 
-// Determine the current tab component dynamically
+// Determine the current tab component dynamically using shallowRef for better performance
 const currentTabComponent = computed(() => {
   const tab = allTabs.find(t => t.id === activeTab.value);
   return tab?.component || null;
@@ -182,7 +195,7 @@ onMounted(() => {
   });
 });
 
-// Cleanup event listeners
+// Cleanup event listeners and timeouts
 onBeforeUnmount(() => {
   if (cleanupEscHandler) {
     cleanupEscHandler();

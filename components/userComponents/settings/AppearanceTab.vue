@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed } from 'vue';
+import { computed } from 'vue';
 import { type AppearanceSettings, type ThemeOption, type FontSizeOption } from '~/composables/useUserSettings';
 import ThemeSelector from '~/components/userComponents/ui/ThemeSelector.vue';
 import FontSizeSelector from '~/components/userComponents/ui/FontSizeSelector.vue';

@@ -18,12 +18,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
 import { type AccessibilitySettings } from '~/composables/useUserSettings';
 import ToggleSwitch from '~/components/userComponents/ui/ToggleSwitch.vue';
 
 interface AccessibilityTabProps {
-  settings: {
+  settings: { 
     accessibility: AccessibilitySettings;
   };
 }

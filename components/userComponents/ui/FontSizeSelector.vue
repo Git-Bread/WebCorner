@@ -21,18 +21,25 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
-import { useUserSettings, type FontSizeOption } from '~/composables/useUserSettings';
+import { type FontSizeOption } from '~/composables/useUserSettings';
 
-const { fontSizes } = useUserSettings();
-
-defineProps<{
+const props = defineProps<{
   modelValue: FontSizeOption;
 }>();
 
 defineEmits<{
   'update:font-size': [fontSize: FontSizeOption];
 }>();
+
+/**
+ * Define available font sizes and their display names
+ */
+const fontSizes = [
+  { name: 'Small', value: 'small' },
+  { name: 'Medium', value: 'medium' },
+  { name: 'Large', value: 'large' },
+  { name: 'XL', value: 'extra-large' }
+];
 
 // Function to get the appropriate CSS class for each font size option
 const getFontSizeClass = (size: FontSizeOption) => {

@@ -81,8 +81,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue';
-
 const props = defineProps<{
   selectedServerId: string | null;
   serverData: Record<string, any>;

@@ -25,14 +25,9 @@ service cloud.firestore {
         get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
     }
     
-    // Function to check if a request is only updating the servers array
-    function isOnlyAddingServer(userId) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servers']) &&
-             request.auth.uid == userId;
-    }
-    
     // User profiles
     match /users/{userId} {
+      // Allow authenticated users to read and separately allow public count queries
       allow read: if isAuthenticated();
       allow create: if isOwner(userId);
       // User updates to their own document
@@ -44,11 +39,17 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
     }
-
+    
     //decorative counter collection
     match /counters/{counterId} {
       allow read: if true;
       allow write: if false;  // Only updateable via Cloud Functions
+    }
+    
+    // Cache collection for counters
+    match /counters_cache/{documentId} {
+      allow read: if true;
+      allow write: if false;  // Should only be updated via the server function
     }
     
     // Server collection

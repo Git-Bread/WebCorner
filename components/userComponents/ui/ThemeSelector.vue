@@ -25,17 +25,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
-import { useUserSettings, type ThemeOption } from '~/composables/useUserSettings';
-
-const { themeOptions } = useUserSettings();
+import { type ThemeOption } from '~/composables/useUserSettings';
 
 const props = defineProps<{
   modelValue: ThemeOption;
   disabled?: boolean;
 }>();
-
-defineEmits(['update:theme']);
 
 function getThemeName(theme: ThemeOption): string {
   if (theme === 'v-theme') return "V's Theme";

@@ -40,8 +40,12 @@
     <!-- Workflow and dashboard animation -->
     <section id="nav-section-3" class="min-h-screen flex flex-col justify-center">
       <CustomizeWorkflow class="mb-8" />
-      <div class="flex justify-center flex-grow px-4 my-4">
-        <DashboardAnimation class="w-full max-w-5xl h-full" />
+      <div class="hidden md:block"> 
+        <ClientOnly>
+          <div class="flex justify-center flex-grow px-4 my-4 ">
+            <DashboardAnimation class="w-full max-w-5xl h-full" />
+          </div>
+        </ClientOnly>
       </div>
     </section>
 

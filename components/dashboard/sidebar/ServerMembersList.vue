@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, watchEffect, ref, onMounted, onUnmounted } from 'vue';
+import { watchEffect, ref, onMounted, onUnmounted } from 'vue';
 import { useServerMembers } from '~/composables/server';
 import MemberProfilePopup from './MemberProfilePopup.vue';
 

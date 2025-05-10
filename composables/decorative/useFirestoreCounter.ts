@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { collection, getCountFromServer, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 
 export function useFirestoreCounter(collectionName: string) {
   const { firestore } = useFirebase()
@@ -7,7 +7,7 @@ export function useFirestoreCounter(collectionName: string) {
   const isLoading = ref(true)
   const error = ref<Error | null>(null)
   
-  const CACHE_COLLECTION = 'counters_cache'
+  const CACHE_COLLECTION = 'counters'
   const CACHE_DOCUMENT = `${collectionName}_count`
   const CACHE_DURATION = 4 * 60 * 60 * 1000 
   // 4 hour, can probaly be alot less but i want to be ultra-safe with this project
@@ -38,7 +38,7 @@ export function useFirestoreCounter(collectionName: string) {
   }
 
   // Function to fetch the count
-  const fetchCount = async (fallbackCount = 5000) => {
+  const fetchCount = async (fallbackCount = 0) => {
     isLoading.value = true
     error.value = null
     
@@ -58,51 +58,30 @@ export function useFirestoreCounter(collectionName: string) {
         }
       }
       
-      // Local cache expired or doesn't exist, check Firestore cache
+      // Local cache expired or doesn't exist, check Firestore counter document
       const cacheRef = doc(firestore, CACHE_COLLECTION, CACHE_DOCUMENT)
       const cacheSnapshot = await getDoc(cacheRef)
       
       if (cacheSnapshot.exists()) {
         const cacheData = cacheSnapshot.data()
-        const cacheTime = cacheData.timestamp?.toMillis() || 0
         
-        // If Firestore cache is fresh, use it and update localStorage
-        if (Date.now() - cacheTime < CACHE_DURATION) {
-          if (import.meta.client) {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-              cachedCount: cacheData.count,
-              timestamp: Date.now()
-            }))
-          }
-          
-          animateCount(cacheData.count)
-          isLoading.value = false
-          return cacheData.count
+        // Update localStorage
+        if (import.meta.client) {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+            cachedCount: cacheData.count,
+            timestamp: Date.now()
+          }))
         }
+        
+        animateCount(cacheData.count)
+        isLoading.value = false
+        return cacheData.count
       }
       
-      // Both caches expired, get fresh count
-      const col = collection(firestore, collectionName)
-      const snapshot = await getCountFromServer(col)
-      const targetCount = snapshot.data().count
-      
-      // Update Firestore cache
-      await setDoc(cacheRef, {
-        count: targetCount,
-        timestamp: serverTimestamp()
-      })
-      
-      // Update localStorage
-      if (import.meta.client) {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-          cachedCount: targetCount,
-          timestamp: Date.now()
-        }))
-      }
-      
-      animateCount(targetCount)
+      // If no cache exists, use fallback
+      count.value = fallbackCount
       isLoading.value = false
-      return targetCount
+      return fallbackCount
     } catch (err) {
       console.error(`Error fetching ${collectionName} count:`, err)
       error.value = err instanceof Error ? err : new Error(String(err))

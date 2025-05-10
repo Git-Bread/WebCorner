@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref } from 'vue';
+import { ref } from 'vue';
 import type { ServerRef } from '~/schemas/userSchemas';
 
 // Import sidebar components

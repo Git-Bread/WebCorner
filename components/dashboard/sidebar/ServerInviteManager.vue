@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, defineProps } from 'vue';
+import { ref, computed, watchEffect } from 'vue';
 import { showToast } from '~/utils/toast';
 import { useServerPermissions, useServerInvitations } from '~/composables/server';
 
