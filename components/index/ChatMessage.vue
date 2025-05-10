@@ -7,6 +7,7 @@
     <div class="mr-3 flex-shrink-0">
       <img 
         :src="profileImage" 
+        :alt="`${username}'s profile picture`"
         class="rounded-full w-10 h-10 object-cover border-2" 
         :class="borderColorClass"
       />

@@ -9,7 +9,8 @@
         @click="selectPreset(preset.id)" 
         class="h-10 rounded-md border hover:border-theme-primary transition-colors relative overflow-hidden"
         :class="{'border-2 border-theme-primary shadow-sm': modelValue === preset.id, 'border-border': modelValue !== preset.id}"
-        :title="preset.title">
+        :title="preset.title"
+        :aria-pressed="modelValue === preset.id">
         
         <!-- Small dot representation -->
         <div class="absolute inset-0 flex items-center justify-center">

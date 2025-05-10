@@ -1,10 +1,16 @@
 <template>
-  <div class="w-96 h-[600px] bg-ui-overlay rounded-lg overflow-hidden flex flex-col shadow-xl border border-ui-accent" aria-hidden="true">
+  <div class="w-96 h-[600px] bg-ui-overlay rounded-lg overflow-hidden flex flex-col shadow-xl border border-ui-accent">
     <div class="p-3 bg-background/90 border-b border-ui-accent">
-      <h3 class="font-semibold text-heading flex items-center">
-        <fa :icon="['fas', 'comments']" class="text-theme-primary mr-2"/>Live Chat
+      <h3 class="font-semibold text-heading flex items-center justify-between">
+        <span class="flex items-center">
+          <fa :icon="['fas', 'comments']" class="text-theme-primary mr-2"/>Live Chat
+        </span>
+        <button @click="clearMessages" class="text-text-muted hover:text-heading transition-colors" aria-label="Clear chat messages">
+          <fa :icon="['fas', 'trash']" class="text-lg" aria-hidden="true" />
+        </button>
       </h3>
     </div>
+    
     <div ref="messagesContainer" class="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-ui-accent scrollbar-track-transparent flex flex-col">
       <div class="flex flex-col">
         <TransitionGroup name="message">
@@ -25,6 +31,21 @@
         <fa :icon="['fas', 'satellite']" class="mb-2 text-theme-primary/30 icon-xl" />
         <p>Waiting for good vibes...</p>
       </div>
+    </div>
+
+    <div class="p-3 border-t border-ui-accent">
+      <button 
+        @click="addMessage({
+          profileImage: '/images/Profile_Pictures/fox_profile.webp',
+          type: 'blue',
+          text: 'Great work everyone!',
+          username: 'Cool User'
+        })"
+        class="w-full bg-ui-overlay hover:bg-surface text-text px-4 py-2 rounded-md text-sm transition-colors"
+        aria-label="Send message: Great work everyone!"
+      >
+        Great work everyone!
+      </button>
     </div>
   </div>
 </template>
@@ -90,67 +111,46 @@ const messageTemplates = [
   "I just discovered a new taco truck. Must share!",
   "Let's not talk deadlines—what are your weekend plans?",
   "Office vibes: chill day and lots of smiles.",
-  "Who’s up for a spontaneous karaoke session?",
+  "Who's up for a spontaneous karaoke session?",
   "Coffee break chatter: have you seen the latest viral video?",
   "Team update: pizza party in the break room!",
   "Catch you later—enjoy the sunshine!",
   "FYI: I've got the best BBQ recipe for our next meet-up."
 ];
 
-
 // List of possible usernames
 const usernames = [
-"Alex",
-  "Taylor",
-  "Jordan",
-  "Casey",
-  "Morgan",
-  "Riley",
-  "Jamie",
-  "Avery",
-  "Quinn",
-  "Parker",
-  "Skyler",
-  "Dakota",
-  "Robin",
-  "Oakley",
-  "Finley",
-  "Neo",
-  "Trinity",
-  "Morpheus",
-  "Cypher",
-  "Switch",
-  "Mouse",
-  "Oracle",
-  "Seraph",
-  "Spooner",
-  "Caleb",
-  "Zed",
-  "Fox",
-  "Pixel",
-  "Echo",
-  "Nimbus"
+  "Alex", "Taylor", "Jordan", "Casey", "Morgan", "Riley", "Jamie", "Avery", "Quinn", "Parker",
+  "Skyler", "Dakota", "Robin", "Oakley", "Finley", "Neo", "Trinity", "Morpheus", "Cypher", "Switch",
+  "Mouse", "Oracle", "Seraph", "Spooner", "Caleb", "Zed", "Fox", "Pixel", "Echo", "Nimbus"
 ];
 
 // method to add new messages
-const addMessage = (data: { profileImage: string, type: string }) => {
-  let candidateText = "";
-  let attempts = 0;
-  // Try up to 10 times to choose a candidate that isn't already in messages
-  do {
-    const randomMessageIndex = Math.floor(Math.random() * messageTemplates.length);
-    candidateText = messageTemplates[randomMessageIndex];
-    attempts++;
-  } while (messages.value.some(m => m.text === candidateText) && attempts < 10);
+const addMessage = (data: { profileImage: string, type: string, text?: string, username?: string }) => {
+  let messageText = data.text;
+  let messageUsername = data.username;
 
-  const randomUsernameIndex = Math.floor(Math.random() * usernames.length);
+  // If no specific text/username provided, use random ones
+  if (!messageText) {
+    let attempts = 0;
+    do {
+      const randomMessageIndex = Math.floor(Math.random() * messageTemplates.length);
+      messageText = messageTemplates[randomMessageIndex];
+      attempts++;
+    } while (messages.value.some(m => m.text === messageText) && attempts < 10);
+  }
+
+  if (!messageUsername) {
+    const randomUsernameIndex = Math.floor(Math.random() * usernames.length);
+    messageUsername = usernames[randomUsernameIndex];
+  }
 
   const message = {
     id: Date.now(),
     profileImage: data.profileImage,
     type: data.type,
-    text: candidateText,
-    username: usernames[randomUsernameIndex],
+    text: messageText,
+    username: messageUsername,
     timestamp: new Date()
   };
 
@@ -160,6 +160,10 @@ const addMessage = (data: { profileImage: string, type: string }) => {
   if (messages.value.length > 8) {
     messages.value.shift();
   }
+};
+
+const clearMessages = () => {
+  messages.value = [];
 };
 
 // Watch for changes to messages and scroll to top

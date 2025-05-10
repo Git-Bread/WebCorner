@@ -15,7 +15,7 @@ import { ClientOnly } from '#components';
           <h2 class="hidden sm:block">Bring Your Team Together!</h2>
         </div>
         <p class="mb-6 text-text">Bring your team together with text channels, group-chats, shared-planning and seamless file sharing. Keep conversations organized and searchable to improve team productivity.</p>
-        <ul class="space-y-3 mb-6 sm:mb-8 feature-list" aria-label="Team collaboration features">
+        <ul class="space-y-3 mb-6 sm:mb-8" aria-label="Team collaboration features">
           <li class="flex items-center">
             <fa :icon="['fas', 'comments']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
             <span class="text-text">Real-time messaging and notifications</span>
@@ -33,8 +33,8 @@ import { ClientOnly } from '#components';
       <div class="lg:w-1/2 order-1 lg:order-2 mb-6 lg:mb-0">
         <ClientOnly>
           <picture>
-            <source srcset="/images/GroupImage.webp" alt="Image of a group of people in a software project" type="image/webp" class="w-full h-full object-cover rounded-2xl" />
-            <img src="/images/GroupImage.jpg" alt="Image of a group of people in a software project" type="image/jpg" class="w-full h-full object-cover rounded-2xl" />
+            <source srcset="/images/GroupImage.webp" type="image/webp" class="w-full h-full object-cover rounded-2xl" />
+            <img src="/images/GroupImage.jpg" alt="Image of a group of people in a software project" class="w-full h-full object-cover rounded-2xl" />
           </picture>
         </ClientOnly>
       </div>

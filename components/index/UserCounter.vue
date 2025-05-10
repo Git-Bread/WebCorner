@@ -6,7 +6,7 @@
       
       <div class="flex flex-col items-center">
         <div class="flex items-baseline">
-          <span class="text-5xl md:text-7xl font-bold text-theme-primary" aria-live="polite">
+          <span class="text-5xl md:text-7xl font-bold text-theme-primary" aria-live="polite" aria-label="Current user count">
             {{ isLoading ? '...' : formattedCount }}
           </span>
           <span class="text-2xl md:text-3xl ml-2 text-heading">users</span>
@@ -15,7 +15,7 @@
           <fa :icon="['fas', 'spinner']" class="animate-spin mr-2" aria-hidden="true" />
           <span>Counting users...</span>
         </p>
-        <p v-else-if="error" class="mt-2 text-error">
+        <p v-else-if="error" class="mt-2 text-error" role="alert">
           Couldn't load latest count. Showing estimate.
         </p>
         <h4 v-else class="mt-4 text-text">and growing every day!</h4>
@@ -28,9 +28,6 @@
 import { onMounted } from 'vue';
 import { useFirestoreCounter } from '~/composables/decorative/useFirestoreCounter';
 
-const { count, formattedCount, isLoading, error, fetchCount } = useFirestoreCounter('users');
-
-onMounted(() => {
-  fetchCount();
-});
+const { formattedCount, isLoading, error, fetchCount } = useFirestoreCounter('users');
+onMounted(() => fetchCount());
 </script>

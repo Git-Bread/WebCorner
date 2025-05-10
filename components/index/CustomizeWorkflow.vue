@@ -17,8 +17,8 @@
           <!-- Desktop heading - visible on sm screens and up -->
           <h2 class="hidden sm:block">Your Workflow, Your Rules!</h2>
         </div>
-        <p class="mb-6 text-text">Tailor your workspace with components, feeds, and customizable permissions for every team member. Create workflows that match your team's unique processes.</p>
-        <ul class="space-y-3 mb-6 sm:mb-8 feature-list" aria-label="Workflow customization features">
+        <p class="mb-6 text-text">Tailor your workspace with components, feeds, and other features! Rezise-repositon and design your own layout to fit your needs or tastes.</p>
+        <ul class="space-y-3 mb-6 sm:mb-8" aria-label="Workflow customization features">
           <li class="flex items-center">
             <fa :icon="['fas', 'sliders']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
             <span class="text-text">Customize the page just for you</span>

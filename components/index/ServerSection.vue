@@ -23,15 +23,15 @@
           </li>
           <li class="flex items-center">
             <fa :icon="['fas', 'cloud']" class="text-theme-primary mr-3 flex-shrink-0 icon-md" aria-hidden="true" />
-            <span class="mb-0.5 text-text">A robust and secure system where everything is stored in the cloud</span>
+            <span class="mb-0.5 text-text">A robust and secure system utilizing cloud technology</span>
           </li>
         </ul>
       </div>
       <div class="lg:w-1/2 order-2 mb-6 lg:mb-0">
         <ClientOnly>
           <picture>
-            <source srcset="/images/ServerImage.webp" alt="Image of a representation of a server structure" type="image/webp" class="rounded-2xl" />
-            <img src="/images/ServerImage.jpg" alt="Image of a representation of a server structure"  type="image/jpg" class="rounded-2xl" />
+            <source srcset="/images/ServerImage.webp" type="image/webp" class="rounded-2xl" />
+            <img src="/images/ServerImage.jpg" alt="Image of a representation of a server structure" class="rounded-2xl" />
           </picture>
         </ClientOnly>
       </div>

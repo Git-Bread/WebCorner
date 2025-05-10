@@ -25,8 +25,8 @@
             <div v-else class="py-16 text-center">
               <div class="bg-background rounded-lg p-8 shadow-md border border-border inline-block max-w-xl">
                 <div class="flex justify-center mb-4">
-                  <fa :icon="['fas', 'users']" class="text-theme-primary text-4xl mr-4" />
-                  <fa :icon="['fas', 'comments']" class="text-theme-secondary text-4xl" />
+                  <fa :icon="['fas', 'users']" class="text-theme-primary text-4xl mr-4" aria-hidden="true" />
+                  <fa :icon="['fas', 'comments']" class="text-theme-secondary text-4xl" aria-hidden="true" />
                 </div>
                 <h3 class="text-heading text-xl font-bold mb-3">Interactive Visualizations Hidden</h3>
                 <p class="text-text">The orbit system and chat visualizations are hidden for improved accessibility. You can enable animations in your accessibility settings.</p>
@@ -42,8 +42,18 @@
       <CustomizeWorkflow class="mb-8" />
       <div class="hidden md:block"> 
         <ClientOnly>
-          <div class="flex justify-center flex-grow px-4 my-4 ">
+          <div v-if="animationControl.animationsEnabled.value" class="flex justify-center flex-grow px-4 my-4 ">
             <DashboardAnimation class="w-full max-w-5xl h-full" />
+          </div>
+          <div v-else class="py-16 text-center">
+            <div class="bg-background rounded-lg p-8 shadow-md border border-border inline-block max-w-xl">
+                <div class="flex justify-center mb-4">
+                  <fa :icon="['fas', 'users']" class="text-theme-primary text-4xl mr-4" aria-hidden="true" />
+                  <fa :icon="['fas', 'comments']" class="text-theme-secondary text-4xl" aria-hidden="true" />
+                </div>
+                <h3 class="text-heading text-xl font-bold mb-3">Interactive Visualizations Hidden</h3>
+              <p class="text-text">The Dashboard visualizations are hidden for improved accessibility. You can enable animations in your accessibility settings.</p>
+            </div>
           </div>
         </ClientOnly>
       </div>

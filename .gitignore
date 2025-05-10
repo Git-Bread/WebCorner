@@ -28,3 +28,6 @@ firebase-export*
 
 # Firebase Functions
 functions/lib
+
+# extra stuff
+TODO.txt

@@ -18,7 +18,7 @@
           <div class="space-y-3">
             <div v-for="i in 4" :key="i" class="flex items-center">
               <div class="w-7 h-7 rounded-full mr-2 overflow-hidden">
-                <img :src="memberImages[i-1]" alt="Member" class="w-full h-full object-cover" />
+                <img :src="memberImages[i-1]" :alt="`Member ${i} avatar`" class="w-full h-full object-cover" />
               </div>
               <div>
                 <div class="w-20 h-3 bg-text rounded-md"></div>
@@ -155,7 +155,7 @@
                   class="flex mb-1 animate-fade-in"
                   :style="{animationDelay: `${message.id * 300}ms`}">
                   <div class="w-5 h-5 rounded-full overflow-hidden mr-1 flex-shrink-0">
-                    <img :src="message.avatar" alt="User avatar" class="w-full h-full object-cover" />
+                    <img :src="message.avatar" :alt="`${message.user}'s avatar`" class="w-full h-full object-cover" />
                   </div>
                   <div class="flex-1">
                     <div class="flex items-center">
@@ -171,7 +171,7 @@
                 <!-- Typing indicator -->
                 <div v-if="isTyping" class="flex mb-1 animate-fade-in">
                   <div class="w-5 h-5 rounded-full overflow-hidden mr-1 flex-shrink-0">
-                    <img :src="typingAvatar" alt="User avatar" class="w-full h-full object-cover" />
+                    <img :src="typingAvatar" :alt="`${typingUser}'s avatar`" class="w-full h-full object-cover" />
                   </div>
                   <div class="flex-1">
                     <div class="flex items-center">
