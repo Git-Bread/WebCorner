@@ -4,32 +4,19 @@
       <h1 id="register-heading" class="mt-6 font-extrabold text-center text-heading">Create your account</h1>
       
       <form class="mt-8 space-y-4" @submit.prevent="handleRegister" aria-labelledby="register-heading">
-        <!-- Email field -->
-        <AuthFormField id="email-address" name="email" type="email" label="Email address" icon="envelope" placeholder="Email address" 
-        autocomplete="email" v-model="formData.email" :errorMessage="errors.email" :hasError="!!errors.email" fieldClass="form-field-1" 
-        @blur="validateField('email')" @update:modelValue="validateField('email')"/>
-        
-        <!-- Username field -->
-        <AuthFormField id="username" name="username" type="text" label="Username" icon="user" placeholder="Username (3-30 characters)" 
-        autocomplete="username" v-model="formData.username" :errorMessage="errors.username" :hasError="!!errors.username" fieldClass="pt-px form-field-2" 
-        @blur="validateField('username')" @update:modelValue="validateField('username')"/>
-        
-        <!-- Password field -->
+        <AuthFormField id="email-address" name="email" type="email" label="Email address" icon="envelope" placeholder="Email address" autocomplete="email" 
+        v-model="formData.email" :errorMessage="errors.email" :hasError="!!errors.email" fieldClass="form-field-1" @blur="validateField('email')" @update:modelValue="validateField('email')"/>
+        <AuthFormField id="username" name="username" type="text" label="Username" icon="user" placeholder="Username (3-30 characters)" autocomplete="username" 
+        v-model="formData.username" :errorMessage="errors.username" :hasError="!!errors.username" fieldClass="pt-px form-field-2" @blur="validateField('username')" @update:modelValue="validateField('username')"/>
         <div class="form-field-3">
-          <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" 
-          autocomplete="new-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" 
-          @blur="validateField('password')" @update:modelValue="validateField('password')">
+          <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" autocomplete="new-password" 
+          v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" @blur="validateField('password')" @update:modelValue="validateField('password')">
             <p v-if="!errors.password && !passwordStrength" class="text-text-muted mt-1 h">Password must be at least 6 characters long.</p>
           </AuthFormField>
 
-          <!-- Password strength indicator -->
           <PasswordStrengthIndicator v-if="formData.password && !errors.password" :password="formData.password" />
         </div>
-
-        <!-- General error message -->
         <AuthErrorMessage :message="generalError" />
-
-        <!-- Submit button and login link -->
         <AuthSubmitButton :loading="loading" :disabled="!isFormValid" label="Register" iconName="user-plus" linkTo="/login" linkText="Already have an account? Sign in" />
       </form>
     </div>
@@ -51,13 +38,11 @@ import { useSettingsManager } from '~/composables/useSettingsManager'
 
 definePageMeta({ layout: 'auth' })
 
-// Setup form validation
 const registrationSchema = {
   email: userSchema.shape.email,
   username: userSchema.shape.username,
   password: {
     safeParse: (value: string) => {
-      // Use the centralized password validation
       const validation = validatePassword(value);
       if (!validation.valid) {
         return { 
@@ -70,7 +55,6 @@ const registrationSchema = {
   }
 }
 
-// Use our form validation composable with initial values
 const { formData, errors, validateField, validateAllFields, isFormValid } = useFormValidation(
   registrationSchema, 
   { email: '', username: '', password: '' }
@@ -83,7 +67,6 @@ const { register } = useAuth()
 const { firestore } = useFirebase()
 const loadingTimeout = ref<number | null>(null);
 
-// Focus the first error field after validation for keyboard accessibility
 const focusFirstError = () => {
   nextTick(() => {
     const firstErrorField = Object.keys(errors).find(key => !!errors[key]);
@@ -94,9 +77,7 @@ const focusFirstError = () => {
   });
 };
 
-// Form submission handler
 const handleRegister = async () => {
-  // Validate all fields
   validateAllFields()
   if (!isFormValid.value) {
     focusFirstError()
@@ -105,7 +86,6 @@ const handleRegister = async () => {
   
   generalError.value = ''
   try {
-    // Timeout check, 15 seconds might be alot but someones internet might be slow
     loading.value = true
     loadingTimeout.value = window.setTimeout(() => {
       if (loading.value) {
@@ -122,33 +102,27 @@ const handleRegister = async () => {
       return
     }
     
-    // Create user document in Firestore
     try {
       const { auth } = useFirebase()
       const uid = auth.currentUser?.uid
       
       if (!uid) throw new Error('User ID not found after registration')
       
-      // Get visitor settings from localStorage if they exist
       const visitorSettingsManager = useSettingsManager('visitor');
       const visitorPrefs = visitorSettingsManager.visitorSettings.value;
       
-      // Create user settings by merging default settings with visitor preferences
       const mergedSettings = {
         ...defaultSettings,
         appearance: {
           ...defaultSettings.appearance,
-          // Transfer the theme if it exists in visitor settings
           ...(visitorPrefs?.appearance?.theme && { theme: visitorPrefs.appearance.theme })
         },
         accessibility: {
           ...defaultSettings.accessibility,
-          // Transfer any accessibility settings that exist
           ...(visitorPrefs?.accessibility && visitorPrefs.accessibility)
         }
       };
       
-      // Prepare user data according to userSchema
       const userData = {
         id: uid,
         username: formData.username,
@@ -164,7 +138,6 @@ const handleRegister = async () => {
         components: {}
       }
 
-      // Validate and save user
       const userValidation = safeValidateUser(userData)
       if (!userValidation.success) {
         throw new Error(`Invalid user data: ${JSON.stringify(userValidation.error)}`)
@@ -172,10 +145,8 @@ const handleRegister = async () => {
       
       await setDoc(doc(firestore, 'users', uid), userData)
       
-      // Show a notification about email verification
       showToast('Registration successful! Please check your email to verify your account.', 'success', 3000)
       
-      // Redirect to dashboard after registration
       navigateTo('/dashboard')
     } catch (err) {
       generalError.value = handleDatabaseError(err)

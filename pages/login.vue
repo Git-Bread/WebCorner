@@ -4,36 +4,27 @@
       <h1 id="login-heading" class="mt-6 font-extrabold text-center text-heading">Sign in to your account</h1>
       
       <form class="mt-8 space-y-4" @submit.prevent="handleLogin" aria-labelledby="login-heading">
-        <!-- Email field -->
-        <AuthFormField id="email-address" name="email" type="email" label="Email address" icon="envelope" placeholder="Email address" 
-        autocomplete="email" v-model="formData.email" :errorMessage="errors.email" :hasError="!!errors.email" fieldClass="form-field-1" 
-        @blur="validateField('email')"/>
+        <AuthFormField id="email-address" name="email" type="email" label="Email address" icon="envelope" placeholder="Email address" autocomplete="email" 
+        v-model="formData.email" :errorMessage="errors.email" :hasError="!!errors.email" fieldClass="form-field-1" @blur="validateField('email')"/>
         
-        <!-- Password field -->
-        <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" 
-        autocomplete="current-password" v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" fieldClass="form-field-2"
-        @blur="validateField('password')" @update:modelValue="validateField('password')"/>
+        <AuthFormField id="password" name="password" type="password" label="Password" icon="lock" placeholder="Password" autocomplete="current-password" 
+        v-model="formData.password" :errorMessage="errors.password" :hasError="!!errors.password" fieldClass="form-field-2" @blur="validateField('password')" @update:modelValue="validateField('password')"/>
 
-        <!-- Remember Me checkbox -->
         <div class="flex items-center justify-between mt-2 form-field-2">
           <div class="flex items-center">
             <input id="remember-me" name="remember-me" type="checkbox" v-model="rememberMe" class="h-4 w-4 text-theme-primary focus:ring-theme-primary border-border rounded">
             <label for="remember-me" class="ml-2 block text-text">Remember me</label>
           </div>
           <div class="text-right">
-            <!-- Forgot Password Button -->
             <NuxtLink to="/forgot-password" class="text-link hover:text-link-hover hover:underline mt-0">
               Forgot your password?
             </NuxtLink>
           </div>
         </div>
 
-        <!-- General error message -->
         <AuthErrorMessage :message="generalError" />
 
-        <!-- Submit button and register link -->
-        <AuthSubmitButton :loading="loading" :disabled="!isFormValid" label="Sign in" iconName="right-to-bracket" linkTo="/register" 
-        linkText="Don't have an account? Register" fieldClass="form-field-3"/>
+        <AuthSubmitButton :loading="loading" :disabled="!isFormValid" label="Sign in" iconName="right-to-bracket" linkTo="/register" linkText="Don't have an account? Register" fieldClass="form-field-3"/>
       </form>
     </div>
   </div>
@@ -47,8 +38,6 @@ import useFormValidation from '~/composables/useFormValidation'
 
 definePageMeta({ layout: 'auth' })
 
-// Login validation with regex
-// This schema is used to validate the email format and password length
 const loginSchema = {
   email: {
     safeParse: (value: string) => {
@@ -75,7 +64,6 @@ const loginSchema = {
   }
 }
 
-// Use form validation composable with field initial values
 const { formData, errors, validateField, isFormValid } = useFormValidation(
   loginSchema, 
   { email: '', password: '' }
@@ -87,7 +75,6 @@ const { login } = useAuth()
 const loadingTimeout = ref<number | null>(null);
 const rememberMe = ref(false);
 
-// Focus the first error field after validation for keyboard accessibility
 const focusFirstError = () => {
   nextTick(() => {
     const firstErrorField = Object.keys(errors).find(key => !!errors[key]);
@@ -109,7 +96,6 @@ const handleLogin = async () => {
   generalError.value = ''
   
   try {
-    // Timeout check
     loading.value = true
     loadingTimeout.value = window.setTimeout(() => {
       if (loading.value) {

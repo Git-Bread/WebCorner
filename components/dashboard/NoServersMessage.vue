@@ -11,7 +11,7 @@
     <div class="flex justify-center space-x-4 animate-buttons">
       <button 
         @click="$emit('create-server')" 
-        class="px-4 py-2 border border-theme-primary text-theme-primary rounded-md cta-button cta-secondary animate-button-pulse"
+        class="px-4 py-2 border border-theme-primary text-theme-primary rounded-md cta-button cta-secondary"
       >
         Create Server
       </button>

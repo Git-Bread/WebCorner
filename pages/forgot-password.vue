@@ -17,32 +17,14 @@
       <form v-else class="mt-8 space-y-4" @submit.prevent="handleForgotPassword" aria-labelledby="forgot-password-heading">
         <p class="text-text mb-4">Enter your email address and we'll send you instructions to reset your password.</p>
         
-        <!-- Email field -->
-        <AuthFormField 
-          id="email-address" 
-          name="email" 
-          type="email" 
-          label="Email address" 
-          icon="envelope" 
-          placeholder="Email address" 
-          autocomplete="email" 
-          v-model="email" 
-          :errorMessage="emailError" 
-          :hasError="!!emailError" 
-          fieldClass="form-field-1"
-          @blur="validateEmail"
-        />
+        <AuthFormField id="email-address" name="email" type="email" label="Email address" icon="envelope" placeholder="Email address" autocomplete="email" 
+        v-model="email" :errorMessage="emailError" :hasError="!!emailError" fieldClass="form-field-1" @blur="validateEmail"/>
 
-        <!-- General error message -->
         <AuthErrorMessage :message="generalError" />
 
-        <!-- Submit button and login link -->
         <div class="mt-6 flex flex-col space-y-4">
-          <button 
-            type="submit" 
-            :disabled="loading || !isEmailValid" 
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-background bg-theme-primary hover:bg-theme-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <button type="submit" :disabled="loading || !isEmailValid" 
+          class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-background bg-theme-primary hover:bg-theme-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-primary disabled:opacity-50 disabled:cursor-not-allowed">
             <span v-if="loading" class="animate-spin mr-2">
               <fa :icon="['fas', 'circle-notch']" />
             </span>
