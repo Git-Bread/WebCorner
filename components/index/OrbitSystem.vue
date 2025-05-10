@@ -2,7 +2,7 @@
   <div v-if="animationControl.animationsEnabled.value" class="relative w-full h-[800px] mt-4 mb-4 z-10 overflow-visible" aria-hidden="true">
     <div class="central-orb shadow-xl">
       <div class="central-orb-logo">
-        <img src="../../public/images/Logo.png" alt="WebCorner Logo" class="w-[90px] h-[90px]" />
+        <img src="/images/Logo.png" alt="WebCorner Logo" class="w-[90px] h-[90px]" loading="lazy" />
       </div>
     </div>
     <div class="orbit-inner shadow-sm"></div>
@@ -12,17 +12,8 @@
         <fa :icon="['fas', 'server']" class="text-5xl text-theme-primary" aria-hidden="true" />
       </div>
       <div class="satellite-orbit">
-        <div class="satellite satellite-pulse-1">
-          <img src="../../public/images/Profile_Pictures/bear_profile.webp" alt="Bear profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-pulse-1">
-          <img src="../../public/images/Profile_Pictures/coldfox_profile.webp" alt="Cold Fox profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-pulse-1">
-          <img src="../../public/images/Profile_Pictures/fox_profile.webp" alt="Fox profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-pulse-1">
-          <img src="../../public/images/Profile_Pictures/eagle_profile.webp" alt="Eagle profile picture" class="w-full h-full rounded-full object-cover" />
+        <div v-for="image in orbit1Images" :key="image.src" class="satellite satellite-pulse-1">
+          <img :src="image.src" :alt="image.alt" class="w-full h-full rounded-full object-cover" loading="lazy" />
         </div>
       </div>
     </div>
@@ -32,20 +23,8 @@
         <fa :icon="['fas', 'server']" class="text-5xl text-theme-primary" aria-hidden="true" />
       </div>
       <div class="satellite-orbit satellite-orbit-2">
-        <div class="satellite satellite-2 satellite-pulse-2">
-          <img src="../../public/images/Profile_Pictures/owl_profile.webp" alt="Owl profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-2 satellite-pulse-2">
-          <img src="../../public/images/Profile_Pictures/parrot_profile.webp" alt="Parrot profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-2 satellite-pulse-2">
-          <img src="../../public/images/Profile_Pictures/hippo_profile.webp" alt="Hippo profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-2 satellite-pulse-2">
-          <img src="../../public/images/Profile_Pictures/hare_profile.webp" alt="Hare profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-2 satellite-pulse-2">
-          <img src="../../public/images/Profile_Pictures/orangebird_profile.webp" alt="Orange Bird profile picture" class="w-full h-full rounded-full object-cover" />
+        <div v-for="image in orbit2Images" :key="image.src" class="satellite satellite-2 satellite-pulse-2">
+          <img :src="image.src" :alt="image.alt" class="w-full h-full rounded-full object-cover" loading="lazy" />
         </div>
       </div>
     </div>
@@ -55,17 +34,8 @@
         <fa :icon="['fas', 'server']" class="text-5xl text-theme-primary" aria-hidden="true" />
       </div>
       <div class="satellite-orbit satellite-orbit-3">
-        <div class="satellite satellite-3 satellite-pulse-3">
-          <img src="../../public/images/Profile_Pictures/deer_profile.webp" alt="Deer profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-3 satellite-pulse-3">
-          <img src="../../public/images/Profile_Pictures/bluebird_profile.webp" alt="Blue Bird profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-3 satellite-pulse-3">
-          <img src="../../public/images/Profile_Pictures/owl_profile.webp" alt="Owl profile picture" class="w-full h-full rounded-full object-cover" />
-        </div>
-        <div class="satellite satellite-3 satellite-pulse-3">
-          <img src="../../public/images/Profile_Pictures/hare_profile.webp" alt="Hare profile picture" class="w-full h-full rounded-full object-cover" />
+        <div v-for="image in orbit3Images" :key="image.src" class="satellite satellite-3 satellite-pulse-3">
+          <img :src="image.src" :alt="image.alt" class="w-full h-full rounded-full object-cover" loading="lazy" />
         </div>
       </div>
     </div>
@@ -79,18 +49,53 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import SatellitePulse from '../../assets/ts/animation/satellite-pulse';
 import { animationControl } from '~/composables/decorative/useAnimationControl';
 
+// Define image interfaces for better type safety
+interface ProfileImage {
+  src: string;
+  alt: string;
+}
+
+// Define orbit images as reactive arrays to enable reuse
+const orbit1Images = ref<ProfileImage[]>([
+  { src: '/images/Profile_Pictures/bear_profile.webp', alt: 'Bear profile picture' },
+  { src: '/images/Profile_Pictures/coldfox_profile.webp', alt: 'Cold Fox profile picture' },
+  { src: '/images/Profile_Pictures/fox_profile.webp', alt: 'Fox profile picture' },
+  { src: '/images/Profile_Pictures/eagle_profile.webp', alt: 'Eagle profile picture' }
+]);
+
+const orbit2Images = ref<ProfileImage[]>([
+  { src: '/images/Profile_Pictures/owl_profile.webp', alt: 'Owl profile picture' },
+  { src: '/images/Profile_Pictures/parrot_profile.webp', alt: 'Parrot profile picture' },
+  { src: '/images/Profile_Pictures/hippo_profile.webp', alt: 'Hippo profile picture' },
+  { src: '/images/Profile_Pictures/hare_profile.webp', alt: 'Hare profile picture' },
+  { src: '/images/Profile_Pictures/orangebird_profile.webp', alt: 'Orange Bird profile picture' }
+]);
+
+const orbit3Images = ref<ProfileImage[]>([
+  { src: '/images/Profile_Pictures/deer_profile.webp', alt: 'Deer profile picture' },
+  { src: '/images/Profile_Pictures/bluebird_profile.webp', alt: 'Blue Bird profile picture' },
+  { src: '/images/Profile_Pictures/owl_profile.webp', alt: 'Owl profile picture' },
+  { src: '/images/Profile_Pictures/hare_profile.webp', alt: 'Hare profile picture' }
+]);
+
 const emit = defineEmits<{
-  (e: 'satellitePulse', data: { profileImage: string, type: string }): void
+  (e: 'satellitePulse', data: { profileImage: string, type: 'blue' | 'purple' | 'pink' }): void
 }>();
 
 const pulseController = SatellitePulse.setup();
 let unregisterAnimation: (() => void) | null = null;
 
 onMounted(() => {
+  // Pre-load images to improve performance
+  orbit1Images.value.concat(orbit2Images.value, orbit3Images.value).forEach(image => {
+    const img = new Image();
+    img.src = image.src;
+  });
+
   unregisterAnimation = animationControl.registerAnimation({
     start: pulseController.startAnimations,
     stop: pulseController.stopAnimations
@@ -98,8 +103,13 @@ onMounted(() => {
   
   if (animationControl.animationsEnabled.value) pulseController.startAnimations();
   
-  pulseController.on('satellitePulse', (data: { profileImage: string, type: string }) => {
-    emit('satellitePulse', data);
+  pulseController.on('satellitePulse', (data: { profileImage: string; type: 'blue' | 'purple' | 'pink'; }) => {
+    if (data.profileImage) {
+      emit('satellitePulse', {
+        profileImage: data.profileImage,
+        type: data.type
+      });
+    }
   });
 });
 

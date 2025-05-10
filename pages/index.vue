@@ -134,6 +134,9 @@ const observerRefs = ref<IntersectionObserver[]>([]);
 onUnmounted(() => {
   // Disconnect all observers
   observerRefs.value.forEach(observer => observer.disconnect());
+  
+  // Clean up animation control
+  animationControl.cleanup();
 });
 
 // Navigate to the next section when chevron is clicked
@@ -143,9 +146,12 @@ function navigateToNextSection() {
 }
 
 // Handle satellite pulse events from orbit component
-function handleSatellitePulse(data: { profileImage: string, type: string }) {
+function handleSatellitePulse(data: { profileImage: string, type: 'blue' | 'purple' | 'pink' }) {
   if (chatBoxRef.value) {
-    chatBoxRef.value.addMessage(data);
+    chatBoxRef.value.addMessage({
+      profileImage: data.profileImage,
+      type: data.type
+    });
   }
 }
 </script>

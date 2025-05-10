@@ -30,39 +30,34 @@
 </template>
 
 <script setup lang="ts">
-
-
-// Define the interface for color presets
-interface ColorPreset {
-  id: string;
-  style: string;
-  title: string;
-}
+import { computed } from 'vue';
+import type { ColorPreset } from '@/assets/ts/animation/types';
 
 // Color mapping for accurate representation as small dots
-const presetRepresentativeColors: Record<string, string> = {
+// Use a Map for better lookup performance
+const presetRepresentativeColors = new Map<string, string>([
   // Particle presets - simplified to match how they appear as small dots
-  'solid-purple': 'rgba(139, 92, 246, 0.9)',
-  'aurora': '#4f46e5', // Dominant color in small dots
-  'cyberpunk': '#d946ef', // Dominant color in small dots 
-  'electric-lime': '#a3e635', // Dominant color in small dots
-  'candy': '#f472b6', // Dominant color in small dots
-  'sunset-glow': '#f97316', // Dominant color in small dots
-  'neon': '#00ffcc', // Cyan-yellow mixing creates a turquoise/aqua color
-  'dark-contrast': '#1e1e1e',
-  'white-glow': '#ffffff',
-  'solid-blue': 'rgba(96, 165, 250, 0.9)',
-  'cosmic-blue': '#60a5fa', // Dominant color in small dots
-  'solid-green': 'rgba(52, 211, 153, 0.9)',
+  ['solid-purple', 'rgba(139, 92, 246, 0.9)'],
+  ['aurora', '#4f46e5'], // Dominant color in small dots
+  ['cyberpunk', '#d946ef'], // Dominant color in small dots 
+  ['electric-lime', '#a3e635'], // Dominant color in small dots
+  ['candy', '#f472b6'], // Dominant color in small dots
+  ['sunset-glow', '#f97316'], // Dominant color in small dots
+  ['neon', '#00ffcc'], // Cyan-yellow mixing creates a turquoise/aqua color
+  ['dark-contrast', '#1e1e1e'],
+  ['white-glow', '#ffffff'],
+  ['solid-blue', 'rgba(96, 165, 250, 0.9)'],
+  ['cosmic-blue', '#60a5fa'], // Dominant color in small dots
+  ['solid-green', 'rgba(52, 211, 153, 0.9)'],
   
   // Interaction presets - these are already single colors
-  'teal': '#14b8a6',
-  'pink': '#f472b6',
-  'purple': '#8b5cf6',
-  'gold': '#facc15',
-  'red': '#ef4444',
-  'blue': '#3b82f6'
-};
+  ['teal', '#14b8a6'],
+  ['pink', '#f472b6'],
+  ['purple', '#8b5cf6'],
+  ['gold', '#facc15'],
+  ['red', '#ef4444'],
+  ['blue', '#3b82f6']
+]);
 
 // Define props with types
 const props = defineProps({
@@ -90,19 +85,25 @@ const props = defineProps({
 // Define emits
 const emit = defineEmits(['update:modelValue']);
 
+// Memoize getRepresentativeStyle with computed
+const representativeStyleCache = computed(() => {
+  const cache = new Map<string, { background: string }>();
+  
+  props.presetOptions.forEach(preset => {
+    const color = presetRepresentativeColors.get(preset.id) || preset.style;
+    cache.set(preset.id, { background: color });
+  });
+  
+  return cache;
+});
+
 // Method to handle preset selection
 const selectPreset = (presetId: string) => {
   emit('update:modelValue', presetId);
 };
 
-// Get a more accurate representative style for the small buttons
-const getRepresentativeStyle = (preset: ColorPreset) => {
-  // If we have a specific color mapping for this preset, use it
-  if (preset.id in presetRepresentativeColors) {
-    return { background: presetRepresentativeColors[preset.id] };
-  }
-  
-  // Fallback to the original style
-  return { background: preset.style };
+// Get a more accurate representative style for the small buttons with caching
+const getRepresentativeStyle = (preset: ColorPreset): { background: string } => {
+  return representativeStyleCache.value.get(preset.id) || { background: preset.style };
 };
 </script>

@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive, watch } from 'vue';
+import { ref, onMounted, onUnmounted, reactive, watch, nextTick } from 'vue';
 import { ParticleNetwork } from '@/assets/ts/animation/particle-network';
 import ColorPresetButtons from '@/components/index/ColorPresetButtons.vue';
 import { useSettingsManager } from '@/composables/useSettingsManager';
@@ -87,6 +87,7 @@ import { particlePresetOptions, interactionPresetOptions, defaultAnimationSettin
 import type { AnimationSettings } from '@/assets/ts/animation/types';
 import { animationControl } from '~/composables/decorative/useAnimationControl';
 
+// Reactive state
 const settingsOpen = ref(false);
 const { updateTheme, currentSettings } = useSettingsManager('visitor');
 const isDarkMode = ref(currentSettings.value.appearance.theme === 'dark');
@@ -95,6 +96,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const heroRootRef = ref<HTMLDivElement | null>(null);
 let particleNetworkInstance: ParticleNetwork | null = null;
 let unregisterAnimation: (() => void) | null = null;
+const SETTINGS_STORAGE_KEY = 'animation-settings';
 
 const toggleDarkMode = () => {
   const newTheme = isDarkMode.value ? 'light' : 'dark';
@@ -102,28 +104,53 @@ const toggleDarkMode = () => {
   updateTheme(newTheme);
 };
 
-const saveSettings = () => {
-  const settingsToSave = {
-    particleCount: settings.particleCount,
-    maxDistance: settings.maxDistance,
-    mouseRadius: settings.mouseRadius,
-    mainParticleColor: settings.mainParticleColor,
-    interactionColor: settings.interactionColor,
-    selectedParticlePreset: settings.selectedParticlePreset,
-    selectedInteractionPreset: settings.selectedInteractionPreset
-  };
-  localStorage.setItem('animation-settings', JSON.stringify(settingsToSave));
+// Load settings from localStorage with error handling
+const loadSettings = (): Partial<AnimationSettings> | null => {
+  try {
+    const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (savedSettings) {
+      return JSON.parse(savedSettings);
+    }
+  } catch (error) {
+    console.error('Failed to load animation settings:', error);
+    // Recover by removing corrupted settings
+    localStorage.removeItem(SETTINGS_STORAGE_KEY);
+  }
+  return null;
 };
 
-const initParticleNetwork = () => {
+const saveSettings = () => {
+  try {
+    const settingsToSave = {
+      particleCount: settings.particleCount,
+      maxDistance: settings.maxDistance,
+      mouseRadius: settings.mouseRadius,
+      selectedParticlePreset: settings.selectedParticlePreset,
+      selectedInteractionPreset: settings.selectedInteractionPreset
+    };
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsToSave));
+  } catch (error) {
+    console.error('Failed to save animation settings:', error);
+  }
+};
+
+const initParticleNetwork = async () => {
   const canvas = canvasRef.value;
   const heroRoot = heroRootRef.value;
 
   if (canvas && heroRoot) {
     try {
-      if (particleNetworkInstance) particleNetworkInstance.stop();
+      if (particleNetworkInstance) {
+        particleNetworkInstance.stop();
+        particleNetworkInstance = null;
+      }
+      
+      // Wait for next tick to ensure clean DOM state
+      await nextTick();
       
       particleNetworkInstance = new ParticleNetwork(canvas, heroRoot);
+      
+      // Apply settings to the particle network
       particleNetworkInstance.updateSettings({
         particleCount: settings.particleCount,
         maxDistance: settings.maxDistance,
@@ -132,7 +159,10 @@ const initParticleNetwork = () => {
         interactionColor: settings.interactionColor
       });
       
-      if (unregisterAnimation) unregisterAnimation();
+      if (unregisterAnimation) {
+        unregisterAnimation();
+        unregisterAnimation = null;
+      }
       
       unregisterAnimation = animationControl.registerAnimation({
         start: () => particleNetworkInstance?.start(),
@@ -147,7 +177,9 @@ const initParticleNetwork = () => {
 };
 
 const applySettings = () => {
-  if (particleNetworkInstance) {
+  if (!particleNetworkInstance) return;
+  
+  try {
     particleNetworkInstance.updateSettings({
       particleCount: settings.particleCount,
       maxDistance: settings.maxDistance,
@@ -156,23 +188,42 @@ const applySettings = () => {
       mouseRadius: settings.mouseRadius
     });
     saveSettings();
+  } catch (error) {
+    console.error("Failed to apply particle settings:", error);
   }
 };
 
-watch(() => settings.particleCount, applySettings);
-watch(() => settings.maxDistance, applySettings);
-watch(() => settings.mouseRadius, applySettings);
+// Debounce function to avoid excessive updates
+const debounce = (fn: Function, delay: number) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return (...args: any[]) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+};
 
+// Debounced version of applySettings
+const debouncedApplySettings = debounce(applySettings, 100);
+
+// Watch particle count with debounce
+watch(() => settings.particleCount, debouncedApplySettings);
+watch(() => settings.maxDistance, debouncedApplySettings);
+watch(() => settings.mouseRadius, debouncedApplySettings);
+
+// Watches for preset changes
 watch(() => settings.selectedParticlePreset, (newPresetId) => {
   settings.mainParticleColor = getPresetStyleById(newPresetId, particlePresetOptions);
-  applySettings();
+  debouncedApplySettings();
 }, { immediate: true });
 
 watch(() => settings.selectedInteractionPreset, (newPresetId) => {
   settings.interactionColor = getPresetStyleById(newPresetId, interactionPresetOptions);
-  applySettings();
+  debouncedApplySettings();
 }, { immediate: true });
 
+// Clear canvas when animations are disabled
 watch(() => animationControl.animationsEnabled.value, (enabled) => {
   if (!enabled && canvasRef.value && particleNetworkInstance) {
     const ctx = canvasRef.value.getContext('2d');
@@ -180,15 +231,18 @@ watch(() => animationControl.animationsEnabled.value, (enabled) => {
   }
 });
 
-onMounted(() => {
-  initParticleNetwork();
-  const savedSettings = localStorage.getItem('animation-settings');
+onMounted(async () => {
+  // Apply saved settings if available
+  const savedSettings = loadSettings();
   if (savedSettings) {
-    const parsedSettings = JSON.parse(savedSettings);
-    Object.assign(settings, parsedSettings);
+    Object.assign(settings, savedSettings);
   }
+  
   // Set initial dark mode state based on current theme
   isDarkMode.value = currentSettings.value.appearance.theme === 'dark';
+  
+  // Initialize the particle network
+  await initParticleNetwork();
 });
 
 onUnmounted(() => {
@@ -196,6 +250,7 @@ onUnmounted(() => {
     particleNetworkInstance.stop();
     particleNetworkInstance = null;
   }
+  
   if (unregisterAnimation) {
     unregisterAnimation();
     unregisterAnimation = null;

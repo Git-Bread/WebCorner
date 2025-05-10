@@ -27,16 +27,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 const props = defineProps({
   profileImage: {
     type: String,
-    required: true
+    required: true,
+    validator: (value: string) => value.startsWith('/images/')
   },
   type: {
     type: String,
-    default: 'blue' // 'blue', 'purple', or 'pink'
+    default: 'blue',
+    validator: (value: string) => ['blue', 'purple', 'pink'].includes(value)
   },
   message: {
     type: String,
@@ -50,6 +52,7 @@ const props = defineProps({
 
 const isFadingOut = ref(false);
 const timestamp = ref(new Date());
+let fadeTimer: ReturnType<typeof setTimeout> | null = null;
 
 const formattedTime = computed(() => {
   const hours = timestamp.value.getHours();
@@ -59,24 +62,37 @@ const formattedTime = computed(() => {
   return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
 });
 
-const userColorClass = computed(() => {
-  if (props.type === 'blue') return 'text-theme-primary';
-  if (props.type === 'purple') return 'text-theme-secondary';
-  if (props.type === 'pink') return 'text-theme-quaternary';
-  return 'text-theme-primary';
+const userColorClass = computed((): string => {
+  switch (props.type) {
+    case 'blue': return 'text-theme-primary';
+    case 'purple': return 'text-theme-secondary';
+    case 'pink': return 'text-theme-quaternary';
+    default: return 'text-theme-primary';
+  }
 });
 
-const borderColorClass = computed(() => {
-  if (props.type === 'blue') return 'border-theme-primary';
-  if (props.type === 'purple') return 'border-theme-secondary';
-  if (props.type === 'pink') return 'border-theme-quaternary';
-  return 'border-theme-primary';
+const borderColorClass = computed((): string => {
+  switch (props.type) {
+    case 'blue': return 'border-theme-primary';
+    case 'purple': return 'border-theme-secondary';
+    case 'pink': return 'border-theme-quaternary';
+    default: return 'border-theme-primary';
+  }
 });
 
 onMounted(() => {
-  setTimeout(() => {
+  // Start fade timer
+  fadeTimer = setTimeout(() => {
     isFadingOut.value = true;
   }, 30000);
+});
+
+onUnmounted(() => {
+  // Clean up timer to prevent memory leaks
+  if (fadeTimer) {
+    clearTimeout(fadeTimer);
+    fadeTimer = null;
+  }
 });
 </script>
 

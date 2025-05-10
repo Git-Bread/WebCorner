@@ -5,19 +5,28 @@ import { ref, watch } from 'vue';
  * This pattern follows a singleton approach for global animation state management
  * across the application's decorative and visual components.
  */
+
+interface AnimationController {
+  stop: () => void;
+  start: () => void;
+}
+
 export const useAnimationControl = () => {
   // Reactive state to track if animations are enabled
   const animationsEnabled = ref(true);
 
   // Track all registered animation instances for central control
-  const registeredAnimations = ref<{ stop: () => void; start: () => void }[]>([]);
+  const registeredAnimations = ref<AnimationController[]>([]);
+  
+  // Keep track of the observer to properly clean it up
+  let observer: MutationObserver | null = null;
 
   // Initialize animation state based on accessibility setting
   if (import.meta.client) {
     animationsEnabled.value = !document.documentElement.classList.contains('disable-animations');
     
     // Listen for changes to the disable-animations class on the HTML element
-    const observer = new MutationObserver((mutations) => {
+    observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
           const hasDisableClass = document.documentElement.classList.contains('disable-animations');
@@ -34,7 +43,7 @@ export const useAnimationControl = () => {
    * @param animation - Object with start and stop methods for controlling the animation
    * @returns Unregister function to clean up when component is unmounted
    */
-  const registerAnimation = (animation: { stop: () => void; start: () => void }) => {
+  const registerAnimation = (animation: AnimationController): (() => void) => {
     registeredAnimations.value.push(animation);
     
     // Apply current state immediately
@@ -62,9 +71,18 @@ export const useAnimationControl = () => {
     });
   });
 
+  // Cleanup function that components can call in their onBeforeUnmount or onUnmounted
+  const cleanup = () => {
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+  };
+
   return {
     animationsEnabled,
-    registerAnimation
+    registerAnimation,
+    cleanup // Export the cleanup function
   };
 };
 

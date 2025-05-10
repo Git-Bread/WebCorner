@@ -54,8 +54,18 @@
 import { ref, watch, nextTick, computed } from 'vue';
 import ChatMessage from './ChatMessage.vue';
 
+// Define message type for better type safety
+interface ChatMessageData {
+  id: number;
+  profileImage: string;
+  type: 'blue' | 'purple' | 'pink';
+  text: string;
+  username: string;
+  timestamp: Date;
+}
+
 // Store for chat messages
-const messages = ref<any[]>([]);
+const messages = ref<ChatMessageData[]>([]);
 const messagesContainer = ref<HTMLElement | null>(null);
 
 // Compute reversed messages to display newest at the top
@@ -125,12 +135,25 @@ const usernames = [
   "Mouse", "Oracle", "Seraph", "Spooner", "Caleb", "Zed", "Fox", "Pixel", "Echo", "Nimbus"
 ];
 
-// method to add new messages
-const addMessage = (data: { profileImage: string, type: string, text?: string, username?: string }) => {
+// Maximum number of messages to keep
+const MAX_MESSAGES = 8;
+
+// Basic validation for text inputs
+const validateText = (text: string): string => {
+  return text ? text.trim().slice(0, 250) : '';
+};
+
+// method to add new messages with improved typing
+const addMessage = (data: { 
+  profileImage: string, 
+  type: 'blue' | 'purple' | 'pink', 
+  text?: string, 
+  username?: string 
+}) => {
   let messageText = data.text;
   let messageUsername = data.username;
 
-  // If no specific text/username provided, use random ones
+  // If no specific text provided, use random one
   if (!messageText) {
     let attempts = 0;
     do {
@@ -140,25 +163,35 @@ const addMessage = (data: { profileImage: string, type: string, text?: string, u
     } while (messages.value.some(m => m.text === messageText) && attempts < 10);
   }
 
+  // If no specific username provided, use random one
   if (!messageUsername) {
     const randomUsernameIndex = Math.floor(Math.random() * usernames.length);
     messageUsername = usernames[randomUsernameIndex];
   }
 
-  const message = {
+  // Basic validation (instead of strict sanitization)
+  const validatedText = validateText(messageText!);
+  const validatedUsername = validateText(messageUsername!);
+  
+  // Validate image URL to ensure it comes from the expected directory
+  const profileImage = data.profileImage.startsWith('/images/') ? 
+    data.profileImage : '/images/Profile_Pictures/fox_profile.webp';
+
+  const message: ChatMessageData = {
     id: Date.now(),
-    profileImage: data.profileImage,
+    profileImage,
     type: data.type,
-    text: messageText,
-    username: messageUsername,
+    text: validatedText,
+    username: validatedUsername,
     timestamp: new Date()
   };
 
+  // Add message to array
   messages.value.push(message);
 
-  // Keep only the last 8 messages
-  if (messages.value.length > 8) {
-    messages.value.shift();
+  // Keep only the last X messages
+  if (messages.value.length > MAX_MESSAGES) {
+    messages.value = messages.value.slice(-MAX_MESSAGES);
   }
 };
 

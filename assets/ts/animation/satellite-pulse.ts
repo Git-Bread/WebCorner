@@ -19,6 +19,14 @@ const eventBus = {
       this.listeners[event] = [];
     }
     this.listeners[event].push(callback);
+    
+    // Return unsubscribe function for cleanup
+    return () => {
+      const index = this.listeners[event]?.indexOf(callback);
+      if (index !== undefined && index !== -1) {
+        this.listeners[event].splice(index, 1);
+      }
+    };
   },
   
   emit(event: string, data?: any) {
@@ -32,6 +40,7 @@ export default {
   setup() {
     let satellites: Satellite[] = [];
     let animationInterval: number | null = null;
+    let activeTimeouts: number[] = [];
     
     /**
      * Initialize the satellite pulse system
@@ -40,45 +49,49 @@ export default {
       // Clear any existing satellites
       satellites = [];
       
-      // Get all satellites
-      const satellite1 = document.querySelectorAll('.satellite-pulse-1');
-      const satellite2 = document.querySelectorAll('.satellite-pulse-2');
-      const satellite3 = document.querySelectorAll('.satellite-pulse-3');
-      
-      // Store all satellites with their types
-      satellite1.forEach(el => {
-        const imgElement = el.querySelector('img');
-        const profileImage = imgElement ? imgElement.getAttribute('src') || undefined : undefined;
-        const altText = imgElement ? imgElement.getAttribute('alt') || undefined : undefined;
-        
-        satellites.push({ 
-          element: el, 
-          type: 'blue',
-          profileImage
+      // Helper function to process satellite elements
+      const processSatellites = (elements: NodeListOf<Element>, type: 'blue' | 'purple' | 'pink') => {
+        elements.forEach(el => {
+          const imgElement = el.querySelector('img');
+          const profileImage = imgElement ? imgElement.getAttribute('src') || undefined : undefined;
+          
+          satellites.push({ 
+            element: el, 
+            type,
+            profileImage
+          });
         });
-      });
+      };
       
-      satellite2.forEach(el => {
-        const imgElement = el.querySelector('img');
-        const profileImage = imgElement ? imgElement.getAttribute('src') || undefined : undefined;
-        
-        satellites.push({ 
-          element: el, 
-          type: 'purple',
-          profileImage
-        });
-      });
+      // Get and process all satellites
+      processSatellites(document.querySelectorAll('.satellite-pulse-1'), 'blue');
+      processSatellites(document.querySelectorAll('.satellite-pulse-2'), 'purple');
+      processSatellites(document.querySelectorAll('.satellite-pulse-3'), 'pink');
+    }
+    
+    /**
+     * Clean up all active timeouts
+     */
+    function clearTimeouts(): void {
+      activeTimeouts.forEach(id => window.clearTimeout(id));
+      activeTimeouts = [];
+    }
+    
+    /**
+     * Create a tracked timeout that we can clean up later
+     */
+    function createTimeout(callback: () => void, delay: number): number {
+      const timeoutId = window.setTimeout(() => {
+        // Remove from active timeouts when executed
+        const index = activeTimeouts.indexOf(timeoutId);
+        if (index !== -1) {
+          activeTimeouts.splice(index, 1);
+        }
+        callback();
+      }, delay);
       
-      satellite3.forEach(el => {
-        const imgElement = el.querySelector('img');
-        const profileImage = imgElement ? imgElement.getAttribute('src') || undefined : undefined;
-        
-        satellites.push({ 
-          element: el, 
-          type: 'pink',
-          profileImage
-        });
-      });
+      activeTimeouts.push(timeoutId);
+      return timeoutId;
     }
     
     /**
@@ -88,16 +101,19 @@ export default {
     function createHaloEffect(satellite: Satellite): void {
       const haloClass = `halo-${satellite.type}`;
       
+      // Check if halo already exists to prevent duplicates
+      const existingHalo = satellite.element.querySelector(`.${haloClass}`);
+      if (existingHalo) return;
+      
       // Create a halo element
       const haloElement = document.createElement('div');
-      haloElement.classList.add(haloClass);
-      haloElement.classList.add("z-10");
+      haloElement.classList.add(haloClass, "z-10");
       
       // Add the halo to the satellite
       satellite.element.prepend(haloElement);
       
       // Remove halo element after animation completes
-      setTimeout(() => {
+      createTimeout(() => {
         if (satellite.element.contains(haloElement)) {
           satellite.element.removeChild(haloElement);
         }
@@ -127,17 +143,23 @@ export default {
       satellite.element.classList.add(pulseClass);
       
       // Fade down after a short delay
-      setTimeout(() => {
+      createTimeout(() => {
+        if (!satellite.element) return; // Safety check
+        
         satellite.element.classList.remove(pulseClass);
         satellite.element.classList.add(fadeClass);
         
         // Return to inactive state
-        setTimeout(() => {
+        createTimeout(() => {
+          if (!satellite.element) return; // Safety check
+          
           satellite.element.classList.remove(fadeClass);
           satellite.element.classList.add(inactiveClass);
           
           // Clean up classes
-          setTimeout(() => {
+          createTimeout(() => {
+            if (!satellite.element) return; // Safety check
+            
             satellite.element.classList.remove(inactiveClass);
           }, 300);
         }, 500);
@@ -162,29 +184,31 @@ export default {
      * Start the animation system
      */
     function startAnimations(): void {
+      // Stop any existing animations first
+      stopAnimations();
+      
       // Initialize the satellite list
       initialize();
-      
-      // Clear any existing interval
-      if (animationInterval !== null) {
-        window.clearInterval(animationInterval);
-      }
       
       // Start a new interval that triggers a pulse every 5 seconds
       animationInterval = window.setInterval(triggerRandomPulse, 5000);
       
-      // Trigger one immediately to start
-      triggerRandomPulse();
+      // Trigger one with small delay to ensure DOM is ready
+      createTimeout(triggerRandomPulse, 300);
     }
     
     /**
      * Stop the animation system
      */
     function stopAnimations(): void {
+      // Clear interval
       if (animationInterval !== null) {
         window.clearInterval(animationInterval);
         animationInterval = null;
       }
+      
+      // Clear all active timeouts
+      clearTimeouts();
     }
     
     return {
