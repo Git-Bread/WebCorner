@@ -182,6 +182,7 @@ import { useImageUpload, deleteUploadedImage } from '~/utils/imageUtils/imageUpl
 import { useAuth } from '~/composables/useAuth';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTimes, faImage, faSpinner, faExchangeAlt, faUpload, faTrashAlt, faServer } from '@fortawesome/free-solid-svg-icons';
+import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
 library.add(faTimes, faImage, faSpinner, faExchangeAlt, faUpload, faTrashAlt, faServer);
 
@@ -257,6 +258,9 @@ const onFileSelected = async (event: Event) => {
     if (downloadUrl) {
       // If upload successful, set new URL
       serverData.imageUrl = downloadUrl;
+      
+      // Cache the server image URL (using a temporary ID for now)
+      serverImageCache.cacheServerImage('temp_server', downloadUrl);
       
       // Delete the old image if it exists
       if (oldImageUrl) {

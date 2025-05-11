@@ -81,8 +81,8 @@ import fieldContainer from '~/components/dashboard/field/fieldContainer.vue';
 
 // Import specific server composables
 import { useServerCore, useServerJoining, useServerInvitations, useServerLayouts } from '~/composables/server';
-// Import server storage utilities
-import { saveLastSelectedServer, getLastSelectedServer } from '~/utils/serverStorageUtils';
+// Import server cache utility
+import { serverCache } from '~/utils/storageUtils/cacheUtil';
 
 // Define page meta with authenticated layout
 definePageMeta({ layout: 'default-authed' });
@@ -112,48 +112,39 @@ const showJoinServerDialog = ref(false);
 const handleServerSelection = async (serverId: string | null) => {
   // Skip if the server is already selected (prevents unnecessary reloads)
   if (serverId === selectedServerId.value) {
-    console.log("Server already selected:", serverId);
     return;
   }
-  
-  console.log("Selecting server:", serverId);
   
   // Update the selected server ID which triggers UI updates
   selectedServerId.value = serverId;
   
   // When serverId is null, clear the current server in useServerCore too
   if (serverId === null && user.value) {
-    console.log('Clearing current server and layout');
     // Clear the current server reference
     await setCurrentServer(null);
     
-    // Clear the last selected server in localStorage
-    console.log(`Clearing last selected server in localStorage for user ${user.value.uid}`);
-    saveLastSelectedServer(null, user.value.uid);
+    // Clear the last selected server in cache
+    serverCache.removeLastSelectedServer(user.value.uid);
     
     // Clear the layout
     currentUserLayout.value = [];
     return; // Exit early - don't proceed with server-specific operations
   }
   
-  // Save to localStorage when user is logged in and serverId exists
+  // Save to cache when user is logged in and serverId exists
   if (user.value && serverId) {
-    console.log(`Saving server ${serverId} as last selected for user ${user.value.uid}`);
     // Save this as the last selected server
-    saveLastSelectedServer(serverId, user.value.uid);
+    serverCache.setLastSelectedServer(serverId, user.value.uid);
     
     // Make sure the server is set as current in useServerCore
     await setCurrentServer(serverId);
     
     // Load the user-specific layout for this server
-    console.log("Loading layout for server:", serverId);
     const layout = await loadUserLayout(serverId);
     if (layout) {
-      console.log(`Loaded layout with ${layout.length} fields for server ${serverId}`);
       currentUserLayout.value = layout;
     } else {
       // If no layout is found, use an empty array
-      console.log(`No layout found for server ${serverId}, using empty layout`);
       currentUserLayout.value = [];
     }
   }
@@ -263,10 +254,9 @@ const handleJoinServer = async (serverId: string) => {
       await handleServerSelection(joinedServerId);
       
       // No navigations needed - we're just updating the selected server in the UI
-      console.log("Server joined and selected:", joinedServerId);
     }
   } catch (error) {
-    console.error('Error joining server:', error);
+    // Error is handled by joinServer method
   }
 };
 
@@ -289,22 +279,18 @@ const handleJoinWithInvite = async (inviteCode: string) => {
       await handleServerSelection(joinedServerId);
       
       // No navigations needed - we're just updating the selected server in the UI
-      console.log("Server joined with invite and selected:", joinedServerId);
     }
   } catch (error) {
-    console.error("Error joining server with invite:", error);
+    // Error is handled by joinServerWithInvite method
     showJoinServerDialog.value = false;
   }
 };
 
 // Watch for server selection changes
 watch(() => selectedServerId.value, async (newServerId) => {
-  console.log(`Selected server changed to: ${newServerId || 'none'}`);
-  
   if (newServerId && user.value) {
     // Ensure server data is available
     if (!serverData.value[newServerId]) {
-      console.log(`Server data missing for ${newServerId}, loading server data`);
       // We need to use loadUserServers here since we need the full server data
       await loadUserServers();
     }
@@ -312,63 +298,73 @@ watch(() => selectedServerId.value, async (newServerId) => {
     // Load user layout when server selection changes
     const layout = await loadUserLayout(newServerId);
     if (layout) {
-      console.log(`Loaded layout with ${layout.length} fields for server ${newServerId}`);
       currentUserLayout.value = layout;
     } else {
-      console.log(`No layout found for server ${newServerId}, using default empty layout`);
       currentUserLayout.value = [];
     }
   } else {
     // Clear current layout when no server is selected
-    console.log('No server selected, clearing layout');
     currentUserLayout.value = [];
   }
 });
 
 // Load servers on component mount
 onMounted(async () => {
-  console.log('Dashboard component mounted');
-  
   // Use the optimized method to load only server list
   await loadUserServerList();
-  console.log(`Loaded ${userServers.value.length} servers`);
   
   // Get route parameters to see if a specific server is requested
   const router = useRouter();
   const route = useRoute();
   const requestedServerId = route.query.serverId as string | undefined;
   
+  // Check if we've navigated to this page directly/via refresh
+  // This helps us determine if we need to force a server data refresh
+  const isPageRefresh = !document.referrer || document.referrer.includes(window.location.host);
+  
+  // If it's a page refresh, ensure server data is loaded properly
+  if (isPageRefresh && userServers.value.length > 0) {
+    await loadUserServers(); // Force a full server data load
+  }
+  
   // If there's a specific server requested in the URL, select that one
   if (requestedServerId && userServers.value.some(s => s.serverId === requestedServerId)) {
-    console.log(`Selecting server from URL parameter: ${requestedServerId}`);
     await handleServerSelection(requestedServerId);
     return;
   }
   
-  // Try to restore the last selected server from localStorage
+  // Try to restore the last selected server from cache
   if (user.value && userServers.value.length > 0) {
-    const lastSelectedServerId = getLastSelectedServer(user.value.uid);
-    console.log(`Checking for last selected server for user ${user.value.uid}: ${lastSelectedServerId || 'none'}`);
+    const lastSelectedServerId = serverCache.getLastSelectedServer(user.value.uid);
     
     if (lastSelectedServerId && userServers.value.some(s => s.serverId === lastSelectedServerId)) {
-      console.log(`Restoring last selected server from localStorage: ${lastSelectedServerId}`);
       await handleServerSelection(lastSelectedServerId);
       return;
-    } else if (lastSelectedServerId) {
-      console.log(`Last selected server ${lastSelectedServerId} not found in user's servers, showing server list`);
     }
   }
   
   // Don't auto-select any server by default - show the server list
-  console.log('Showing server list dashboard view');
   
   // Make sure server data is loaded though for the list
   if (userServers.value.length > 0) {
     const serversWithoutData = userServers.value.filter(s => !serverData.value[s.serverId]);
     if (serversWithoutData.length > 0) {
-      console.log(`Loading data for ${serversWithoutData.length} servers`);
       await loadUserServers();
     }
   }
 });
 </script>
+
+<style scoped>
+  /* Add your styles here */
+</style>
+
+<script>
+export default {
+  // Add any necessary component options here
+};
+</script>
+
+<style>
+  /* Add any necessary global styles here */
+</style>

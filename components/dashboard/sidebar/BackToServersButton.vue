@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { clearLastSelectedServer } from '~/utils/serverStorageUtils';
+import { serverCache } from '~/utils/storageUtils/cacheUtil';
 
 const { user } = useAuth();
 const isNavigating = ref(false);
@@ -24,22 +24,21 @@ const emit = defineEmits<{
 const handleBackClick = async () => {
   isNavigating.value = true;
   
-  // Clear the last selected server from localStorage
-  if (user.value) {
-    console.log(`Clearing last selected server from localStorage for user ${user.value.uid}`);
-    clearLastSelectedServer(user.value.uid);
-  }
-  
-  // Add a small delay to show the animation
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  // Emit back event
-  console.log('Emitting back event to navigate to server list');
-  emit('back');
-  
-  // Reset the loading state after a short delay
-  setTimeout(() => {
+  try {
+    if (user.value) {
+      // Clear the last selected server in cache
+      serverCache.removeLastSelectedServer(user.value.uid);
+    }
+    
+    // Simulate a slight delay for the loading animation
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Emit event to parent component
+    emit('back');
+  } catch (error) {
+    // Handle any errors silently
+  } finally {
     isNavigating.value = false;
-  }, 200);
+  }
 };
 </script>

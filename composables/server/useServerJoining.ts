@@ -93,25 +93,6 @@ export const useServerJoining = () => {
       // Save basic server info to localStorage
       saveServerBasicInfoToCache();
       
-      // Update the localStorage cache directly
-      if (user.value) {
-        try {
-          const userCacheKey = `webcorner_user_${user.value.uid}`;
-          // Dynamically import to avoid circular dependencies
-          const { getFromLocalStorage, saveToLocalStorage } = await import('~/utils/storageUtils');
-          const cachedData = getFromLocalStorage(userCacheKey);
-          if (cachedData) {
-            // Update the cached data with the new server list
-            cachedData.servers = userServers.value;
-            saveToLocalStorage(userCacheKey, cachedData);
-            console.log('Updated localStorage cache with joined server data');
-          }
-        } catch (cacheError) {
-          console.error('Error updating localStorage cache after joining server:', cacheError);
-          // Non-critical error, don't stop execution
-        }
-      }
-      
       // No navigation - let the caller handle UI updates
       // Return the serverId on success
       return joinedServerId;

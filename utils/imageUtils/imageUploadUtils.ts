@@ -148,11 +148,10 @@ export const useImageUpload = () => {
     path: string = 'profile_pictures',
     maxSizeInMB: number = 5,
     allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-    targetWidth: number = 512, // Added parameter
-    targetHeight: number = 512, // Added parameter
-    compressionQuality: number = 0.8 // Added parameter
+    targetWidth: number = 512, 
+    targetHeight: number = 512, 
+    compressionQuality: number = 0.8 
   ): Promise<string | null> => {
-    // Reset states
     isUploading.value = true;
     uploadProgress.value = 0;
     uploadError.value = null;
@@ -169,7 +168,7 @@ export const useImageUpload = () => {
         throw new Error(`File size exceeds maximum allowed size of ${maxSizeInMB}MB`);
       }
       
-      // Additional security: Validate path to prevent directory traversal
+      // Validate path to prevent directory traversal
       if (path.includes('..') || path.startsWith('/') || path.includes('\\')) {
         throw new Error('Invalid storage path');
       }
@@ -193,7 +192,7 @@ export const useImageUpload = () => {
       
       // Create a unique filename with sanitized original name
       const sanitizedName = sanitizeFilename(file.name);
-      const fileName = `${uuidv4()}-${sanitizedName}.jpg`; // Force .jpg extension for compressed image
+      const fileName = `${uuidv4()}-${sanitizedName}.jpg`;
       
       // Ensure the path is properly sanitized
       const safePath = path.replace(/[^\w\/\-]/g, '');
@@ -223,7 +222,7 @@ export const useImageUpload = () => {
             // Calculate and update progress percentage
             const progress = Math.round(
               (snapshot.bytesTransferred / snapshot.totalBytes) * 80
-            ) + 20; // Add 20% for the preprocessing we've already done
+            ) + 20; // Add 20% for the preprocessing
             
             uploadProgress.value = progress;
           },
@@ -254,7 +253,7 @@ export const useImageUpload = () => {
       
     } catch (error) {
       uploadError.value = error instanceof Error && error.message.includes("Invalid file type") 
-        ? error.message  // detailed message for validation errors, ease of debugging
+        ? error.message
         : handleStorageError(error);
       console.error('Upload error:', error);
       return null; 

@@ -58,6 +58,9 @@ import ServerMembersList from './sidebar/ServerMembersList.vue';
 import BackToServersButton from './sidebar/BackToServersButton.vue';
 import ServerList from './sidebar/ServerList.vue';
 
+// Import the serverImageCache utility
+import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
+
 // Server sidebar props
 type ServerSidebarProps = {
   servers: ServerRef[];
@@ -83,7 +86,13 @@ const getServerName = (serverId: string): string => {
 };
 
 const getServerImageUrl = (serverId: string): string | undefined => {
-  return props.serverData[serverId]?.server_img_url || undefined;
+  if (!serverId || !props.serverData) return undefined;
+  
+  const server = props.serverData[serverId];
+  if (!server) return undefined;
+  
+  // Use the serverImageCache utility to get cached image URL
+  return server.server_img_url ? serverImageCache.getServerImage(server.server_img_url) : undefined;
 };
 
 const getMemberCount = (serverId: string): number => {
@@ -92,7 +101,6 @@ const getMemberCount = (serverId: string): number => {
 
 // Handle back to servers button click
 const handleBackToServers = () => {
-  console.log('Going back to server list - emitting server-selected with null');
   emit('server-selected', null);
 };
 

@@ -238,12 +238,12 @@
 </template>
 
 <script setup lang="ts">
+import { serverCache, profileCache } from '~/utils/storageUtils/cacheUtil';
 
 // Get auth data and profile composable directly
 const { user } = useAuth();
 const { 
   profileData,
-  profileImages, 
   defaultProfileImages, // Added for access to default images separately
   userCustomImages, // Added for access to user's custom images
   isEditing,
@@ -256,7 +256,6 @@ const {
   selectProfileImage,
   uploadCustomImage,
   resendVerificationEmail,
-  invalidateProfileCache,
 } = useProfile();
 
 // For file upload
@@ -350,7 +349,6 @@ async function confirmUpload() {
     // Close modal after successful upload
     showPreviewModal.value = false;
   } catch (error) {
-    console.error('Error uploading image:', error);
     uploadError.value = 'Failed to upload image';
   }
 }
@@ -364,6 +362,8 @@ async function handleSubmit() {
   previewImage.value = '';
   
   // Force a cache refresh for other components that might be using the profile data
-  invalidateProfileCache();
+  if (user.value) {
+    profileCache.invalidateProfile(user.value.uid);
+  }
 }
 </script>

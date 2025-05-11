@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { formatDate } from '~/utils/dateUtil'; // Assuming you have a date formatting utility
+import { profileImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
 // Access auth data directly
 const { user } = useAuth();
@@ -70,11 +71,22 @@ const { user } = useAuth();
 // Access profile data and functions directly
 const { 
   userName,
-  userPhotoUrl,
+  userPhotoUrl: originalPhotoUrl,
   isEditing,
   profileCompletionPercentage,
-  tempProfileImage
+  tempProfileImage: originalTempImage
 } = useProfile();
+
+// Use cached profile images
+const userPhotoUrl = computed(() => {
+  const photoUrl = originalPhotoUrl.value;
+  return photoUrl ? profileImageCache.getProfileImage(photoUrl) : '/images/Profile_Pictures/default_profile.jpg';
+});
+
+const tempProfileImage = computed(() => {
+  const tempImage = originalTempImage.value;
+  return tempImage ? profileImageCache.getProfileImage(tempImage) : null;
+});
 
 // Format creation and sign-in times
 const formattedCreationTime = computed(() => formatDate(user.value?.metadata?.creationTime));

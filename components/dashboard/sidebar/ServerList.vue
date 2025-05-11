@@ -64,6 +64,7 @@
 
 <script setup lang="ts">
 import type { ServerRef } from '~/schemas/userSchemas';
+import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
 const props = defineProps<{
   servers: ServerRef[];
@@ -80,6 +81,10 @@ const emit = defineEmits<{
 
 // Helper functions using props directly
 const getServerName = (serverId: string): string => {
+  if (!props.serverData[serverId]) {
+    console.warn(`Server data missing for ${serverId} in ServerList component, using fallback name`);
+    return 'Loading server...';
+  }
   return props.serverData[serverId]?.name || 'Unknown Server';
 };
 
@@ -89,6 +94,12 @@ const getServerInitial = (serverId: string): string => {
 };
 
 const getServerImageUrl = (serverId: string): string | undefined => {
-  return props.serverData[serverId]?.server_img_url || undefined;
+  if (!serverId || !props.serverData) return undefined;
+  
+  const server = props.serverData[serverId];
+  if (!server) return undefined;
+  
+  // Use the serverImageCache utility to get cached image URL
+  return server.server_img_url ? serverImageCache.getServerImage(server.server_img_url) : undefined;
 };
 </script>

@@ -60,6 +60,7 @@ import { ClientOnly } from '#components';
 import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { profileImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
 const { user, logout, isAuthenticated } = useAuth()
 const profileState = useProfile()
@@ -68,9 +69,18 @@ const menuOpen = ref(false)
 const settingsOpen = ref(false);
 
 const userName = computed(() => profileState.userName.value)
-const userPhotoUrl = computed(() => profileState.userPhotoUrl.value)
+
+// Use the profileImageCache utility to get the cached profile image URL
+const userPhotoUrl = computed(() => {
+  const photoUrl = profileState.userPhotoUrl.value;
+  return photoUrl ? profileImageCache.getProfileImage(photoUrl) : '/images/Profile_Pictures/default_profile.jpg';
+})
+
 const isEditing = computed(() => profileState.isEditing.value)
-const tempProfileImage = computed(() => profileState.tempProfileImage.value)
+const tempProfileImage = computed(() => {
+  const tempImage = profileState.tempProfileImage.value;
+  return tempImage ? profileImageCache.getProfileImage(tempImage) : null;
+})
 
 const route = useRoute();
 const isOnProfilePage = computed(() => route.path === '/profile');
