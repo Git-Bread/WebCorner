@@ -1,69 +1,70 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { ScheduledEvent } from "firebase-functions/v2/scheduler";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { CallableRequest } from "firebase-functions/v2/https";
 
 // Initialize the Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const europeRegion = functions;
-
 /**
  * Scheduled function that runs weekly to clean up expired server invites
  * This prevents database bloat from old invites that are no longer valid
  */
-export const cleanupExpiredInvites = europeRegion.pubsub
-  .schedule("every sunday 03:00")
-  .timeZone("GMT")
-  .onRun(async (context) => {
-    const now = new Date();
+export const cleanupExpiredInvites = onSchedule({
+  schedule: "every sunday 03:00",
+  timeZone: "GMT"
+}, async (event: ScheduledEvent) => {
+  const now = new Date();
+  
+  try {
+    const invitesRef = admin.firestore().collection("serverInvites");
+    const expiredInvitesQuery = await invitesRef
+      .where("expiresAt", "<", now)
+      .get();
     
-    try {
-      const invitesRef = admin.firestore().collection("serverInvites");
-      const expiredInvitesQuery = await invitesRef
-        .where("expiresAt", "<", now)
-        .get();
-      
-      if (expiredInvitesQuery.empty) {
-        return null;
-      }
-      
-      const batch = admin.firestore().batch();
-      expiredInvitesQuery.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-      
-      await batch.commit();
-      return null;
-    } catch (error) {
-      functions.logger.error("Error cleaning up expired invites:", error);
-      return null;
+    if (expiredInvitesQuery.empty) {
+      return;
     }
-  });
+    
+    const batch = admin.firestore().batch();
+    expiredInvitesQuery.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    
+    await batch.commit();
+    return;
+  } catch (error) {
+    functions.logger.error("Error cleaning up expired invites:", error);
+    return;
+  }
+});
 
 /**
  * Scheduled function to update user count
  * Runs once per day to update the counter document
  */
-export const updateUserCount = europeRegion.pubsub
-  .schedule('every day 00:00')
-  .timeZone('GMT')
-  .onRun(async (context) => {
-    try {
-      const usersRef = admin.firestore().collection('users');
-      const totalUsers = (await usersRef.count().get()).data().count;
-      
-      await admin.firestore().doc('counters/users_count').set({
-        count: totalUsers,
-        lastUpdated: admin.firestore.FieldValue.serverTimestamp()
-      });
-      return null;
-    } catch (error) {
-      functions.logger.error('Error updating user count:', error);
-      throw error;
-    }
-  });
+export const updateUserCount = onSchedule({
+  schedule: 'every day 00:00',
+  timeZone: 'GMT'
+}, async (event: ScheduledEvent) => {
+  try {
+    const usersRef = admin.firestore().collection('users');
+    const totalUsers = (await usersRef.count().get()).data().count;
+    
+    await admin.firestore().doc('counters/users_count').set({
+      count: totalUsers,
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+    });
+    return;
+  } catch (error) {
+    functions.logger.error('Error updating user count:', error);
+    throw error;
+  }
+});
 
 /**
  * Callable function to increment a server invite use count
@@ -71,8 +72,8 @@ export const updateUserCount = europeRegion.pubsub
  * @deprecated This function is being phased out in favor of consolidated processing in joinServerMember
  * which now accepts an optional inviteCode parameter to handle invite tracking
  */
-export const incrementInviteUsage = europeRegion.https.onCall(async (data, context) => {
-  if (!context.auth) {
+export const incrementInviteUsage = functions.https.onCall(async (request: CallableRequest) => {
+  if (!request.auth) {
     throw new functions.https.HttpsError(
       'unauthenticated',
       'You must be logged in to use this function'
@@ -80,6 +81,7 @@ export const incrementInviteUsage = europeRegion.https.onCall(async (data, conte
   }
   
   try {
+    const data = request.data as { inviteCode: string };
     const { inviteCode } = data;
     
     if (!inviteCode) {
@@ -158,9 +160,9 @@ export const incrementInviteUsage = europeRegion.https.onCall(async (data, conte
  * This handles all server joining operations in one secure server-side function
  * Can optionally handle invite usage tracking as well
  */
-export const joinServerMember = europeRegion.https.onCall(async (data, context) => {
+export const joinServerMember = functions.https.onCall(async (request: CallableRequest) => {
   try {
-    if (!context.auth) {
+    if (!request.auth) {
       throw new functions.https.HttpsError(
         'unauthenticated',
         'You must be logged in to use this function'
@@ -168,8 +170,9 @@ export const joinServerMember = europeRegion.https.onCall(async (data, context) 
     }
 
     try {
+      const data = request.data as { serverId: string, inviteCode?: string };
       const { serverId, inviteCode } = data;
-      const userId = context.auth.uid;
+      const userId = request.auth.uid;
 
       if (!serverId) {
         functions.logger.error('joinServerMember: No serverId provided');

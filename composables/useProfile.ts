@@ -186,11 +186,20 @@ export const useProfile = () => {
       showToast('Profile updated successfully', 'success')
       isEditing.value = false
       
-      // Update the local userName ref
+      // Update the local state
       userName.value = profileData.value.username
+      userPhotoUrl.value = profileData.value.profileImage || userPhotoUrl.value
       
-      // Reload user data
-      await loadUserData()
+      // Update userDoc value to match
+      if (userDoc.value) {
+        userDoc.value = {
+          ...userDoc.value,
+          username: profileData.value.username,
+          bio: profileData.value.bio,
+          profile_image_url: profileData.value.profileImage,
+          updatedAt: new Date()
+        }
+      }
     } catch (error) {
       console.error('Error updating profile:', error)
       showToast('Failed to update profile', 'error')

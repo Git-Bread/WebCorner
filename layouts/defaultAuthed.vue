@@ -16,7 +16,7 @@
         
         <!-- Settings Component for authenticated users -->
         <Transition name="fade-slide-up">
-            <UserComponentsSettingsMenu 
+            <SettingsMenu 
                 v-if="showUserSettings" 
                 mode="user" 
                 @close-settings="showUserSettings = false" />
@@ -27,5 +27,6 @@
 <script setup lang="ts">
 import { HeadersStandardHeader } from '#components'
 import { ref } from 'vue';
+import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
 const showUserSettings = ref(false);
 </script>
