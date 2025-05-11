@@ -21,12 +21,27 @@
                 mode="user" 
                 @close-settings="showUserSettings = false" />
         </Transition>
+        
+        <!-- Debug Panel (only included in development or if debug enabled) -->
+        <ClientOnly>
+            <DebugPanel v-if="isDevelopment || isDebugMode()" />
+        </ClientOnly>
     </div>
 </template>
 
 <script setup lang="ts">
 import { HeadersStandardHeader } from '#components'
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
+import DebugPanel from '~/components/debug/DebugPanel.vue';
+import { isDebugMode as checkDebugMode, IS_DEVELOPMENT } from '~/utils/debugUtils';
+
 const showUserSettings = ref(false);
+const isDevelopment = IS_DEVELOPMENT;
+const isDebugMode = ref(false);
+
+onMounted(() => {
+    // Check if debug mode is enabled
+    isDebugMode.value = checkDebugMode();
+});
 </script>

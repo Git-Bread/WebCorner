@@ -6,18 +6,11 @@
  */
 
 import { saveToLocalStorage, getFromLocalStorage, removeFromLocalStorage } from './localStorageUtil';
+import { shouldLog } from '../debugUtils';
 
-// Debug flag - set to true to enable debug logging
-const DEBUG_CACHE = true;
-
-/**
- * Debug logger for cache operations
- * @param operation The operation being performed
- * @param key The key being operated on
- * @param details Additional details about the operation
- */
+// Debug logger for cache operations
 const debugCache = (operation: string, key: string, details?: any): void => {
-  if (!DEBUG_CACHE) return;
+  if (!shouldLog('cache')) return;
   console.debug(`cache | ${operation} | ${key}${details ? ' | ' + JSON.stringify(details) : ''}`);
 };
 
@@ -70,7 +63,7 @@ export const setCacheItem = <T>(
       size: typeof data === 'string' ? data.length : JSON.stringify(data).length
     });
   } catch (error) {
-    if (DEBUG_CACHE) console.error('Error setting cache item:', error);
+    if (shouldLog('cache')) console.error('Error setting cache item:', error);
   }
 };
 
@@ -140,7 +133,7 @@ export const getCacheItem = <T>(
     
     return null;
   } catch (error) {
-    if (DEBUG_CACHE) console.error('Error getting cache item:', error);
+    if (shouldLog('cache')) console.error('Error getting cache item:', error);
     return null;
   }
 };
@@ -165,7 +158,7 @@ export const removeCacheItem = (
     
     debugCache('remove', key, { removeFromLocal });
   } catch (error) {
-    if (DEBUG_CACHE) console.error('Error removing cache item:', error);
+    if (shouldLog('cache')) console.error('Error removing cache item:', error);
   }
 };
 
@@ -205,7 +198,7 @@ export const cacheItemExists = (
     debugCache('exists', key, { exists: false, checked: checkLocalStorage ? ['memory', 'localStorage'] : ['memory'] });
     return false;
   } catch (error) {
-    if (DEBUG_CACHE) console.error('Error checking cache item existence:', error);
+    if (shouldLog('cache')) console.error('Error checking cache item existence:', error);
     return false;
   }
 };
@@ -230,7 +223,7 @@ export const clearCache = (clearLocalStorage: boolean = false): void => {
       debugCache('clear', 'all localStorage cache', { prefix: APP_PREFIX });
     }
   } catch (error) {
-    if (DEBUG_CACHE) console.error('Error clearing cache:', error);
+    if (shouldLog('cache')) console.error('Error clearing cache:', error);
   }
 };
 
@@ -257,7 +250,7 @@ export const cleanExpiredCacheItems = (): number => {
     
     return removedCount;
   } catch (error) {
-    if (DEBUG_CACHE) console.error('Error cleaning expired cache items:', error);
+    if (shouldLog('cache')) console.error('Error cleaning expired cache items:', error);
     return 0;
   }
 };

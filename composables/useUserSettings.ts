@@ -2,7 +2,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { type User as FirebaseUser } from 'firebase/auth';
 import { handleDatabaseError } from '~/utils/errorHandler';
 import { applyTheme, applyFontSize, applyAccessibilitySettings } from '~/utils/settingsUtils';
-import { saveToLocalStorage, getFromLocalStorage, removeFromLocalStorage } from '~/utils/storageUtils';
+import { saveToLocalStorage, getFromLocalStorage, removeFromLocalStorage } from '~/utils/storageUtils/localStorageUtil';
 
 // Cache constants
 const SETTINGS_CACHE_KEY_PREFIX = 'webcorner_settings_';

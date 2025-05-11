@@ -4,17 +4,11 @@
  * This file centralizes all localStorage operations for consistent patterns and error handling
  */
 
-// Debug flag - set to true to enable debug logging
-const DEBUG_STORAGE = true;
+import { shouldLog } from '../debugUtils';
 
-/**
- * Debug logger for storage operations
- * @param operation The operation being performed
- * @param key The key being operated on
- * @param details Additional details about the operation
- */
+// Debug logger for storage operations
 const debugStorage = (operation: string, key: string, details?: any): void => {
-  if (!DEBUG_STORAGE) return;
+  if (!shouldLog('storage')) return;
   console.debug(`localStorage | ${operation} | ${key}${details ? ' | ' + JSON.stringify(details) : ''}`);
 };
 
@@ -55,7 +49,7 @@ export const saveToLocalStorage = (key: string, data: any, prefix?: string): voi
     debugStorage('save', fullKey, { size: JSON.stringify(item).length });
   } catch (error) {
     // Only log error, don't disrupt app flow
-    if (DEBUG_STORAGE) console.error('Error saving to localStorage:', error);
+    if (shouldLog('storage')) console.error('Error saving to localStorage:', error);
   }
 };
 
@@ -93,7 +87,7 @@ export const getFromLocalStorage = (key: string, maxAge: number = 1000 * 60 * 60
     });
     return parsed.data;
   } catch (error) {
-    if (DEBUG_STORAGE) console.error('Error reading from localStorage:', error);
+    if (shouldLog('storage')) console.error('Error reading from localStorage:', error);
     return null;
   }
 };
@@ -111,7 +105,7 @@ export const removeFromLocalStorage = (key: string, prefix?: string): void => {
     localStorage.removeItem(fullKey);
     debugStorage('remove', fullKey);
   } catch (error) {
-    if (DEBUG_STORAGE) console.error('Error removing from localStorage:', error);
+    if (shouldLog('storage')) console.error('Error removing from localStorage:', error);
   }
 };
 
@@ -134,7 +128,7 @@ export const clearLocalStorageByPrefix = (prefix: string): void => {
     keysToRemove.forEach(key => localStorage.removeItem(key));
     debugStorage('clear by prefix', prefix, { count: keysToRemove.length });
   } catch (error) {
-    if (DEBUG_STORAGE) console.error('Error clearing localStorage by prefix:', error);
+    if (shouldLog('storage')) console.error('Error clearing localStorage by prefix:', error);
   }
 };
 
@@ -149,7 +143,7 @@ export const clearAllApplicationStorage = (appPrefix: string = 'webcorner'): voi
     clearLocalStorageByPrefix(appPrefix);
     debugStorage('clear all application storage', appPrefix);
   } catch (error) {
-    if (DEBUG_STORAGE) console.error('Error clearing all application storage:', error);
+    if (shouldLog('storage')) console.error('Error clearing all application storage:', error);
   }
 };
 
@@ -185,7 +179,7 @@ export const migrateLocalStorageItem = (oldKey: string, newKey: string, transfor
     debugStorage('migrate', `${oldKey} → ${newKey}`);
     return true;
   } catch (error) {
-    if (DEBUG_STORAGE) console.error('Error migrating localStorage item:', error);
+    if (shouldLog('storage')) console.error('Error migrating localStorage item:', error);
     return false;
   }
 };
@@ -219,7 +213,7 @@ export const localStorageItemExists = (key: string, maxAge: number = 1000 * 60 *
     
     return isValid;
   } catch (error) {
-    if (DEBUG_STORAGE) console.error('Error checking localStorage item existence:', error);
+    if (shouldLog('storage')) console.error('Error checking localStorage item existence:', error);
     return false;
   }
 };
@@ -250,7 +244,7 @@ export const getLocalStorageSize = (): number | null => {
     
     return sizeInBytes;
   } catch (error) {
-    if (DEBUG_STORAGE) console.error('Error calculating localStorage size:', error);
+    if (shouldLog('storage')) console.error('Error calculating localStorage size:', error);
     return null;
   }
 };

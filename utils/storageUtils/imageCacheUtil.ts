@@ -5,17 +5,11 @@
  * to reduce bandwidth usage and improve performance.
  */
 
-// Debug flag - set to true to enable debug logging
-const DEBUG_IMAGE_CACHE = true;
+import { shouldLog } from '../debugUtils';
 
-/**
- * Debug logger for image cache operations
- * @param operation The operation being performed
- * @param url The image URL being operated on
- * @param details Additional details about the operation
- */
+// Debug logger for image cache operations
 const debugImageCache = (operation: string, url: string, details?: any): void => {
-  if (!DEBUG_IMAGE_CACHE) return;
+  if (!shouldLog('imageCache')) return;
   // Truncate long URLs to avoid cluttering the console
   const displayUrl = url && url.length > 40 ? url.substring(0, 20) + '...' + url.substring(url.length - 20) : url;
   console.debug(`imageCache | ${operation} | ${displayUrl}${details ? ' | ' + JSON.stringify(details) : ''}`);

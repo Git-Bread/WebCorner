@@ -156,6 +156,162 @@ export const incrementInviteUsage = functions.https.onCall(async (request: Calla
 });
 
 /**
+ * Helper function to get all subcollections of a document
+ * @param docRef - Firestore document reference
+ * @returns Promise with array of subcollection names
+ */
+async function getAllSubcollections(docRef: FirebaseFirestore.DocumentReference): Promise<string[]> {
+  try {
+    // NOTE: listCollections() is only available in Node.js admin SDK
+    const collections = await docRef.listCollections();
+    return collections.map(col => col.id);
+  } catch (error) {
+    functions.logger.error(`Error getting subcollections for ${docRef.path}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Callable function to delete a user account and clean up all associated data
+ */
+export const deleteUserAccount = functions.https.onCall(async (request: CallableRequest) => {
+  try {
+    if (!request.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'You must be logged in to delete your account'
+      );
+    }
+
+    const userId = request.auth.uid;
+    functions.logger.info(`User ${userId} has requested account deletion`);
+
+    // Get all the user's data
+    const userRef = admin.firestore().collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        'User data not found'
+      );
+    }
+
+    const userData = userDoc.data();
+    const batch = admin.firestore().batch();
+
+    // Track all promises for parallel execution
+    const cleanupPromises: Promise<any>[] = [];
+
+    // 1. Handle servers the user owns
+    try {
+      const serversQuery = await admin.firestore().collection('servers')
+        .where('ownerId', '==', userId)
+        .get();
+
+      if (!serversQuery.empty) {
+        for (const serverDoc of serversQuery.docs) {
+          const serverId = serverDoc.id;
+          functions.logger.info(`Cleaning up server ${serverId} owned by user ${userId}`);
+
+          // Get all subcollections dynamically
+          const subcollections = await getAllSubcollections(serverDoc.ref);
+          functions.logger.info(`Found ${subcollections.length} subcollections for server ${serverId}: ${subcollections.join(', ')}`);
+
+          // Create an array of deletion promises
+          const subcollectionDeletePromises = subcollections.map(subcollectionName => 
+            admin.firestore().recursiveDelete(serverDoc.ref.collection(subcollectionName))
+              .then(() => {
+                functions.logger.info(`Deleted subcollection ${subcollectionName} for server ${serverId}`);
+              })
+              .catch(error => {
+                functions.logger.error(`Error deleting subcollection ${subcollectionName} for server ${serverId}:`, error);
+              })
+          );
+
+          // Add all deletion promises to our tracking array
+          cleanupPromises.push(Promise.all(subcollectionDeletePromises));
+          
+          // Delete the server document itself
+          batch.delete(serverDoc.ref);
+        }
+      }
+    } catch (serverError) {
+      functions.logger.error(`Error cleaning up servers owned by user ${userId}:`, serverError);
+    }
+
+    // 2. Remove user from servers they're a member of
+    if (userData && Array.isArray(userData.servers)) {
+      for (const serverMembership of userData.servers) {
+        const serverId = serverMembership.serverId;
+        if (!serverId) continue;
+        
+        try {
+          const serverRef = admin.firestore().collection('servers').doc(serverId);
+          const memberRef = serverRef.collection('members').doc(userId);
+          
+          // Delete user from server's member list
+          batch.delete(memberRef);
+          
+          // Decrement server's member count
+          batch.update(serverRef, {
+            memberCount: FieldValue.increment(-1)
+          });
+          
+          functions.logger.info(`Removed user ${userId} from server ${serverId}`);
+        } catch (membershipError) {
+          functions.logger.error(`Error removing user ${userId} from server ${serverId}:`, membershipError);
+        }
+      }
+    }
+
+    // 3. Delete user's storage files (profile images, etc.)
+    try {
+      const profileImagesBucket = admin.storage().bucket();
+      const [profileImages] = await profileImagesBucket.getFiles({
+        prefix: `profile_pictures/${userId}`
+      });
+
+      if (profileImages.length > 0) {
+        functions.logger.info(`Deleting ${profileImages.length} profile images for user ${userId}`);
+        const deletePromises = profileImages.map(file => file.delete());
+        cleanupPromises.push(Promise.all(deletePromises));
+      }
+    } catch (storageError) {
+      functions.logger.error(`Error cleaning up storage for user ${userId}:`, storageError);
+    }
+
+    // 4. Execute all cleanup tasks in parallel
+    await Promise.all(cleanupPromises);
+
+    // 5. Delete the user document
+    batch.delete(userRef);
+
+    // 6. Commit all database changes
+    await batch.commit();
+    
+    functions.logger.info(`Successfully completed cleanup for user ${userId}`);
+    
+    return {
+      success: true,
+      message: 'Account successfully deleted'
+    };
+    
+  } catch (error) {
+    functions.logger.error('Error in deleteUserAccount:', error);
+    
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    } else {
+      throw new functions.https.HttpsError(
+        'internal',
+        'An unexpected error occurred while deleting your account'
+      );
+    }
+  }
+});
+
+/**
  * Callable function to update server member count and add user to server
  * This handles all server joining operations in one secure server-side function
  * Can optionally handle invite usage tracking as well

@@ -36,16 +36,7 @@ const { formattedCount, isLoading, error, fetchCount, startAnimation, cleanup } 
 const counterSection = ref<HTMLElement | null>(null);
 const hasAnimated = ref(false);
 let observer: IntersectionObserver | null = null;
-
-// Prefetch data but don't animate yet
-const prefetchData = async () => {
-  try {
-    // Fetch data with animation disabled
-    await fetchCount(15236, false);
-  } catch (err) {
-    console.error('Error prefetching counter data:', err);
-  }
-};
+const fetchCompleted = ref(false);
 
 // Called when the counter section enters the viewport
 const handleIntersection = (entries: IntersectionObserverEntry[]) => {
@@ -65,8 +56,12 @@ const handleIntersection = (entries: IntersectionObserverEntry[]) => {
 };
 
 onMounted(() => {
-  // Start by just loading the data without animation
-  prefetchData();
+  // Only fetch data once
+  if (!fetchCompleted.value) {
+    fetchCount(15236, false).then(() => {
+      fetchCompleted.value = true;
+    });
+  }
   
   // Setup intersection observer to watch when counter comes into view
   if (counterSection.value && 'IntersectionObserver' in window) {

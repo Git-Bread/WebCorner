@@ -75,11 +75,19 @@
           @click="confirmDeleteAccount" 
           class="border border-error text-error px-4 py-2 rounded text-sm hover:bg-error-light hover:bg-opacity-10 transition duration-200 flex items-center"
           aria-label="Delete your account"
+          :disabled="isDeleting"
         >
           <fa :icon="['fas', 'trash-alt']" class="mr-2" aria-hidden="true" /> Delete Account
         </button>
       </div>
     </div>
+    
+    <!-- Delete Account Confirmation Modal -->
+    <DeleteAccountModal 
+      :showModal="showDeleteModal" 
+      @close="closeDeleteModal" 
+      @confirm="handleDeleteAccount" 
+    />
   </div>
 </template>
 
@@ -88,17 +96,20 @@ import { ref, reactive, computed } from 'vue';
 import AuthFormField from '~/components/auth/AuthFormField.vue';
 import AuthErrorMessage from '~/components/auth/AuthErrorMessage.vue';
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue';
+import DeleteAccountModal from '~/components/ui/DeleteAccountModal.vue';
 import { validatePassword, validatePasswordsMatch } from '~/utils/passwordUtils';
 import { showToast } from '~/utils/toast';
 
 // Use the profile composable
-const { lastPasswordReset, updatePassword } = useProfile();
+const { lastPasswordReset, updatePassword, deleteAccount, isDeleting, deleteError } = useProfile();
+const router = useRouter();
 
 // Local state management (instead of using global state from the composable)
 const passwordResetVisible = ref(false);
 const validationAttempted = ref(false);
 const errorMessage = ref('');
 const isUpdating = ref(false);
+const showDeleteModal = ref(false);
 
 // Use local reactive object instead of global state
 const localPasswordData = reactive({
@@ -221,8 +232,30 @@ async function handleUpdatePassword() {
   }
 }
 
-// Placeholder for account deletion confirmation
+// Account deletion confirmation
 function confirmDeleteAccount() {
-  showToast('Account deletion is currently disabled for your protection', 'info');
+  showDeleteModal.value = true;
+}
+
+// Handle account deletion
+async function handleDeleteAccount(password: string) {
+  try {
+    const success = await deleteAccount(password);
+    
+    if (success) {
+      // Navigate to login page after successful deletion
+      router.push('/login');
+    } else if (deleteError.value) {
+      // Show error message in modal
+      showToast(deleteError.value, 'error');
+    }
+  } catch (error) {
+    showToast('Failed to delete account', 'error');
+  }
+}
+
+// Close delete modal
+function closeDeleteModal() {
+  showDeleteModal.value = false;
 }
 </script>

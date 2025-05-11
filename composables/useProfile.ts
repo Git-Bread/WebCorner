@@ -1,6 +1,7 @@
 import { computed, watch, onMounted } from 'vue'
 import { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword as firebaseUpdatePassword, sendEmailVerification } from 'firebase/auth'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
 import { showToast } from '~/utils/toast'
 import { handleAuthError } from '~/utils/errorHandler'
 import { validatePassword, validatePasswordsMatch } from '~/utils/passwordUtils'
@@ -22,7 +23,7 @@ interface UserDocument {
 
 export const useProfile = () => {
   const { user } = useAuth()
-  const { firestore, auth, storage } = useFirebase()
+  const { firestore, auth, storage, functions } = useFirebase()
   const { uploadImage, uploadError } = useImageUpload()
 
   // shared UI state
@@ -416,6 +417,78 @@ export const useProfile = () => {
     }
   }
 
+  // Delete user account with proper authentication and data cleanup
+  const isDeleting = ref(false);
+  const deleteError = ref('');
+
+  async function deleteAccount(password: string): Promise<boolean> {
+    if (!user.value || !auth.currentUser) {
+      deleteError.value = 'You must be logged in to delete your account';
+      return false;
+    }
+
+    isDeleting.value = true;
+    deleteError.value = '';
+    
+    try {
+      // 1. Re-authenticate the user with their password
+      const credential = EmailAuthProvider.credential(
+        auth.currentUser.email || '',
+        password
+      );
+      
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      
+      // 2. Get user data to check for owned servers
+      const userDocRef = doc(firestore, 'users', user.value.uid);
+      const userDocSnapshot = await getDoc(userDocRef);
+      
+      if (!userDocSnapshot.exists()) {
+        deleteError.value = 'User data not found';
+        return false;
+      }
+      
+      const userData = userDocSnapshot.data();
+      
+      // 3. Check if user owns any servers - if so, we need to handle them
+      // This will be processed on server-side by the Cloud Function
+      
+      // 4. Call the Cloud Function to handle account deletion
+      const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
+      
+      await deleteUserAccount();
+      
+      // 5. Delete the Firebase Auth user account
+      await auth.currentUser.delete();
+      
+      // 6. Clear any local state and caches
+      const userId = user.value?.uid;
+      if (userId) {
+        // Clear profile cache
+        profileCache.invalidateProfile(userId);
+        
+        // Clear profile image cache - create a helper method for this
+        // This is safe since we'll redirect away from the profile after deletion
+        localStorage.removeItem(`webcorner_profile_${userId}`);
+        const cacheKeys = Object.keys(localStorage).filter(key => 
+          key.startsWith('webcorner_img_') && 
+          key.includes(userId)
+        );
+        cacheKeys.forEach(key => localStorage.removeItem(key));
+      }
+      
+      showToast('Your account has been permanently deleted', 'success');
+      return true;
+      
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      deleteError.value = handleAuthError(error);
+      return false;
+    } finally {
+      isDeleting.value = false;
+    }
+  }
+
   // Initialize user data - use onMounted instead of watch for initialization
   const initializeUserData = async () => {
     if (user.value) {
@@ -462,6 +535,8 @@ export const useProfile = () => {
     userCustomImages,
     defaultProfileImages,
     tempProfileImage,
+    isDeleting,
+    deleteError,
     
     // Computed
     profileCompletionPercentage,
@@ -476,5 +551,6 @@ export const useProfile = () => {
     updatePassword,
     resendVerificationEmail,
     fetchUserCustomImages,
+    deleteAccount,
   }
 }

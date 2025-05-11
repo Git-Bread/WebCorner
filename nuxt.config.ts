@@ -68,6 +68,9 @@ export default defineNuxtConfig({
         'hashtag',
         'comment',
         'sync',
+        'memory',
+        'bug',
+        'database',
       ],
       brands: [
         'github',

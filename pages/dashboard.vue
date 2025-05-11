@@ -354,17 +354,3 @@ onMounted(async () => {
   }
 });
 </script>
-
-<style scoped>
-  /* Add your styles here */
-</style>
-
-<script>
-export default {
-  // Add any necessary component options here
-};
-</script>
-
-<style>
-  /* Add any necessary global styles here */
-</style>
