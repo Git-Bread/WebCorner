@@ -92,7 +92,7 @@ const getMemberCount = (serverId: string): number => {
 
 // Handle back to servers button click
 const handleBackToServers = () => {
-  console.log('Going back to server list');
+  console.log('Going back to server list - emitting server-selected with null');
   emit('server-selected', null);
 };
 

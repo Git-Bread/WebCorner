@@ -10,18 +10,28 @@ import { useServerCore } from './useServerCore';
 export const useServerJoining = () => {
   const { firestore, functions } = useFirebase();
   const { user } = useAuth();
-  const { userServers, loadUserServers, setCurrentServer } = useServerCore();
+  const { userServers, loadUserServers, setCurrentServer, serverData, saveServerBasicInfoToCache } = useServerCore();
   
   // State
   const isJoiningServer = ref(false);
   
   // Reference to Cloud Function
   const joinServerMemberFunction = httpsCallable(functions, 'joinServerMember');
-    /**
+  
+  /**
    * Join an existing server using direct server ID
    * @returns Promise with the joined serverId if successful, or null on failure
-   */  const joinServer = async (serverId: string): Promise<string | null> => {
-    if (!user.value || !serverId) return null; 
+   */ 
+  const joinServer = async (serverId: string): Promise<string | null> => {
+    if (!user.value) {
+      showToast('Please log in to join servers', 'error');
+      return null;
+    }
+    
+    if (!serverId || serverId.trim() === '') {
+      showToast('Invalid server ID', 'error');
+      return null;
+    }
     
     isJoiningServer.value = true;
     
@@ -79,6 +89,9 @@ export const useServerJoining = () => {
       // Reload user servers to update UI with the new server data
       await loadUserServers();
       console.log(`User servers reloaded after joining ${joinedServerId}`);
+      
+      // Save basic server info to localStorage
+      saveServerBasicInfoToCache();
       
       // Update the localStorage cache directly
       if (user.value) {

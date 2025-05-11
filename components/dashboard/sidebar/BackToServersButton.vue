@@ -24,7 +24,9 @@ const emit = defineEmits<{
 const handleBackClick = async () => {
   isNavigating.value = true;
   
+  // Clear the last selected server from localStorage
   if (user.value) {
+    console.log(`Clearing last selected server from localStorage for user ${user.value.uid}`);
     clearLastSelectedServer(user.value.uid);
   }
   
@@ -32,9 +34,10 @@ const handleBackClick = async () => {
   await new Promise(resolve => setTimeout(resolve, 300));
   
   // Emit back event
+  console.log('Emitting back event to navigate to server list');
   emit('back');
   
-  // Reset the state after a short delay
+  // Reset the loading state after a short delay
   setTimeout(() => {
     isNavigating.value = false;
   }, 200);

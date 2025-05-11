@@ -5,6 +5,7 @@ import type { ServerRef } from '~/schemas/userSchemas';
 import { showToast } from '~/utils/toast';
 import { cleanupTempServerImages, moveServerImageToPermanent } from '~/utils/imageUtils/imageUploadUtils';
 import { handleDatabaseError, handleStorageError } from '~/utils/errorHandler';
+import { getServerBasicInfo, saveServerBasicInfo } from '~/utils/serverStorageUtils';
 
 /**
  * Composable for core server operations like loading server data and creating new servers
@@ -66,6 +67,10 @@ export const useServerCore = () => {
         if (userData && userData.servers) {
           console.log(`Found ${userData.servers.length} servers in cached user data`);
           userServers.value = userData.servers;
+          
+          // Also load basic server info (names and icons) from localStorage
+          loadServerBasicInfoFromCache();
+          
           isLoading.value = false;
           return;
         }
@@ -93,8 +98,55 @@ export const useServerCore = () => {
   };
 
   /**
+   * Load server basic info (names and icons) from localStorage
+   */
+  const loadServerBasicInfoFromCache = (): void => {
+    if (!user.value) return;
+    
+    try {
+      const cachedBasicInfo = getServerBasicInfo(user.value.uid);
+      
+      if (cachedBasicInfo && Object.keys(cachedBasicInfo).length > 0) {
+        console.log(`Found basic info for ${Object.keys(cachedBasicInfo).length} servers in localStorage`);
+        
+        // Merge with existing server data to preserve in-memory data
+        const updatedServerData = { ...serverData.value };
+        
+        // Only add cached data for servers we have in our list
+        for (const server of userServers.value) {
+          if (cachedBasicInfo[server.serverId] && !updatedServerData[server.serverId]) {
+            updatedServerData[server.serverId] = cachedBasicInfo[server.serverId];
+          }
+        }
+        
+        serverData.value = updatedServerData;
+      } else {
+        console.log('No cached server basic info found, will load from Firestore as needed');
+      }
+    } catch (error) {
+      console.error('Error loading server basic info from cache:', error);
+      // Non-critical error, continue without cached data
+    }
+  };
+
+  /**
+   * Save current server data basic info (names and icons) to localStorage
+   */
+  const saveServerBasicInfoToCache = (): void => {
+    if (!user.value || Object.keys(serverData.value).length === 0) return;
+    
+    try {
+      saveServerBasicInfo(user.value.uid, serverData.value);
+    } catch (error) {
+      console.error('Error saving server basic info to cache:', error);
+      // Non-critical error, continue
+    }
+  };
+
+  /**
    * Load user's servers from Firestore
-   */  const loadUserServers = async (): Promise<void> => {
+   */  
+  const loadUserServers = async (): Promise<void> => {
     if (!user.value) return;
     
     isLoading.value = true;
@@ -155,6 +207,9 @@ export const useServerCore = () => {
               });
               
               serverData.value = updatedServerData;
+              
+              // Save basic server info to localStorage
+              saveServerBasicInfoToCache();
             } else {
               console.log("All server data already in cache, no need to fetch");
             }
@@ -176,10 +231,12 @@ export const useServerCore = () => {
       isLoading.value = false;
     }
   };
+  
   /**
    * Set the current active server
    * @param serverId - ID of the server to set as current
-   */  const setCurrentServer = async (serverId: string | null): Promise<void> => {
+   */  
+  const setCurrentServer = async (serverId: string | null): Promise<void> => {
     if (!serverId) {
       currentServer.value = null;
       console.log("Cleared current server");
@@ -210,11 +267,15 @@ export const useServerCore = () => {
             ...serverData.value,
             [serverId]: serverInfo
           };
+          
+          // Save updated server data basic info to localStorage
+          saveServerBasicInfoToCache();
         } else {
           console.warn(`Server ${serverId} not found in Firestore`);
           return;
         }
-      } catch (error) {        console.error(`Error loading server ${serverId}:`, error);
+      } catch (error) {
+        console.error(`Error loading server ${serverId}:`, error);
         return;
       }
     } else if (!serverInfo) {
@@ -360,6 +421,9 @@ export const useServerCore = () => {
             saveToLocalStorage(userCacheKey, cachedData);
             console.log('Updated localStorage cache with new server data');
           }
+          
+          // Also save the server basic info
+          saveServerBasicInfoToCache();
         } catch (cacheError) {
           console.error('Error updating localStorage cache after server creation:', cacheError);
           // Non-critical error, don't stop execution
@@ -421,10 +485,12 @@ export const useServerCore = () => {
             updatedAt: new Date()
           };
         }
+        
+        // If name or image was updated, update the basic info cache
+        if (metadata.name || metadata.server_img_url) {
+          saveServerBasicInfoToCache();
+        }
       }
-      
-      // No need to update localStorage cache here since we're only updating server metadata,
-      // not the user's server list which is what's stored in the userDoc cache
       
       return true;
     } catch (error) {
@@ -465,6 +531,7 @@ export const useServerCore = () => {
     loadUserServerList,
     createServer,
     updateServerMetadata,
-    setCurrentServer
+    setCurrentServer,
+    saveServerBasicInfoToCache
   };
 };

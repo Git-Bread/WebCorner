@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { httpsCallable } from 'firebase/functions';
+import { collection, doc, getDoc, getDocs, setDoc, query, where, limit } from 'firebase/firestore';
 import { showToast } from '~/utils/toast';
 import { createServerInvite, getInviteByCode, getServerInvites } from '~/utils/inviteUtils';
 import { isInviteValid, type ServerInvite } from '~/schemas/serverInviteSchemas';
@@ -12,16 +13,18 @@ import { useServerPermissions } from './useServerPermissions';
 export const useServerInvitations = () => {
   const { firestore, functions } = useFirebase();
   const { user } = useAuth();
-  const { userServers, serverData, loadUserServers, setCurrentServer } = useServerCore();
+  const { userServers, serverData, loadUserServers, setCurrentServer, saveServerBasicInfoToCache } = useServerCore();
   const { isServerAdminOrOwner } = useServerPermissions();
   
   // State
   const isJoiningServer = ref(false);
   const activeInvites = ref<ServerInvite[]>([]);
   const isLoadingInvites = ref(false);
+  const isGeneratingInvite = ref(false);
     // Create references to Cloud Functions
   const incrementInviteUsageFunction = httpsCallable(functions, 'incrementInviteUsage');
   const joinServerMemberFunction = httpsCallable(functions, 'joinServerMember');
+  const joinWithInviteFunction = httpsCallable(functions, 'joinServerWithInvite');
   
   /**
    * Clear active invites array
@@ -102,76 +105,42 @@ export const useServerInvitations = () => {
   
   /**
    * Join a server using an invitation code
-   * @returns Promise with the joined serverId if successful, or null on failure
+   * @returns Promise with the server ID if successful, or null on failure
    */
   const joinServerWithInvite = async (inviteCode: string): Promise<string | null> => {
-    if (!user.value || !inviteCode) return null;
+    if (!user.value || !inviteCode || inviteCode.trim() === '') {
+      showToast('Invalid invitation code', 'error');
+      return null;
+    }
     
     isJoiningServer.value = true;
     
     try {
-      // Fetch the invitation details
-      const invite = await getInviteByCode(firestore, inviteCode);
-      
-      if (!invite) {
-        showToast('Invalid invitation code', 'error');
-        return null;
-      }
-      
-      // Check if the invitation is valid (not expired, not over max uses)
-      if (!isInviteValid(invite)) {
-        showToast('This invitation has expired or reached its usage limit', 'error');
-        return null;
-      }
-      
-      // IMPORTANT: Load the latest user servers before checking membership
-      await loadUserServers();
-      
-      // Check if user is already a member of this server
-      const safeUserServers = Array.isArray(userServers.value) ? userServers.value : [];
-      const isAlreadyMember = safeUserServers.some(s => s.serverId === invite.serverId);
-      if (isAlreadyMember) {
-        showToast('You are already a member of this server', 'info');
-        // Add a small delay to show the loading state for better UX
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // If they're already a member, still return the ID so we can navigate to it
-        return invite.serverId;
-      }
-      
-      // Call the Cloud Function to handle all server joining operations
-      try {
-        await joinServerMemberFunction({ serverId: invite.serverId });
-      } catch (joinError: any) {
-        // Handle potential errors from joinServerMemberFunction
-        console.error('Error during server join operation:', joinError);
-        let errorMessage = 'Failed to join server';
-        if (joinError.code === 'already-exists' || 
-            (joinError.message && joinError.message.includes('already a member'))) {
-          errorMessage = 'You are already a member of this server';
-          // If they're already a member, still return the ID so we can navigate to it
-          await loadUserServers(); // Refresh user servers
-          return invite.serverId;
-        } else if (joinError.details?.message) {
-          errorMessage = joinError.details.message;
-        }
-        showToast(errorMessage, 'error', 3000);
-        return null; // Stop execution if join fails
-      }
-      
-      // Increment the invite use count separately
-      // This is done separately so that server joining can succeed even if this fails
-      if (invite.id) {
-        incrementInviteCount(invite.id).catch(() => {
-          // Non-critical error, so we don't necessarily stop the whole process
-        });
-      }
+      // Call the Cloud Function to join the server with the invite code
+      console.log(`Attempting to join server with invite code: ${inviteCode}`);
+      await joinWithInviteFunction({ inviteCode });
       
       showToast('Server joined successfully!', 'success');
-      console.log(`Successfully joined server with invite: ${invite.serverId}`);
+      
+      // Also increment the invitation use count in a non-blocking way
+      incrementInviteCount(inviteCode).catch(error => {
+        console.error('Error incrementing invite count:', error);
+        // Non-critical error, don't block the user flow
+      });
+      
+      // Get the server details from the invitation
+      const invite = await getInviteByCode(firestore, inviteCode);
+      if (!invite) {
+        console.error('Could not retrieve invite details after joining');
+        return null;
+      }
       
       // Reload user servers to update UI with the new server data
       await loadUserServers();
-      console.log(`User servers reloaded after joining server ${invite.serverId} with invite`);
+      console.log(`User servers reloaded after joining server ${invite.serverId} via invite`);
+      
+      // Save basic server info to localStorage
+      saveServerBasicInfoToCache();
       
       // Update the localStorage cache directly
       if (user.value) {

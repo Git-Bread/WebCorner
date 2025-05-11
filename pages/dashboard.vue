@@ -121,8 +121,24 @@ const handleServerSelection = async (serverId: string | null) => {
   // Update the selected server ID which triggers UI updates
   selectedServerId.value = serverId;
   
-  // Save to localStorage when user is logged in
+  // When serverId is null, clear the current server in useServerCore too
+  if (serverId === null && user.value) {
+    console.log('Clearing current server and layout');
+    // Clear the current server reference
+    await setCurrentServer(null);
+    
+    // Clear the last selected server in localStorage
+    console.log(`Clearing last selected server in localStorage for user ${user.value.uid}`);
+    saveLastSelectedServer(null, user.value.uid);
+    
+    // Clear the layout
+    currentUserLayout.value = [];
+    return; // Exit early - don't proceed with server-specific operations
+  }
+  
+  // Save to localStorage when user is logged in and serverId exists
   if (user.value && serverId) {
+    console.log(`Saving server ${serverId} as last selected for user ${user.value.uid}`);
     // Save this as the last selected server
     saveLastSelectedServer(serverId, user.value.uid);
     
@@ -133,9 +149,11 @@ const handleServerSelection = async (serverId: string | null) => {
     console.log("Loading layout for server:", serverId);
     const layout = await loadUserLayout(serverId);
     if (layout) {
+      console.log(`Loaded layout with ${layout.length} fields for server ${serverId}`);
       currentUserLayout.value = layout;
     } else {
       // If no layout is found, use an empty array
+      console.log(`No layout found for server ${serverId}, using empty layout`);
       currentUserLayout.value = [];
     }
   }
@@ -309,30 +327,48 @@ watch(() => selectedServerId.value, async (newServerId) => {
 
 // Load servers on component mount
 onMounted(async () => {
+  console.log('Dashboard component mounted');
+  
   // Use the optimized method to load only server list
   await loadUserServerList();
   console.log(`Loaded ${userServers.value.length} servers`);
   
-  // After servers are loaded, check if we have a previously selected server in localStorage
-  if (user.value && hasServers.value && !selectedServerId.value) {
+  // Get route parameters to see if a specific server is requested
+  const router = useRouter();
+  const route = useRoute();
+  const requestedServerId = route.query.serverId as string | undefined;
+  
+  // If there's a specific server requested in the URL, select that one
+  if (requestedServerId && userServers.value.some(s => s.serverId === requestedServerId)) {
+    console.log(`Selecting server from URL parameter: ${requestedServerId}`);
+    await handleServerSelection(requestedServerId);
+    return;
+  }
+  
+  // Try to restore the last selected server from localStorage
+  if (user.value && userServers.value.length > 0) {
     const lastSelectedServerId = getLastSelectedServer(user.value.uid);
-    console.log(`Last selected server from localStorage: ${lastSelectedServerId || 'none'}`);
+    console.log(`Checking for last selected server for user ${user.value.uid}: ${lastSelectedServerId || 'none'}`);
     
-    // Verify that the server exists in the user's server list before selecting it
     if (lastSelectedServerId && userServers.value.some(s => s.serverId === lastSelectedServerId)) {
-      console.log(`Found previously selected server ${lastSelectedServerId} in user's servers`);
-      // Set the selected server and load user layout
+      console.log(`Restoring last selected server from localStorage: ${lastSelectedServerId}`);
       await handleServerSelection(lastSelectedServerId);
-    } else if (userServers.value.length > 0) {
-      // If no last selected server, default to the first one
-      const firstServerId = userServers.value[0].serverId;
-      console.log(`No last selected server, defaulting to first server: ${firstServerId}`);
-      await handleServerSelection(firstServerId);
-    } else {
-      console.log('No servers available to select');
+      return;
+    } else if (lastSelectedServerId) {
+      console.log(`Last selected server ${lastSelectedServerId} not found in user's servers, showing server list`);
     }
-  } else {
-    console.log(`Server selection status: user=${!!user.value}, hasServers=${hasServers.value}, selectedServerId=${selectedServerId.value}`);
+  }
+  
+  // Don't auto-select any server by default - show the server list
+  console.log('Showing server list dashboard view');
+  
+  // Make sure server data is loaded though for the list
+  if (userServers.value.length > 0) {
+    const serversWithoutData = userServers.value.filter(s => !serverData.value[s.serverId]);
+    if (serversWithoutData.length > 0) {
+      console.log(`Loading data for ${serversWithoutData.length} servers`);
+      await loadUserServers();
+    }
   }
 });
 </script>
