@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { serverSchema } from '~/schemas/serverSchemas';
 import type { ServerRef } from '~/schemas/userSchemas';
@@ -7,6 +7,47 @@ import { cleanupTempServerImages, moveServerImageToPermanent } from '~/utils/ima
 import { handleDatabaseError, handleStorageError } from '~/utils/errorHandler';
 import { serverCache } from '~/utils/storageUtils/cacheUtil';
 import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
+import { shouldLog } from '~/utils/debugUtils';
+
+/**
+ * Interface for server data
+ */
+export interface ServerData {
+  id: string;
+  name: string;
+  description: string;
+  server_img_url: string | null;
+  ownerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  memberCount: number;
+  maxMembers: number;
+  settings: Record<string, any>;
+  components: Record<string, boolean>;
+  [key: string]: any; // Allow for additional properties
+}
+
+/**
+ * Interface for server creation parameters
+ */
+export interface ServerCreateParams {
+  name: string;
+  description: string;
+  server_img_url?: string | null;
+  maxMembers?: number;
+  components?: Record<string, boolean>;
+}
+
+/**
+ * Interface for current server state
+ */
+export interface CurrentServerState {
+  id: string;
+  data?: ServerData;
+}
+
+// Subsystem name for logging
+const SUBSYSTEM = 'server-core';
 
 /**
  * Composable for core server operations like loading server data and creating new servers
@@ -14,245 +55,247 @@ import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 export const useServerCore = () => {
   const { firestore } = useFirebase();
   const { user } = useAuth();
-  const route = useRoute();
   
   // State
   const userServers = ref<ServerRef[]>([]);
-  const serverData = ref<Record<string, any>>({});
+  const serverData = ref<Record<string, ServerData>>({});
   const isLoading = ref(false);
   const isCreatingServer = ref(false);
   
-  // Current server state with auto-detection from route
-  const currentServer = ref<{ id: string; data?: Record<string, any> } | null>(null);
+  // Current server state
+  const currentServer = ref<CurrentServerState | null>(null);
   
-  // Computed property to get current server ID from route or stored value
-  const currentServerId = computed(() => {
-    // First check if we have a server ID in the route
-    if (route.params.serverId) {
-      return route.params.serverId as string;
+  // PRIVATE METHODS
+  
+  /**
+   * Logs debug information
+   */
+  const logDebug = (message: string, ...data: any[]): void => {
+    if (shouldLog(SUBSYSTEM)) {
+      console.log(`[ServerCore] ${message}`, ...data);
     }
-    
-    // Then check if we have a stored current server
-    if (currentServer.value?.id) {
-      return currentServer.value.id;
+  };
+  
+  /**
+   * Logs an error and returns a fallback value
+   */
+  const logError = <T>(context: string, error: unknown, fallback: T): T => {
+    if (shouldLog(SUBSYSTEM)) {
+      console.error(`[ServerCore] ${context}:`, error);
     }
-    
-    // If user has servers, default to the first one
-    if (userServers.value.length > 0) {
-      return userServers.value[0].serverId;
-    }
-    
-    return null;
+    return fallback;
+  };
+  
+  // Computed property to get current server ID
+  const currentServerId = computed((): string | null => {
+    // The only source is the explicitly set current server
+    return currentServer.value?.id || null;
   });
 
   /**
-   * Load only the user's server list from Firestore or cache
-   * This is an optimized version that avoids fetching the full user document when possible
+   * Update server data state from cache
+   * @param forceFresh Whether to bypass cache
+   * @returns Number of servers loaded from cache
    */
-  const loadUserServerList = async (): Promise<void> => {
-    if (!user.value) return;
-    
-    isLoading.value = true;
-    console.log("Loading user server list (optimized)...");
+  const updateFromCache = (forceFresh = false): number => {
+    if (!user.value || userServers.value.length === 0) return 0;
+    if (forceFresh) return 0;
     
     try {
-      // Try to get cached server list first using serverCache
-      const cachedServerList = serverCache.getServerList(user.value.uid);
+      let loadedCount = 0;
       
-      if (cachedServerList) {
-        console.log(`Found ${cachedServerList.length} servers in cached data`);
-        userServers.value = cachedServerList;
-        
-        // Load server basic info
-        loadServerBasicInfoFromCache();
-        
-        isLoading.value = false;
-        return;
-      }
-      
-      // If cache miss, fetch from Firestore
-      const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
-      
-      if (userDoc.exists()) {
-        const fetchedUserData = userDoc.data();
-        const newServersList = fetchedUserData.servers || [];
-        
-        console.log(`Found ${newServersList.length} servers from Firestore`);
-        userServers.value = newServersList;
-        
-        // Cache the server list for future use
-        serverCache.saveServerList(user.value.uid, newServersList);
-      }
-    } catch (error) {
-      console.error('Error loading user server list:', error);
-      showToast('Failed to load your servers', 'error');
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  /**
-   * Load server basic info (names and icons) from cache
-   */
-  const loadServerBasicInfoFromCache = (): void => {
-    if (!user.value || userServers.value.length === 0) return;
-    
-    try {
-      // Load individual server data for each server from cache
-      const updatedServerData = { ...serverData.value };
-      
+      // Process each server to get its data from cache
       for (const server of userServers.value) {
-        // Skip servers we already have data for
-        if (updatedServerData[server.serverId]) continue;
+        // Skip servers that you already have data for
+        if (serverData.value[server.serverId]) continue;
         
         // Try to get from cache
         const cachedServerData = serverCache.getServerData(server.serverId);
         if (cachedServerData) {
-          // Cache any server image URL
+          // Cache any server image URL in the image cache too
           if (cachedServerData.server_img_url) {
             serverImageCache.cacheServerImage(server.serverId, cachedServerData.server_img_url);
           }
           
-          updatedServerData[server.serverId] = cachedServerData;
+          // Update our internal state
+          serverData.value = {
+            ...serverData.value,
+            [server.serverId]: cachedServerData as ServerData
+          };
+          
+          loadedCount++;
         }
       }
       
-      // Only update if we found any cached data
-      if (Object.keys(updatedServerData).length > Object.keys(serverData.value).length) {
-        console.log(`Loaded basic info for ${Object.keys(updatedServerData).length - Object.keys(serverData.value).length} servers from cache`);
-        serverData.value = updatedServerData;
-      } else {
-        console.log('No additional cached server data found');
-      }
-    } catch (error) {
-      console.error('Error loading server basic info from cache:', error);
-      // Non-critical error, continue without cached data
-    }
-  };
-
-  /**
-   * Save current server data to cache
-   */
-  const saveServerDataToCache = (): void => {
-    if (!user.value || Object.keys(serverData.value).length === 0) return;
-    
-    try {
-      // Save each server's data individually
-      for (const [serverId, data] of Object.entries(serverData.value)) {
-        serverCache.saveServerData(serverId, data);
+      if (loadedCount > 0) {
+        logDebug(`Loaded data for ${loadedCount} servers from cache`);
       }
       
-      console.log(`Saved ${Object.keys(serverData.value).length} servers to cache`);
+      return loadedCount;
     } catch (error) {
-      console.error('Error saving server data to cache:', error);
-      // Non-critical error, continue
+      logError('updateFromCache', error, 0);
+      return 0;
+    }
+  };
+
+  // PUBLIC API
+
+  /**
+   * Save server data to cache 
+   * This serves as a simple wrapper around serverCache.saveServerData
+   * @param serverId The ID of the server to save (or all servers if not provided)
+   * @returns void
+   */
+  const saveServerDataToCache = (serverId?: string): void => {
+    if (!user.value || Object.keys(serverData.value).length === 0) return;
+    
+    try {
+      if (serverId && serverData.value[serverId]) {
+        // Save a specific server's data
+        serverCache.saveServerData(serverId, serverData.value[serverId]);
+        logDebug(`Saved server data to cache: ${serverId}`);
+      } else {
+        // Save all servers' data
+        for (const [id, data] of Object.entries(serverData.value)) {
+          serverCache.saveServerData(id, data);
+        }
+        logDebug(`Saved ${Object.keys(serverData.value).length} servers to cache`);
+      }
+    } catch (error) {
+      logError('saveServerDataToCache', error, null);
     }
   };
 
   /**
-   * Save server basic info to cache
+   * Save server list to cache
+   * This serves as a simple wrapper around serverCache.saveServerList
    */
-  const saveServerBasicInfoToCache = (): void => {
-    if (!user.value || Object.keys(serverData.value).length === 0) return;
+  const saveServerListToCache = (): void => {
+    if (!user.value || userServers.value.length === 0) return;
     
     try {
-      // Save basic info for each server to cache
-      saveServerDataToCache();
-      console.log(`Saved basic server info to cache`);
+      serverCache.saveServerList(user.value.uid, userServers.value);
+      logDebug(`Saved server list with ${userServers.value.length} servers to cache`);
     } catch (error) {
-      console.error('Error saving server basic info to cache:', error);
-      // Non-critical error, continue
+      logError('saveServerListToCache', error, null);
     }
   };
 
   /**
    * Load user's servers from Firestore
-   */  
-  const loadUserServers = async (): Promise<void> => {
+   * Fetches both the server list and detailed server data
+   */
+  const loadUserServers = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
     
     isLoading.value = true;
-    console.log("Loading user servers...");
+    logDebug("Loading user servers...");
     
     try {
+      // Try to get cached server list first if not forcing fresh data
+      let cachedServerList: ServerRef[] | null = null;
+      
+      if (!forceFresh) {
+        cachedServerList = serverCache.getServerList(user.value.uid);
+        
+        if (cachedServerList && cachedServerList.length > 0) {
+          logDebug(`Found ${cachedServerList.length} servers in cached data`);
+          userServers.value = cachedServerList;
+          
+          // Try to load server data from cache and check if we have everything
+          const cachedCount = updateFromCache();
+          
+          // If we have all servers' data cached, we can return early
+          if (cachedCount === cachedServerList.length) {
+            logDebug("All server data loaded from cache");
+            isLoading.value = false;
+            return;
+          }
+          
+          logDebug("Server list loaded from cache, but need to fetch additional server details");
+        }
+      }
+      
+      // If cache miss, force fresh, or incomplete cached data, fetch from Firestore
       const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const newServersList = userData.servers || [];
         
-        console.log(`Found ${newServersList.length} servers for user`);
+        logDebug(`Found ${newServersList.length} servers for user from Firestore`);
         
-        // Only process changes if the server list has actually changed
-        const serverIdsChanged = 
-          newServersList.length !== userServers.value.length ||
-          !newServersList.every((newServer: ServerRef) => 
-            userServers.value.some(existing => existing.serverId === newServer.serverId)
-          );
+        // Check if server list has changed
+        const needToUpdateList = forceFresh || 
+          !cachedServerList || 
+          newServersList.length !== cachedServerList.length ||
+          JSON.stringify(newServersList) !== JSON.stringify(cachedServerList);
         
-        if (serverIdsChanged) {
-          console.log("Server list has changed, updating...");
+        if (needToUpdateList) {
           userServers.value = newServersList;
+          // Update cache with new server list
+          saveServerListToCache();
+        }
+        
+        // Only load server details if there are servers
+        if (newServersList.length > 0) {
+          // Determine which servers need to be fetched
+          const serversToFetch = newServersList.filter(
+            (server: ServerRef) => forceFresh || !serverData.value[server.serverId]
+          );
           
-          // Only load server details if there are servers and the list has changed
-          if (newServersList.length > 0) {
-            // Only fetch servers we don't already have data for
-            const serversToFetch = newServersList.filter(
-              (server: ServerRef) => !serverData.value[server.serverId]
+          if (serversToFetch.length > 0) {
+            logDebug(`Need to fetch ${serversToFetch.length} server details`);
+            
+            const serverPromises = serversToFetch.map((server: ServerRef) => 
+              getDoc(doc(firestore, 'servers', server.serverId))
+                .then(doc => ({
+                  serverId: server.serverId,
+                  data: doc.exists() ? doc.data() : null
+                }))
+                .catch(error => {
+                  logError(`loadServerDetails(${server.serverId})`, error, null);
+                  return { serverId: server.serverId, data: null };
+                })
             );
             
-            console.log(`Need to fetch ${serversToFetch.length} new server details`);
+            // Wait for all server data to be fetched in parallel
+            const newServersData = await Promise.all(serverPromises);
+            logDebug(`Successfully fetched ${newServersData.filter(s => s.data).length} server details`);
             
-            if (serversToFetch.length > 0) {
-              const serverPromises = serversToFetch.map((server: ServerRef) => 
-                getDoc(doc(firestore, 'servers', server.serverId))
-                  .then(doc => ({
-                    serverId: server.serverId,
-                    data: doc.exists() ? doc.data() : null
-                  }))
-                  .catch(error => {
-                    console.error(`Error loading server ${server.serverId}:`, error);
-                    return { serverId: server.serverId, data: null };
-                  })
-              );
-              
-              // Wait for all new server data to be fetched in parallel
-              const newServersData = await Promise.all(serverPromises);
-              console.log(`Successfully fetched ${newServersData.filter(s => s.data).length} server details`);
-              
-              // Update server data state - preserve existing data
-              const updatedServerData = { ...serverData.value };
-              newServersData.forEach((server: { serverId: string; data: any | null }) => {
-                if (server.data) {
-                  // Cache any server image URL
-                  if (server.data.server_img_url) {
-                    serverImageCache.cacheServerImage(server.serverId, server.data.server_img_url);
-                  }
-                  
-                  updatedServerData[server.serverId] = server.data;
+            // Update server data state - preserve existing data for servers not being refreshed
+            const updatedServerData = { ...serverData.value };
+            let updatedCount = 0;
+            
+            newServersData.forEach((server: { serverId: string; data: any | null }) => {
+              if (server.data) {
+                // Cache any server image URL
+                if (server.data.server_img_url) {
+                  serverImageCache.cacheServerImage(server.serverId, server.data.server_img_url);
                 }
-              });
-              
+                
+                updatedServerData[server.serverId] = server.data as ServerData;
+                updatedCount++;
+              }
+            });
+            
+            if (updatedCount > 0) {
               serverData.value = updatedServerData;
               
-              // Save basic server info to localStorage
-              saveServerDataToCache();
-            } else {
-              console.log("All server data already in cache, no need to fetch");
+              // Update cache for each new server
+              newServersData.forEach((server) => {
+                if (server.data) {
+                  serverCache.saveServerData(server.serverId, server.data);
+                }
+              });
             }
-            
-            // After loading servers, try to set the current server if needed
-            if (!currentServer.value && currentServerId.value) {
-              console.log(`Setting current server to ${currentServerId.value} after loading servers`);
-              await setCurrentServer(currentServerId.value);
-            }
+          } else {
+            logDebug("No new server details needed, using cached data");
           }
-        } else {
-          console.log("Server list unchanged, using cached data");
         }
       }
     } catch (error) {
-      console.error('Error loading user servers:', error);
+      logError('loadUserServers', error, null);
       showToast('Failed to load your servers', 'error');
     } finally {
       isLoading.value = false;
@@ -266,50 +309,63 @@ export const useServerCore = () => {
   const setCurrentServer = async (serverId: string | null): Promise<void> => {
     if (!serverId) {
       currentServer.value = null;
-      console.log("Cleared current server");
+      logDebug("Cleared current server");
       return;
     }
     
     // Check if current server is already set to this server
     if (currentServer.value?.id === serverId) {
-      console.log(`Server ${serverId} is already the current server, skipping redundant update`);
+      logDebug(`Server ${serverId} is already the current server`);
       return; // Skip if already set to avoid unnecessary operations
     }
     
-    console.log(`Setting current server to: ${serverId}`);
+    logDebug(`Setting current server to: ${serverId}`);
     
     // Check if we already have the server data loaded
     let serverInfo = serverData.value[serverId];
     
-    // If not, try to load it from Firestore
-    if (!serverInfo && user.value) {
-      console.log(`Server data not in cache for ${serverId}, fetching from Firestore`);
-      try {
-        const serverDoc = await getDoc(doc(firestore, 'servers', serverId));
-        if (serverDoc.exists()) {
-          serverInfo = serverDoc.data();
-          console.log(`Successfully fetched server data for ${serverId}`);
-          // Update the server data cache
-          serverData.value = {
-            ...serverData.value,
-            [serverId]: serverInfo
-          };
-          
-          // Save updated server data basic info to localStorage
-          saveServerDataToCache();
-        } else {
-          console.warn(`Server ${serverId} not found in Firestore`);
+    // If not, try to load it from cache first
+    if (!serverInfo) {
+      serverInfo = serverCache.getServerData(serverId) as ServerData;
+      
+      // If not in cache, fetch from Firestore
+      if (!serverInfo && user.value) {
+        logDebug(`Server data not in cache for ${serverId}, fetching from Firestore`);
+        try {
+          const serverDoc = await getDoc(doc(firestore, 'servers', serverId));
+          if (serverDoc.exists()) {
+            serverInfo = serverDoc.data() as ServerData;
+            logDebug(`Successfully fetched server data for ${serverId}`);
+            
+            // Update the server data cache
+            serverData.value = {
+              ...serverData.value,
+              [serverId]: serverInfo
+            };
+            
+            // Update cache
+            serverCache.saveServerData(serverId, serverInfo);
+          } else {
+            logDebug(`Server ${serverId} not found in Firestore`);
+            return;
+          }
+        } catch (error) {
+          logError(`setCurrentServer(${serverId})`, error, null);
           return;
         }
-      } catch (error) {
-        console.error(`Error loading server ${serverId}:`, error);
+      } else if (serverInfo) {
+        // We got it from cache, update local state
+        serverData.value = {
+          ...serverData.value,
+          [serverId]: serverInfo
+        };
+        logDebug(`Loaded server data for ${serverId} from cache`);
+      } else {
+        logDebug(`Server ${serverId} not found in server data cache or Firestore`);
         return;
       }
-    } else if (!serverInfo) {
-      console.warn(`Server ${serverId} not found in server data cache`);
-      return;
     } else {
-      console.log(`Using cached server data for ${serverId}`);
+      logDebug(`Using cached server data for ${serverId} from local state`);
     }
     
     // Update the current server reference
@@ -318,22 +374,20 @@ export const useServerCore = () => {
       data: serverInfo
     };
     
-    console.log(`Current server successfully set to ${serverId}`);
+    // Save last selected server to cache
+    if (user.value) {
+      serverCache.setLastSelectedServer(serverId, user.value.uid);
+      logDebug(`Saved last selected server to cache: ${serverId}`);
+    }
     
-    // Skip router navigation - we're handling the UI updates directly
+    logDebug(`Current server successfully set to ${serverId}`);
   };
   
   /**
    * Create a new server
-   * @returns Promise<string | null> - Returns null on success, or an error message string on failure.
+   * @returns Promise<string | null> - Returns server ID on success, or an error message on failure.
    */
-  const createServer = async (serverInfo: { 
-    name: string; 
-    description: string;
-    server_img_url?: string | null; 
-    maxMembers?: number;
-    components?: Record<string, boolean>;
-  }): Promise<string | null> => {
+  const createServer = async (serverInfo: ServerCreateParams): Promise<string | null> => {
     if (!user.value) {
       return "User not authenticated.";
     }
@@ -347,6 +401,7 @@ export const useServerCore = () => {
     isCreatingServer.value = true;
     const tempImageUrl = serverInfo.server_img_url;
     let serverRef;
+    logDebug("Creating new server...");
 
     try {
       // Create server data
@@ -355,7 +410,7 @@ export const useServerCore = () => {
       // Create server document reference
       serverRef = doc(collection(firestore, 'servers'));
       
-      // Prepare initial server data *without* the image URL since it needs owner id to be handled
+      // Prepare initial server data without the image URL
       const initialServerData = {
         name: serverInfo.name,
         description: serverInfo.description || '',
@@ -374,20 +429,20 @@ export const useServerCore = () => {
       };
       
       // Validate initial server data
-      const validationResult = serverSchema.safeParse({
-        ...initialServerData
-      });
+      const validationResult = serverSchema.safeParse(initialServerData);
       
       if (!validationResult.success) {
-        console.error('Initial server data validation failed:', validationResult.error.flatten());
+        logError('serverValidation', validationResult.error, null);
         return 'Server information is invalid. Please check the fields.';
       }
 
       await setDoc(serverRef, initialServerData);
+      logDebug(`Created server document with ID: ${serverRef.id}`);
       
       // --- Image Handling - AFTER initial doc creation ---
       let finalImageUrl: string | null = null;
       if (tempImageUrl && tempImageUrl.includes('temp_server_images')) {
+        logDebug(`Moving temporary image to permanent location: ${tempImageUrl}`);
         try {
           const movedImageUrl = await moveServerImageToPermanent(tempImageUrl, serverRef.id);
           if (movedImageUrl) {
@@ -397,19 +452,18 @@ export const useServerCore = () => {
               server_img_url: finalImageUrl,
               updatedAt: new Date() // Update timestamp
             });
+            logDebug(`Updated server with permanent image URL: ${finalImageUrl}`);
             
             // Clean up *all* temp images for the user after successful move and update
             await cleanupTempServerImages(user.value.uid); 
-
           } else {
-            // Handle case where move function returns null/undefined without throwing
-            console.warn(`moveServerImageToPermanent returned null/undefined for server ${serverRef.id}.`);
+            logDebug(`moveServerImageToPermanent returned null for server ${serverRef.id}`);
             showToast('Server created, but failed to finalize server image.', 'warning');
           }
         } catch (imageError) {
           // Use handleStorageError for user message
           const userMessage = handleStorageError(imageError);
-          console.error(`Error moving/updating server image for server ${serverRef.id}:`, imageError);
+          logError(`serverImageHandling(${serverRef.id})`, imageError, null);
           showToast(`Server created, but image setup failed: ${userMessage}`, 'warning');
           // Continue server creation even if image fails
         }
@@ -422,6 +476,7 @@ export const useServerCore = () => {
           joinedAt: now
         })
       });
+      logDebug(`Added server to user's server list`);
       
       // Create owner member record
       await setDoc(doc(firestore, 'servers', serverRef.id, 'members', user.value.uid), {
@@ -430,32 +485,17 @@ export const useServerCore = () => {
         joinedAt: now,
         groupIds: [] 
       });
+      logDebug(`Created owner member record for user: ${user.value.uid}`);
       
       showToast('Server created successfully!', 'success');
       
       // Load the latest data from Firestore
-      await loadUserServers();
+      await loadUserServers(true);
       
-      // Update the localStorage cache directly to avoid a future Firestore read
-      if (user.value) {
-        try {
-          // Update the cache with new server data
-          serverCache.saveServerList(user.value.uid, userServers.value);
-          console.log('Updated server cache with new server data');
-          
-          // Also save the server basic info
-          saveServerDataToCache();
-        } catch (cacheError) {
-          console.error('Error updating server cache after server creation:', cacheError);
-          // Non-critical error, don't stop execution
-        }
-      }
-      
-      return null;
-
+      return serverRef.id;
     } catch (error: any) {
       const userMessage = handleDatabaseError(error); 
-      console.error('Error during server creation process:', error); 
+      logError('createServer', error, null);
       return `Failed to create server: ${userMessage}`; 
     } finally {
       isCreatingServer.value = false;
@@ -474,6 +514,8 @@ export const useServerCore = () => {
   ): Promise<boolean> => {
     if (!user.value || !serverId) return false;
     
+    logDebug(`Updating metadata for server: ${serverId}`);
+    
     try {
       // Check if the server exists
       const serverRef = doc(firestore, 'servers', serverId);
@@ -485,62 +527,161 @@ export const useServerCore = () => {
       }
       
       // Update the metadata with the current timestamp
-      await updateDoc(serverRef, {
+      const updateData = {
         ...metadata,
         updatedAt: new Date()
-      });
+      };
+      
+      await updateDoc(serverRef, updateData);
       
       // Update the local state to reflect changes
       if (serverData.value[serverId]) {
         serverData.value[serverId] = {
           ...serverData.value[serverId],
-          ...metadata,
-          updatedAt: new Date()
+          ...updateData
         };
         
         // If current server is being updated, update the currentServer ref too
         if (currentServer.value?.id === serverId) {
           currentServer.value.data = {
             ...currentServer.value.data,
-            ...metadata,
-            updatedAt: new Date()
-          };
+            ...updateData
+          } as ServerData;
         }
         
-        // If name or image was updated, update the basic info cache
-        if (metadata.name || metadata.server_img_url) {
-          saveServerDataToCache();
-        }
+        // Update the cache
+        serverCache.saveServerData(serverId, serverData.value[serverId]);
       }
       
+      logDebug(`Successfully updated server metadata for: ${serverId}`);
       return true;
     } catch (error) {
-      console.error('Error updating server metadata:', error);
+      logError(`updateServerMetadata(${serverId})`, error, false);
       const userMessage = handleDatabaseError(error);
       showToast(`Failed to update server: ${userMessage}`, 'error');
       return false;
     }
   };
-
-  // Watch for route changes to update current server
-  if (process.client) {
-    watch(() => route.params.serverId, async (newServerId) => {
-      if (newServerId && typeof newServerId === 'string') {
-        await setCurrentServer(newServerId);
+  
+  /**
+   * Get a specific server's data by ID
+   * If data is not in local state, tries cache first, then fetches from Firestore
+   */
+  const getServerById = async (serverId: string, forceFresh = false): Promise<ServerData | null> => {
+    if (!serverId) return null;
+    
+    // Check local state first if not forcing fresh data
+    if (!forceFresh && serverData.value[serverId]) {
+      logDebug(`Using cached data for server: ${serverId} from local state`);
+      return serverData.value[serverId];
+    }
+    
+    // If not in local state or forcing fresh, but not forcing fresh from Firestore,
+    // try the cache first
+    if (!forceFresh) {
+      const cachedData = serverCache.getServerData(serverId) as ServerData;
+      if (cachedData) {
+        // Update local state
+        serverData.value = {
+          ...serverData.value,
+          [serverId]: cachedData
+        };
+        
+        logDebug(`Found server data in cache: ${serverId}`);
+        return cachedData;
       }
-    }, { immediate: true });
-  }
+    }
+    
+    // If forcing fresh or not in cache, fetch from Firestore
+    logDebug(`Fetching server data from Firestore: ${serverId}`);
+    
+    try {
+      const serverRef = doc(firestore, 'servers', serverId);
+      const serverDoc = await getDoc(serverRef);
+      
+      if (serverDoc.exists()) {
+        const data = serverDoc.data() as ServerData;
+        
+        // Update local state
+        serverData.value = {
+          ...serverData.value,
+          [serverId]: data
+        };
+        
+        // Update cache
+        serverCache.saveServerData(serverId, data);
+        
+        return data;
+      }
+      
+      logDebug(`Server not found: ${serverId}`);
+      return null;
+    } catch (error) {
+      logError(`getServerById(${serverId})`, error, null);
+      return null;
+    }
+  };
 
-  // On client-side mount, initialize the current server from route or stored value
+  /**
+   * Clear server caches - useful for logout or when troubleshooting
+   */
+  const clearServerCaches = (userId?: string): void => {
+    userId = userId || user.value?.uid;
+    if (!userId) return;
+    
+    try {
+      // Reset state
+      userServers.value = [];
+      serverData.value = {};
+      currentServer.value = null;
+      
+      // Clear all server-related caches
+      serverCache.invalidateAllServerData(userId);
+      logDebug(`Cleared all server caches for user: ${userId}`);
+    } catch (error) {
+      logError('clearServerCaches', error, null);
+    }
+  };
+
+  // On client-side mount, initialize data
   if (process.client) {
     onMounted(async () => {
-      if (currentServerId.value) {
-        await setCurrentServer(currentServerId.value);
+      // Load server list and data
+      await loadUserServers();
+      
+      // If no current server is set but the user has servers
+      if (!currentServer.value && userServers.value.length > 0) {
+        let serverIdToSelect: string | null = null;
+        
+        // Try to restore the last selected server first
+        if (user.value) {
+          serverIdToSelect = serverCache.getLastSelectedServer(user.value.uid);
+          
+          // Make sure the server still exists in the user's server list
+          if (serverIdToSelect && !userServers.value.some(s => s.serverId === serverIdToSelect)) {
+            logDebug(`Last selected server ${serverIdToSelect} no longer in user's server list`);
+            serverIdToSelect = null;
+          } else if (serverIdToSelect) {
+            logDebug(`Restoring last selected server: ${serverIdToSelect}`);
+          }
+        }
+        
+        // If no last selected server or it wasn't found, default to the first one
+        if (!serverIdToSelect) {
+          serverIdToSelect = userServers.value[0].serverId;
+          logDebug(`Defaulting to first server in list: ${serverIdToSelect}`);
+        }
+        
+        // Set the selected server as current
+        if (serverIdToSelect) {
+          await setCurrentServer(serverIdToSelect);
+        }
       }
     });
   }
 
   return {
+    // State
     userServers,
     serverData,
     isLoading,
@@ -548,12 +689,16 @@ export const useServerCore = () => {
     currentServer,
     currentServerId,
     
+    // Core methods
     loadUserServers,
-    loadUserServerList,
     createServer,
     updateServerMetadata,
     setCurrentServer,
+    getServerById,
+    clearServerCaches,
+    
+    // Cache methods
     saveServerDataToCache,
-    saveServerBasicInfoToCache
+    saveServerListToCache
   };
 };
