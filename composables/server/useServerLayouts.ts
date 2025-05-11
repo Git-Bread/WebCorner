@@ -23,6 +23,20 @@ export interface LayoutField {
 }
 
 /**
+ * Interface for dashboard field configuration (for type compatibility)
+ */
+export interface DashboardFieldConfig {
+  id: string;
+  title: string;
+  componentType: string;
+  size: { width: number; height: number };
+  position: { row: number; col: number };
+  props?: Record<string, any>;
+  placeholder?: string;
+  [key: string]: any; // Allow for additional properties
+}
+
+/**
  * Interface for layout metadata
  */
 export interface LayoutMetadata {
@@ -143,8 +157,8 @@ export function useServerLayouts() {
    * @param forceFresh If true, bypass cache and fetch from Firestore
    * @returns The layout configuration or empty array if none exists
    */
-  const loadUserLayout = async (serverId: string, forceFresh = false): Promise<LayoutField[]> => {
-    if (!user.value || !serverId) return [];
+  const loadUserLayout = async <T = LayoutField>(serverId: string, forceFresh = false): Promise<T[]> => {
+    if (!user.value || !serverId) return [] as T[];
     
     try {
       isLoadingLayout.value = true;
@@ -153,13 +167,13 @@ export function useServerLayouts() {
       // Check cache first unless force fresh is specified
       if (!forceFresh) {
         const cacheKey = getUserLayoutCacheKey(user.value.uid, serverId);
-        const cachedLayout = getCacheItem<{ layout: LayoutField[], metadata: LayoutMetadata }>(cacheKey);
+        const cachedLayout = getCacheItem<{ layout: any[], metadata: LayoutMetadata }>(cacheKey);
         
         if (cachedLayout) {
           logDebug(`Using cached layout for server: ${serverId}`);
           userLayouts.value[serverId] = cachedLayout.layout;
           layoutMetadata.value[serverId] = cachedLayout.metadata;
-          return cachedLayout.layout;
+          return cachedLayout.layout as T[];
         }
       }
       
@@ -186,7 +200,7 @@ export function useServerLayouts() {
         // Also use the built-in server cache for broader caching
         serverCache.saveUserLayout(user.value.uid, serverId, layout);
         
-        return layout;
+        return layout as T[];
       } else {
         // No user-specific layout, get server default layout
         logDebug(`No custom layout found, falling back to server default`);
@@ -200,7 +214,7 @@ export function useServerLayouts() {
             logDebug(`Using cached default layout`);
             userLayouts.value[serverId] = cachedDefaultLayout.layout;
             layoutMetadata.value[serverId] = cachedDefaultLayout.metadata;
-            return cachedDefaultLayout.layout;
+            return cachedDefaultLayout.layout as T[];
           }
         }
         
@@ -227,17 +241,17 @@ export function useServerLayouts() {
           userLayouts.value[serverId] = defaultLayout;
           layoutMetadata.value[serverId] = defaultMetadata;
           
-          return defaultLayout;
+          return defaultLayout as T[];
         }
         
         // No server default layout either
         logDebug(`No default layout found, returning empty layout`);
-        return [];
+        return [] as T[];
       }
     } catch (error) {
-      logError(`loadUserLayout(${serverId})`, error, []);
+      logError(`loadUserLayout(${serverId})`, error, [] as T[]);
       showToast('Failed to load your layout', 'error');
-      return [];
+      return [] as T[];
     } finally {
       isLoadingLayout.value = false;
     }
@@ -248,9 +262,9 @@ export function useServerLayouts() {
    * 
    * @param serverId The server ID to save the layout for
    * @param layout The layout configuration to save
-   * @returns True if save was successful, false otherwise
+   * @returns Promise resolving to true if successful, false otherwise
    */
-  const saveUserLayout = async (serverId: string, layout: LayoutField[]): Promise<boolean> => {
+  const saveUserLayout = async <T = LayoutField>(serverId: string, layout: T[]): Promise<boolean> => {
     if (!user.value || !serverId) return false;
     
     try {
@@ -260,36 +274,42 @@ export function useServerLayouts() {
       const serverDocRef = doc(firestore, 'servers', serverId);
       const userLayoutRef = doc(collection(serverDocRef, 'userLayouts'), user.value.uid);
       
-      // Create metadata
-      const metadata: LayoutMetadata = {
+      // Prepare layout data with metadata
+      const layoutData = {
+        layout,
         userId: user.value.uid,
         lastModified: new Date(),
         isDefault: false
       };
       
-      // Save the layout with creation/modification metadata
-      await setDoc(userLayoutRef, {
-        layout,
-        userId: user.value.uid,
-        lastModified: metadata.lastModified,
-      }, { merge: true });
+      // Save to Firestore
+      await setDoc(userLayoutRef, layoutData);
+      
+      // Update local state
+      userLayouts.value[serverId] = layout as unknown as LayoutField[];
+      layoutMetadata.value[serverId] = {
+        userId: layoutData.userId,
+        lastModified: layoutData.lastModified,
+        isDefault: layoutData.isDefault
+      };
       
       // Update cache
       const cacheKey = getUserLayoutCacheKey(user.value.uid, serverId);
-      setCacheItem(cacheKey, { layout, metadata }, LAYOUT_CACHE_EXPIRATION, true);
+      setCacheItem(cacheKey, { 
+        layout, 
+        metadata: layoutMetadata.value[serverId] 
+      }, LAYOUT_CACHE_EXPIRATION, true);
       
       // Also use the built-in server cache for broader caching
-      serverCache.saveUserLayout(user.value.uid, serverId, layout);
+      serverCache.saveUserLayout(user.value.uid, serverId, layout as any[]);
       
-      // Update local state
-      userLayouts.value[serverId] = layout;
-      layoutMetadata.value[serverId] = metadata;
-      
+      logDebug(`Layout saved successfully for server: ${serverId}`);
       showToast('Layout saved successfully', 'success');
+      
       return true;
     } catch (error) {
       logError(`saveUserLayout(${serverId})`, error, false);
-      showToast('Failed to save your layout', 'error');
+      showToast('Failed to save layout', 'error');
       return false;
     }
   };

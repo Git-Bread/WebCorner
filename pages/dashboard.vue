@@ -2,9 +2,6 @@
   <div class="flex h-screen bg-background">
     <!-- Server Sidebar Component -->
     <ServerSidebar 
-      :servers="userServers" 
-      :server-data="serverData" 
-      :is-loading="isLoading" 
       :selected-server-id="selectedServerId"
       @server-selected="handleServerSelection"
       @add-server="showCreateServerDialog = true"
@@ -39,6 +36,7 @@
             class="h-full"
           />
         </div>
+        <DashboardContent v-else-if="!selectedServerId" />
       </div>
       
       <!-- Loading state -->
@@ -78,17 +76,18 @@ import LoadingIndicator from '~/components/dashboard/LoadingIndicator.vue';
 import CreateServerDialog from '~/components/dashboard/CreateServerDialog.vue';
 import JoinServerDialog from '~/components/dashboard/JoinServerDialog.vue';
 import fieldContainer from '~/components/dashboard/field/fieldContainer.vue';
+import DashboardContent from '~/components/dashboard/DashboardContent.vue';
 
 // Import specific server composables
 import { useServerCore, useServerJoining, useServerInvitations, useServerLayouts } from '~/composables/server';
-// Import server cache utility
+import type { DashboardFieldConfig } from '~/composables/server/useServerLayouts';
 import { serverCache } from '~/utils/storageUtils/cacheUtil';
 
 // Define page meta with authenticated layout
 definePageMeta({ layout: 'default-authed' });
 
 // Use the specific server composables
-const { userServers, serverData, isLoading, isCreatingServer, loadUserServerList, loadUserServers, createServer, updateServerMetadata, setCurrentServer } = useServerCore();
+const { userServers, serverData, isLoading, isCreatingServer, loadUserServers, createServer, updateServerMetadata, setCurrentServer, loadUserServerList, clearCurrentServer } = useServerCore();
 const { isJoiningServer, joinServer } = useServerJoining();
 const { joinServerWithInvite } = useServerInvitations();
 const { user } = useAuth();
@@ -97,7 +96,7 @@ const { user } = useAuth();
 const {isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
 
 const selectedServerId = ref<string | null>(null);
-const currentUserLayout = ref<FieldConfig[]>([]);
+const currentUserLayout = ref<DashboardFieldConfig[]>([]);
 
 // Computed property to check if user has servers
 const hasServers = computed(() => {
@@ -119,28 +118,22 @@ const handleServerSelection = async (serverId: string | null) => {
   selectedServerId.value = serverId;
   
   // When serverId is null, clear the current server in useServerCore too
-  if (serverId === null && user.value) {
-    // Clear the current server reference
-    await setCurrentServer(null);
-    
-    // Clear the last selected server in cache
-    serverCache.removeLastSelectedServer(user.value.uid);
+  if (serverId === null) {
+    // Use the composable's clearCurrentServer method
+    await clearCurrentServer();
     
     // Clear the layout
     currentUserLayout.value = [];
-    return; // Exit early - don't proceed with server-specific operations
+    return; // Exit early
   }
   
   // Save to cache when user is logged in and serverId exists
   if (user.value && serverId) {
-    // Save this as the last selected server
-    serverCache.setLastSelectedServer(serverId, user.value.uid);
-    
     // Make sure the server is set as current in useServerCore
     await setCurrentServer(serverId);
     
     // Load the user-specific layout for this server
-    const layout = await loadUserLayout(serverId);
+    const layout = await loadUserLayout<DashboardFieldConfig>(serverId);
     if (layout) {
       currentUserLayout.value = layout;
     } else {
@@ -167,9 +160,9 @@ interface FieldConfig {
 }
 
 // Save user-specific layout configuration
-const saveUserLayoutConfig = async (config: FieldConfig[]) => {
+const saveUserLayoutConfig = async (config: DashboardFieldConfig[]) => {
   if (selectedServerId.value && user.value) {
-    const success = await saveUserLayout(selectedServerId.value, config);
+    const success = await saveUserLayout<DashboardFieldConfig>(selectedServerId.value, config);
     if (success) {
       // Update the current layout
       currentUserLayout.value = config;
@@ -189,10 +182,10 @@ const handleCreateServer = async (serverInfo: {
     // We keep the dialog open during creation to show the loading state
     // The isCreatingServer state is already passed to the dialog via the isCreating prop
     
-    const result = await createServer(serverInfo);
+    const newServerId = await createServer(serverInfo);
     
     // Only close the dialog on success
-    if (result === null) { // null means success
+    if (typeof newServerId === 'string') { // newServerId is the ID of the created server
       // Show success toast notification
       import('~/utils/toast').then(({ showToast }) => {
         showToast(`Server "${serverInfo.name}" created successfully!`, 'success', 3000);
@@ -201,39 +194,16 @@ const handleCreateServer = async (serverInfo: {
       // Close the dialog
       showCreateServerDialog.value = false;
       
-      // Wait briefly for server data to be updated, then select the new server
-      setTimeout(async () => {
-        // Find and select the newly created server using server data
-        // Find the server ID based on the name (assuming names are unique for now, or use a better method if not)
-        // This part might need refinement if names aren't unique or if createServer returns the ID
-        const newServer = userServers.value.find(s => 
-          serverData.value[s.serverId]?.name === serverInfo.name &&
-          serverData.value[s.serverId]?.ownerId === useAuth().user.value?.uid // Add owner check for more robustness
-        );
-        if (newServer) {
-          handleServerSelection(newServer.serverId); // Use handleServerSelection to also save to localStorage
-        }
-      }, 500); // Keep a small delay to allow reactivity to settle
+      // Reload server list to get the new server
+      await loadUserServerList();
+      
+      // Select the newly created server
+      await handleServerSelection(newServerId);
     }
   } catch (error) {
     console.error('Error creating server:', error);
-    // Dialog will remain open, showing any error state
   }
-    
-  // Wait briefly for server data to be updated, then select the new server
-  setTimeout(async () => {
-    // Find and select the newly created server using server data
-    // Find the server ID based on the name (assuming names are unique for now, or use a better method if not)
-    // This part might need refinement if names aren't unique or if createServer returns the ID
-    const newServer = userServers.value.find(s => 
-      serverData.value[s.serverId]?.name === serverInfo.name &&
-      serverData.value[s.serverId]?.ownerId === useAuth().user.value?.uid // Add owner check for more robustness
-    );
-    if (newServer) {
-      handleServerSelection(newServer.serverId); // Use handleServerSelection to also save to localStorage
-    }
-  }, 500); // Keep a small delay to allow reactivity to settle
-}
+};
 
 // Handle joining a server directly with server ID
 const handleJoinServer = async (serverId: string) => {
@@ -241,19 +211,17 @@ const handleJoinServer = async (serverId: string) => {
     // We'll keep the dialog open to show the loading state
     // The dialog already shows the loading state through isJoiningServer
     
-    const joinedServerId = await joinServer(serverId);
+    const result = await joinServer(serverId);
     
     // Close the dialog after the operation completes
     showJoinServerDialog.value = false;
     
-    if (joinedServerId) {
-      // First ensure we wait for server data to be fully loaded - use optimized method
+    if (result && result.success && result.serverId) {
+      // First ensure we wait for server data to be fully loaded
       await loadUserServerList();
       
       // Then select the newly joined server - this loads the layout
-      await handleServerSelection(joinedServerId);
-      
-      // No navigations needed - we're just updating the selected server in the UI
+      await handleServerSelection(result.serverId);
     }
   } catch (error) {
     // Error is handled by joinServer method
@@ -266,19 +234,17 @@ const handleJoinWithInvite = async (inviteCode: string) => {
     // We'll keep the dialog open to show the loading state
     // The dialog already shows the loading state through isJoiningServer
     
-    const joinedServerId = await joinServerWithInvite(inviteCode);
+    const result = await joinServerWithInvite(inviteCode);
     
     // Close the dialog after the operation completes
     showJoinServerDialog.value = false;
     
-    if (joinedServerId) {
-      // First ensure we wait for server data to be fully loaded - use optimized method
+    if (result && result.success && result.serverId) {
+      // First ensure we wait for server data to be fully loaded
       await loadUserServerList();
       
       // Then select the newly joined server - this loads the layout
-      await handleServerSelection(joinedServerId);
-      
-      // No navigations needed - we're just updating the selected server in the UI
+      await handleServerSelection(result.serverId);
     }
   } catch (error) {
     // Error is handled by joinServerWithInvite method
@@ -296,7 +262,7 @@ watch(() => selectedServerId.value, async (newServerId) => {
     }
     
     // Load user layout when server selection changes
-    const layout = await loadUserLayout(newServerId);
+    const layout = await loadUserLayout<DashboardFieldConfig>(newServerId);
     if (layout) {
       currentUserLayout.value = layout;
     } else {
@@ -342,8 +308,6 @@ onMounted(async () => {
       return;
     }
   }
-  
-  // Don't auto-select any server by default - show the server list
   
   // Make sure server data is loaded though for the list
   if (userServers.value.length > 0) {

@@ -155,19 +155,19 @@
             type="button"
             @click="$emit('close')"
             class="px-6 py-2 border border-border rounded-md text-text hover:bg-surface transition-all flex items-center"
-            :disabled="isUploading || isCreating"
+            :disabled="isUploading || isCreatingServer"
           >
             <fa :icon="['fas', 'times']" class="mr-2" />
             Cancel
           </button>
           <button
             type="submit"
-            :disabled="isUploading || isCreating"
+            :disabled="isUploading || isCreatingServer"
             class="px-6 py-2 bg-theme-primary text-background rounded-md hover:bg-opacity-90 transition-all flex items-center"
           >
-            <fa v-if="isCreating" :icon="['fas', 'spinner']" class="mr-2 animate-spin" />
+            <fa v-if="isCreatingServer" :icon="['fas', 'spinner']" class="mr-2 animate-spin" />
             <fa v-else :icon="['fas', 'server']" class="mr-2" />
-            <span v-if="isCreating">Creating...</span>
+            <span v-if="isCreatingServer">Creating...</span>
             <span v-else>Create Server</span>
           </button>
         </div>
@@ -180,16 +180,20 @@
 import { ref, reactive, watch } from 'vue';
 import { useImageUpload, deleteUploadedImage } from '~/utils/imageUtils/imageUploadUtils';
 import { useAuth } from '~/composables/useAuth';
+import { useServerCore } from '~/composables/server';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faTimes, faImage, faSpinner, faExchangeAlt, faUpload, faTrashAlt, faServer } from '@fortawesome/free-solid-svg-icons';
 import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
+import { showToast } from '~/utils/toast';
 
 library.add(faTimes, faImage, faSpinner, faExchangeAlt, faUpload, faTrashAlt, faServer);
 
 const props = defineProps<{
   isOpen: boolean;
-  isCreating: boolean;
 }>();
+
+// Use the server composables directly
+const { createServer, isCreatingServer, loadUserServerList, setCurrentServer } = useServerCore();
 
 const serverData = reactive({
   name: '',
@@ -291,24 +295,40 @@ const clearImage = async () => {
 };
 
 const emit = defineEmits<{
-  (e: 'create', data: { 
-    name: string; 
-    description: string;
-    server_img_url: string | null;
-    maxMembers: number;
-    components: Record<string, boolean>;
-  }): void;
   (e: 'close'): void;
 }>();
 
 const handleCreate = async () => {
-  emit('create', {
-    name: serverData.name,
-    description: serverData.description,
-    server_img_url: serverData.imageUrl || null,
-    maxMembers: serverData.maxMembers,
-    components: serverData.components
-  });
+  try {
+    // Create server using the composable
+    const newServerId = await createServer({
+      name: serverData.name,
+      description: serverData.description,
+      server_img_url: serverData.imageUrl || null,
+      maxMembers: serverData.maxMembers,
+      components: serverData.components
+    });
+    
+    // Successful server creation
+    if (typeof newServerId === 'string') {
+      // Check if it's an error message (contains "Failed" or "Error")
+      if (newServerId.includes('Failed') || newServerId.includes('Error') || newServerId.includes('error')) {
+        showToast(newServerId, 'error');
+      } else {
+        // It's a valid server ID - close the dialog and show success
+        emit('close');
+        
+        // Select the newly created server
+        await setCurrentServer(newServerId);
+        
+        // Show success toast notification
+        showToast(`Server "${serverData.name}" created successfully!`, 'success', 3000);
+      }
+    }
+  } catch (error) {
+    console.error('Error creating server:', error);
+    showToast('Failed to create server', 'error');
+  }
 };
 
 // Reset form when dialog is opened

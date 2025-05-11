@@ -12,9 +12,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { serverCache } from '~/utils/storageUtils/cacheUtil';
+import { useAuth } from '~/composables/useAuth';
+import { useServerCore } from '~/composables/server';
 
 const { user } = useAuth();
+const { clearCurrentServer } = useServerCore();
 const isNavigating = ref(false);
 
 const emit = defineEmits<{
@@ -25,10 +27,8 @@ const handleBackClick = async () => {
   isNavigating.value = true;
   
   try {
-    if (user.value) {
-      // Clear the last selected server in cache
-      serverCache.removeLastSelectedServer(user.value.uid);
-    }
+    // Clear the current server selection in the composable
+    await clearCurrentServer();
     
     // Simulate a slight delay for the loading animation
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -37,6 +37,7 @@ const handleBackClick = async () => {
     emit('back');
   } catch (error) {
     // Handle any errors silently
+    console.error('Error navigating back:', error);
   } finally {
     isNavigating.value = false;
   }

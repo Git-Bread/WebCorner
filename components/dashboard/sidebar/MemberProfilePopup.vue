@@ -55,6 +55,7 @@
 
 <script setup lang="ts">
 import type { ServerMember } from '~/composables/server/useServerMembers';
+import { useServerMembers } from '~/composables/server';
 
 const props = defineProps({
   member: {
@@ -73,7 +74,14 @@ const props = defineProps({
 
 defineEmits(['close']);
 
+// Leverage the utility function from the composable if available
+const { getUserInitial: getMemberInitial } = useServerMembers();
+
 const getUserInitial = (displayName?: string): string => {
+  // Use the composable method if available, otherwise provide our own implementation
+  if (getMemberInitial) {
+    return getMemberInitial(displayName);
+  }
   return displayName ? displayName.charAt(0).toUpperCase() : 'U';
 };
 </script>

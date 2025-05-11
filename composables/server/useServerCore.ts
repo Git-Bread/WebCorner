@@ -303,6 +303,50 @@ export const useServerCore = () => {
   };
   
   /**
+   * Load only the user's server list without detailed server data
+   * This is a lightweight version of loadUserServers for faster initial loading
+   */
+  const loadUserServerList = async (forceFresh = false): Promise<void> => {
+    if (!user.value) return;
+    
+    isLoading.value = true;
+    logDebug("Loading user server list (lightweight)...");
+    
+    try {
+      // Try to get cached server list first if not forcing fresh data
+      if (!forceFresh) {
+        const cachedServerList = serverCache.getServerList(user.value.uid);
+        
+        if (cachedServerList && cachedServerList.length > 0) {
+          logDebug(`Found ${cachedServerList.length} servers in cached data`);
+          userServers.value = cachedServerList;
+          isLoading.value = false;
+          return;
+        }
+      }
+      
+      // If cache miss or force fresh, fetch from Firestore
+      const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const newServersList = userData.servers || [];
+        
+        logDebug(`Found ${newServersList.length} servers for user from Firestore`);
+        userServers.value = newServersList;
+        
+        // Update cache with new server list
+        saveServerListToCache();
+      }
+    } catch (error) {
+      logError('loadUserServerList', error, null);
+      showToast('Failed to load your servers', 'error');
+    } finally {
+      isLoading.value = false;
+    }
+  };
+  
+  /**
    * Set the current active server
    * @param serverId - ID of the server to set as current
    */  
@@ -643,6 +687,26 @@ export const useServerCore = () => {
     }
   };
 
+  /**
+   * Clear the current server selection
+   * Removes the current server from state and cache
+   */
+  const clearCurrentServer = async (): Promise<void> => {
+    if (!user.value) return;
+    
+    try {
+      // Reset current server state
+      currentServer.value = null;
+      
+      // Remove from cache
+      serverCache.removeLastSelectedServer(user.value.uid);
+      
+      logDebug('Cleared current server selection');
+    } catch (error) {
+      logError('clearCurrentServer', error, null);
+    }
+  };
+
   // On client-side mount, initialize data
   if (process.client) {
     onMounted(async () => {
@@ -699,6 +763,8 @@ export const useServerCore = () => {
     
     // Cache methods
     saveServerDataToCache,
-    saveServerListToCache
+    saveServerListToCache,
+    loadUserServerList,
+    clearCurrentServer
   };
 };

@@ -81,8 +81,16 @@
 </template>
 
 <script setup lang="ts">
+import { useServerCore } from '~/composables/server';
+
+// Use server composables directly
+const { serverData, currentServerId } = useServerCore();
+
+// Take the selectedServerId as a prop but use currentServerId as fallback
 const props = defineProps<{
-  selectedServerId: string | null;
-  serverData: Record<string, any>;
+  selectedServerId?: string | null;
 }>();
+
+// Use the provided selectedServerId from props, or fall back to the composable's currentServerId
+const selectedServerId = computed(() => props.selectedServerId ?? currentServerId.value);
 </script>

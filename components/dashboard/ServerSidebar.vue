@@ -34,10 +34,6 @@
         </div>
         
         <ServerList 
-          :servers="servers" 
-          :server-data="serverData" 
-          :is-loading="isLoading"
-          :selected-server-id="selectedServerId"
           @server-selected="handleServerSelection"
           @add-server="$emit('add-server')"
           @join-server="$emit('join-server')"
@@ -49,7 +45,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { ServerRef } from '~/schemas/userSchemas';
 
 // Import sidebar components
 import ServerInviteManager from './sidebar/ServerInviteManager.vue';
@@ -58,21 +53,14 @@ import ServerMembersList from './sidebar/ServerMembersList.vue';
 import BackToServersButton from './sidebar/BackToServersButton.vue';
 import ServerList from './sidebar/ServerList.vue';
 
-// Import the serverImageCache utility
+// Import server composables for direct access
+import { useServerCore } from '~/composables/server';
 import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
-// Server sidebar props
-type ServerSidebarProps = {
-  servers: ServerRef[];
-  serverData: Record<string, any>;
-  isLoading: boolean;
+// Define props and emits
+const props = defineProps<{
   selectedServerId: string | null;
-}
-
-const props = defineProps<ServerSidebarProps>();
-
-// Track server selection state
-const isSelectingServer = ref(false);
+}>();
 
 const emit = defineEmits<{
   (e: 'server-selected', serverId: string | null): void;
@@ -80,15 +68,21 @@ const emit = defineEmits<{
   (e: 'join-server'): void;
 }>();
 
-// Helper functions using props directly
+// Use server composables directly
+const { serverData } = useServerCore();
+
+// Track server selection state
+const isSelectingServer = ref(false);
+
+// Helper functions that now use the composable data directly
 const getServerName = (serverId: string): string => {
-  return props.serverData[serverId]?.name || 'Unknown Server';
+  return serverData.value[serverId]?.name || 'Unknown Server';
 };
 
 const getServerImageUrl = (serverId: string): string | undefined => {
-  if (!serverId || !props.serverData) return undefined;
+  if (!serverId || !serverData.value) return undefined;
   
-  const server = props.serverData[serverId];
+  const server = serverData.value[serverId];
   if (!server) return undefined;
   
   // Use the serverImageCache utility to get cached image URL
@@ -96,7 +90,7 @@ const getServerImageUrl = (serverId: string): string | undefined => {
 };
 
 const getMemberCount = (serverId: string): number => {
-  return props.serverData[serverId]?.memberCount || 1;
+  return serverData.value[serverId]?.memberCount || 1;
 };
 
 // Handle back to servers button click

@@ -7,9 +7,10 @@
       <div class="w-6 h-6 border-2 border-t-theme-primary rounded-full animate-spin" aria-label="Loading servers"></div>
     </div>
     
-    <div v-else-if="servers && servers.length > 0" class="space-y-2">      <!-- Server list items -->
+    <div v-else-if="userServers && userServers.length > 0" class="space-y-2">
+      <!-- Server list items -->
       <div 
-        v-for="server in servers" 
+        v-for="server in userServers" 
         :key="server.serverId" 
         class="flex items-center p-2 rounded-md hover:bg-background cursor-pointer"
         :class="{'bg-background border border-theme-primary': selectedServerId === server.serverId}"
@@ -63,13 +64,12 @@
 </template>
 
 <script setup lang="ts">
-import type { ServerRef } from '~/schemas/userSchemas';
+import { computed } from 'vue';
+import { useServerCore } from '~/composables/server';
 import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
+// External props we need to keep for integration
 const props = defineProps<{
-  servers: ServerRef[];
-  serverData: Record<string, any>;
-  isLoading: boolean;
   selectedServerId?: string | null;
 }>();
 
@@ -79,13 +79,16 @@ const emit = defineEmits<{
   (e: 'join-server'): void;
 }>();
 
-// Helper functions using props directly
+// Use server composables directly
+const { userServers, serverData, isLoading } = useServerCore();
+
+// Helper functions using composable data directly
 const getServerName = (serverId: string): string => {
-  if (!props.serverData[serverId]) {
+  if (!serverData.value[serverId]) {
     console.warn(`Server data missing for ${serverId} in ServerList component, using fallback name`);
     return 'Loading server...';
   }
-  return props.serverData[serverId]?.name || 'Unknown Server';
+  return serverData.value[serverId]?.name || 'Unknown Server';
 };
 
 const getServerInitial = (serverId: string): string => {
@@ -94,9 +97,9 @@ const getServerInitial = (serverId: string): string => {
 };
 
 const getServerImageUrl = (serverId: string): string | undefined => {
-  if (!serverId || !props.serverData) return undefined;
+  if (!serverId || !serverData.value) return undefined;
   
-  const server = props.serverData[serverId];
+  const server = serverData.value[serverId];
   if (!server) return undefined;
   
   // Use the serverImageCache utility to get cached image URL

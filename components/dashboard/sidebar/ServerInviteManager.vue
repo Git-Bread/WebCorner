@@ -150,9 +150,11 @@ const props = defineProps<{
   serverId: string;
 }>();
 
-const { isServerAdminOrOwner } = useServerPermissions();
+// Use the composables directly
+const { hasRoleOrHigher } = useServerPermissions();
 const { generateServerInvite, loadServerInvites, activeInvites, isLoadingInvites, clearActiveInvites } = useServerInvitations();
 
+// Local state
 const showInviteForm = ref(false);
 const maxUses = ref<number | null>(null);
 const expiryOption = ref('2');
@@ -170,9 +172,10 @@ const shouldShowCurrentInvite = computed(() =>
   !activeInvites.value.some(invite => invite.code === currentInviteCode.value)
 );
 
+// Check if user has admin permissions
 watchEffect(async () => {
   if (props.serverId) {
-    isAdmin.value = await isServerAdminOrOwner(props.serverId);
+    isAdmin.value = await hasRoleOrHigher(props.serverId, 'admin');
   } else {
     isAdmin.value = false;
   }
@@ -218,10 +221,10 @@ const createInvite = async () => {
       ...(maxUses.value && { maxUses: maxUses.value })
     };
     
-    const inviteCode = await generateServerInvite(props.serverId, options);
+    const result = await generateServerInvite(props.serverId, options);
     
-    if (inviteCode) {
-      currentInviteCode.value = inviteCode;
+    if (result.success && result.inviteCode) {
+      currentInviteCode.value = result.inviteCode;
       inviteCreatedAt.value = new Date();
       showInviteForm.value = false;
       
@@ -250,6 +253,7 @@ const copyInviteCode = (code: string) => {
       tempInput.select();
       document.execCommand('copy');
       document.body.removeChild(tempInput);
+      
       showToast('Invite code copied to clipboard', 'success');
     });
 };

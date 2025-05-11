@@ -85,22 +85,14 @@
 <script setup lang="ts">
 import { watchEffect, ref, onMounted, onUnmounted } from 'vue';
 import { useServerMembers } from '~/composables/server';
+import type { ServerMember } from '~/composables/server/useServerMembers';
 import MemberProfilePopup from './MemberProfilePopup.vue';
-
-interface ServerMember {
-  userId: string;
-  displayName?: string;
-  profileImage?: string;
-  bio?: string;
-  email?: string;
-  role: 'owner' | 'admin' | 'member';
-  joinedAt: Date;
-}
 
 const props = defineProps<{
   serverId: string;
 }>();
 
+// Directly use the server members composable
 const { 
   isLoadingMembers, 
   fetchServerMembers, 
@@ -109,13 +101,14 @@ const {
   regularMembers
 } = useServerMembers();
 
+// UI state management
 const selectedMember = ref<ServerMember | null>(null);
 const showMemberProfile = ref(false);
 const popupStyle = ref({
   top: '0px',
   left: '0px',
 });
-const memberItems = ref([]);
+const memberItems = ref<HTMLElement[]>([]);
 
 // Helper function to determine member item class based on index
 const getMemberItemClass = (index: number): string => {
@@ -169,12 +162,17 @@ const handleClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
+  
+  if (props.serverId) {
+    fetchServerMembers(props.serverId);
+  }
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 
+// Watch for changes to server ID and fetch members
 watchEffect(() => {
   if (props.serverId) {
     fetchServerMembers(props.serverId);
