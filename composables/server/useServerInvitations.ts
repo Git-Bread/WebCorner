@@ -164,31 +164,55 @@ export const useServerInvitations = () => {
         incrementInviteCount(invite.id).catch(() => {
           // Non-critical error, so we don't necessarily stop the whole process
         });
-      }      showToast('Server joined successfully!', 'success');
+      }
+      
+      showToast('Server joined successfully!', 'success');
       console.log(`Successfully joined server with invite: ${invite.serverId}`);
       
       // Reload user servers to update UI with the new server data
       await loadUserServers();
       console.log(`User servers reloaded after joining server ${invite.serverId} with invite`);
       
+      // Update the localStorage cache directly
+      if (user.value) {
+        try {
+          const userCacheKey = `webcorner_user_${user.value.uid}`;
+          // Dynamically import to avoid circular dependencies
+          const { getFromLocalStorage, saveToLocalStorage } = await import('~/utils/storageUtils');
+          const cachedData = getFromLocalStorage(userCacheKey);
+          if (cachedData) {
+            // Update the cached data with the new server list
+            cachedData.servers = userServers.value;
+            saveToLocalStorage(userCacheKey, cachedData);
+            console.log('Updated localStorage cache with joined server data (via invite)');
+          }
+        } catch (cacheError) {
+          console.error('Error updating localStorage cache after joining server with invite:', cacheError);
+          // Non-critical error, don't stop execution
+        }
+      }
+      
       // No navigation - let the caller handle UI updates
       return invite.serverId; // Return the serverId on success
-
     } catch (error: any) {
       console.error('Error joining server with invite:', error);
-      // General error handling for the overall process
-      let errorMessage = 'Failed to join server using invite';
-      if (error.details?.message) { // Check if it's a Firebase Functions error
+      
+      // Extract the error message
+      let errorMessage = 'Failed to join server with invite';
+      if (error.code === 'already-exists') {
+        errorMessage = 'You are already a member of this server';
+      } else if (error.details?.message) {
         errorMessage = error.details.message;
-      } else if (error.message) {
-        errorMessage = error.message;
       }
+      
       showToast(errorMessage, 'error');
       return null;
     } finally {
       isJoiningServer.value = false;
     }
-  };  /**
+  };
+  
+  /**
    * Helper function to increment the invite use count
    * This is separated to avoid blocking the main joining process
    */

@@ -8,6 +8,7 @@ import { useImageUpload } from '~/utils/imageUtils/imageUploadUtils'
 import { getUserImages } from '~/utils/imageUtils/imageLimitUtil'
 import { getDownloadURL } from 'firebase/storage'
 import { formatDate } from '~/utils/dateUtil'
+import { saveToLocalStorage, getFromLocalStorage, removeFromLocalStorage } from '~/utils/storageUtils'
 
 // Define type for user document
 interface UserDocument {
@@ -16,6 +17,38 @@ interface UserDocument {
   profile_image_url?: string;
   updatedAt?: Date;
   [key: string]: any;
+}
+
+// Cache constants
+const USER_CACHE_KEY_PREFIX = 'webcorner_user_';
+const USER_CACHE_EXPIRY = 1000 * 60 * 60; // 1 hour
+
+// Cache for profile images to reduce bandwidth usage
+const imageCache = new Map<string, { url: string, timestamp: number }>();
+const CACHE_EXPIRY = 1000 * 60 * 30; // 30 minutes
+
+/**
+ * Gets an image URL with caching
+ * @param url The original image URL
+ * @returns The cached or original URL
+ */
+function getCachedImageUrl(url: string): string {
+  // Skip caching for default images or empty URLs
+  if (!url || url.startsWith('/images/')) {
+    return url;
+  }
+  
+  const now = Date.now();
+  const cached = imageCache.get(url);
+  
+  // Return cached URL if it exists and hasn't expired
+  if (cached && (now - cached.timestamp) < CACHE_EXPIRY) {
+    return cached.url;
+  }
+  
+  // Cache the new URL
+  imageCache.set(url, { url, timestamp: now });
+  return url;
 }
 
 export const useProfile = () => {
@@ -92,7 +125,8 @@ export const useProfile = () => {
         userImagesData.map(async (imageData) => {
           try {
             // Get download URL directly from StorageReference
-            return await getDownloadURL(imageData.ref)
+            const url = await getDownloadURL(imageData.ref)
+            return url
           } catch (error) {
             console.error(`Error getting download URL for ${imageData.ref.fullPath}:`, error)
             return null
@@ -100,8 +134,10 @@ export const useProfile = () => {
         })
       )
       
-      // Filter out any nulls and update the state
-      userCustomImages.value = imageUrls.filter((url): url is string => url !== null)
+      // Filter out any nulls, apply caching, and update the state
+      userCustomImages.value = imageUrls
+        .filter((url): url is string => url !== null)
+        .map(url => getCachedImageUrl(url))
     } catch (error) {
       console.error('Error fetching user images:', error)
     } finally {
@@ -131,29 +167,60 @@ export const useProfile = () => {
   })
 
   // Load user data from Firestore
-  async function loadUserData() {
+  async function loadUserData(forceRefresh: boolean = false) {
     if (!user.value) return
     
+    const userCacheKey = `${USER_CACHE_KEY_PREFIX}${user.value.uid}`;
+    
     try {
+      // Try to get from cache first, unless forceRefresh is true
+      if (!forceRefresh) {
+        const cachedData = getFromLocalStorage(userCacheKey, USER_CACHE_EXPIRY);
+        if (cachedData) {
+          console.log('Using cached user data');
+          userDoc.value = cachedData;
+          
+          // Set local data from cache
+          userName.value = user.value.displayName || cachedData.username || user.value.email?.split('@')[0] || 'User';
+          userPhotoUrl.value = cachedData.profile_image_url || '/images/Profile_Pictures/default_profile.jpg';
+          
+          // Update form data
+          profileData.value = {
+            username: user.value.displayName || cachedData.username || '',
+            bio: cachedData.bio || '',
+            profileImage: cachedData.profile_image_url || ''
+          }
+          
+          // Load user's custom images
+          await fetchUserCustomImages();
+          return;
+        }
+      }
+      
+      // If not in cache or forceRefresh is true, fetch from Firestore
       const docRef = doc(firestore, 'users', user.value.uid)
       const docSnap = await getDoc(docRef)
       
       if (docSnap.exists()) {
-        userDoc.value = docSnap.data()
+        const data = docSnap.data() as UserDocument;
+        userDoc.value = data;
+        
+        // Cache the user data
+        saveToLocalStorage(userCacheKey, data);
         
         // Set local data - prioritize displayName from auth, then username from Firestore
-        userName.value = user.value.displayName || userDoc.value.username || user.value.email?.split('@')[0] || 'User'
-        userPhotoUrl.value = userDoc.value.profile_image_url || '/images/Profile_Pictures/default_profile.jpg'
+        userName.value = user.value.displayName || data.username || user.value.email?.split('@')[0] || 'User';
+        userPhotoUrl.value = data.profile_image_url || '/images/Profile_Pictures/default_profile.jpg';
         
         // Update form data
         profileData.value = {
-          username: user.value.displayName || userDoc.value.username || '',
-          bio: userDoc.value.bio || '',
-          profileImage: userDoc.value.profile_image_url || ''
+          username: user.value.displayName || data.username || '',
+          bio: data.bio || '',
+          profileImage: data.profile_image_url || ''
         }
         
         // Load user's custom images
-        await fetchUserCustomImages()
+        await fetchUserCustomImages();
       }
     } catch (error) {
       console.error('Error loading user data:', error)
@@ -199,6 +266,10 @@ export const useProfile = () => {
           profile_image_url: profileData.value.profileImage,
           updatedAt: new Date()
         }
+        
+        // Update the localStorage cache with the new user data
+        const userCacheKey = `${USER_CACHE_KEY_PREFIX}${user.value.uid}`;
+        saveToLocalStorage(userCacheKey, userDoc.value);
       }
     } catch (error) {
       console.error('Error updating profile:', error)
@@ -225,14 +296,28 @@ export const useProfile = () => {
     if (!user.value) return null;
     
     try {
+      // Validate file size before upload
+      const maxSizeInMB = 5; // 5MB max
+      const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+      
+      if (file.size > maxSizeInBytes) {
+        throw new Error(`File size exceeds maximum allowed size of ${maxSizeInMB}MB`);
+      }
+      
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Invalid file type. Allowed types: JPEG, PNG, WebP');
+      }
+      
       isImageUploading.value = true;
       
       // Call the upload utility function
       const downloadURL = await uploadImage(
         file, 
         `profile_pictures/${user.value.uid}`,
-        5, // 5MB max (increased from 2MB)
-        ['image/jpeg', 'image/png', 'image/webp']
+        maxSizeInMB, // Pass the size limit to the upload function
+        allowedTypes
       );
       
       if (downloadURL) {
@@ -244,8 +329,29 @@ export const useProfile = () => {
         
         tempProfileImage.value = downloadURL;
         
-        // Refresh the user's custom images list
-        await fetchUserCustomImages();
+        // Cache the image URL
+        imageCache.set(downloadURL, { url: downloadURL, timestamp: Date.now() });
+        
+        // Directly update the userCustomImages array instead of fetching from server
+        userCustomImages.value = [downloadURL, ...userCustomImages.value];
+        
+        // If there are more than MAX_USER_IMAGES (5), remove the oldest one from local state
+        // This mirrors the server-side behavior in enforceImageLimit
+        if (userCustomImages.value.length > 5) {
+          userCustomImages.value = userCustomImages.value.slice(0, 5);
+        }
+        
+        // If this is being set as the profile image, update the cache
+        if (userDoc.value) {
+          userDoc.value = {
+            ...userDoc.value,
+            profile_image_url: downloadURL
+          };
+          
+          // Update the localStorage cache with the new user data
+          const userCacheKey = `${USER_CACHE_KEY_PREFIX}${user.value.uid}`;
+          saveToLocalStorage(userCacheKey, userDoc.value);
+        }
         
         showToast('Image uploaded successfully', 'success');
         return downloadURL;
@@ -255,7 +361,7 @@ export const useProfile = () => {
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      showToast('Failed to upload image', 'error');
+      showToast(error instanceof Error ? error.message : 'Failed to upload image', 'error');
       return null;
     } finally {
       isImageUploading.value = false;
@@ -348,6 +454,18 @@ export const useProfile = () => {
     }
   }
 
+  /**
+   * Invalidate the user profile cache
+   * This forces a fresh load from Firestore on next request
+   */
+  function invalidateProfileCache() {
+    if (!user.value) return;
+    
+    const userCacheKey = `${USER_CACHE_KEY_PREFIX}${user.value.uid}`;
+    removeFromLocalStorage(userCacheKey);
+    console.log('Profile cache invalidated');
+  }
+
   // Initialize user data - use onMounted instead of watch for initialization
   const initializeUserData = async () => {
     if (user.value) {
@@ -408,5 +526,6 @@ export const useProfile = () => {
     updatePassword,
     resendVerificationEmail,
     fetchUserCustomImages,
+    invalidateProfileCache,
   }
 }

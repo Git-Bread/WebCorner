@@ -88,20 +88,16 @@ import { saveLastSelectedServer, getLastSelectedServer } from '~/utils/serverSto
 definePageMeta({ layout: 'default-authed' });
 
 // Use the specific server composables
-const { userServers, serverData, isLoading, isCreatingServer, loadUserServers, createServer, updateServerMetadata, setCurrentServer } = useServerCore();
+const { userServers, serverData, isLoading, isCreatingServer, loadUserServerList, loadUserServers, createServer, updateServerMetadata, setCurrentServer } = useServerCore();
 const { isJoiningServer, joinServer } = useServerJoining();
 const { joinServerWithInvite } = useServerInvitations();
 const { user } = useAuth();
 
 // User-specific layout management
-const { userLayouts, isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
+const {isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
 
 const selectedServerId = ref<string | null>(null);
 const currentUserLayout = ref<FieldConfig[]>([]);
-
-// Additional loading states
-const isSelectingServer = ref(false);
-const loadingDetails = ref<string | null>(null);
 
 // Computed property to check if user has servers
 const hasServers = computed(() => {
@@ -242,8 +238,8 @@ const handleJoinServer = async (serverId: string) => {
     showJoinServerDialog.value = false;
     
     if (joinedServerId) {
-      // First ensure we wait for server data to be fully loaded
-      await loadUserServers();
+      // First ensure we wait for server data to be fully loaded - use optimized method
+      await loadUserServerList();
       
       // Then select the newly joined server - this loads the layout
       await handleServerSelection(joinedServerId);
@@ -252,8 +248,7 @@ const handleJoinServer = async (serverId: string) => {
       console.log("Server joined and selected:", joinedServerId);
     }
   } catch (error) {
-    console.error("Error joining server:", error);
-    showJoinServerDialog.value = false;
+    console.error('Error joining server:', error);
   }
 };
 
@@ -269,8 +264,8 @@ const handleJoinWithInvite = async (inviteCode: string) => {
     showJoinServerDialog.value = false;
     
     if (joinedServerId) {
-      // First ensure we wait for server data to be fully loaded
-      await loadUserServers();
+      // First ensure we wait for server data to be fully loaded - use optimized method
+      await loadUserServerList();
       
       // Then select the newly joined server - this loads the layout
       await handleServerSelection(joinedServerId);
@@ -291,7 +286,8 @@ watch(() => selectedServerId.value, async (newServerId) => {
   if (newServerId && user.value) {
     // Ensure server data is available
     if (!serverData.value[newServerId]) {
-      console.log(`Server data missing for ${newServerId}, reloading servers`);
+      console.log(`Server data missing for ${newServerId}, loading server data`);
+      // We need to use loadUserServers here since we need the full server data
       await loadUserServers();
     }
     
@@ -311,11 +307,10 @@ watch(() => selectedServerId.value, async (newServerId) => {
   }
 });
 
-// Load user's servers on component mount
+// Load servers on component mount
 onMounted(async () => {
-  console.log('Dashboard mounted, loading servers...');
-  // Single loading operation to get all server data
-  await loadUserServers();
+  // Use the optimized method to load only server list
+  await loadUserServerList();
   console.log(`Loaded ${userServers.value.length} servers`);
   
   // After servers are loaded, check if we have a previously selected server in localStorage

@@ -102,7 +102,9 @@ const handleLogout = async () => {
 
 onMounted(() => {
   if (user.value) {
-    profileState.loadUserData()
+    // Use cached profile data if available (pass false to avoid forcing a refresh)
+    // This reduces Firestore reads by using localStorage cache when available
+    profileState.loadUserData(false)
   }
 
   document.addEventListener('click', (event) => {

@@ -25,6 +25,7 @@ export const useSettingsManager = (mode: 'visitor' | 'user') => {
   const { 
     settings: userSettingsApi, 
     saveSettings, 
+    loadSettings,
     applySettings,
     defaultVisitorSettings 
   } = useUserSettings();
@@ -154,7 +155,14 @@ export const useSettingsManager = (mode: 'visitor' | 'user') => {
   }
 
   // Initialize settings
-  const initialize = () => {
+  const initialize = async () => {
+    if (mode === 'user') {
+      // For user mode, load settings from cache if available
+      await loadSettings(false); // false means use cache if available
+      userModeSettings.value = JSON.parse(JSON.stringify(userSettingsApi.value));
+    }
+    
+    // Apply the current settings to the application
     applyCurrentSettings();
   };
 

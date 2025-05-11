@@ -2,6 +2,11 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { type User as FirebaseUser } from 'firebase/auth';
 import { handleDatabaseError } from '~/utils/errorHandler';
 import { applyTheme, applyFontSize, applyAccessibilitySettings } from '~/utils/settingsUtils';
+import { saveToLocalStorage, getFromLocalStorage, removeFromLocalStorage } from '~/utils/storageUtils';
+
+// Cache constants
+const SETTINGS_CACHE_KEY_PREFIX = 'webcorner_settings_';
+const SETTINGS_CACHE_EXPIRY = 1000 * 60 * 60 * 24; // 24 hours
 
 // const array for reuse
 export const themeOptions = ['light', 'dark', 'v-theme'] as const;
@@ -95,14 +100,43 @@ export const useUserSettings = () => {
     return { ...defaultVisitorSettings };
   };
 
-  // Load user settings from Firestore
-  const loadSettings = async () => {
+  // Load user settings from Firestore with caching
+  const loadSettings = async (forceRefresh: boolean = false) => {
     if (!user.value) return false;
     
     isLoading.value = true;
     error.value = null;
     
+    const settingsCacheKey = `${SETTINGS_CACHE_KEY_PREFIX}${user.value.uid}`;
+    
     try {
+      // Try to get from cache first, unless forceRefresh is true
+      if (!forceRefresh && import.meta.client) {
+        const cachedSettings = getFromLocalStorage(settingsCacheKey, SETTINGS_CACHE_EXPIRY);
+        if (cachedSettings) {
+          console.log('Using cached user settings');
+          
+          // Apply cached settings
+          settings.value = {
+            appearance: { 
+              ...defaultSettings.appearance, 
+              ...cachedSettings.appearance 
+            },
+            privacy: { 
+              ...defaultSettings.privacy, 
+              ...cachedSettings.privacy 
+            },
+            accessibility: { 
+              ...defaultSettings.accessibility,
+              ...cachedSettings.accessibility 
+            }
+          };
+          
+          return true;
+        }
+      }
+      
+      // If not in cache or forceRefresh is true, fetch from Firestore
       const userDocRef = doc(firestore, 'users', user.value.uid);
       const userDoc = await getDoc(userDocRef);
       
@@ -113,7 +147,7 @@ export const useUserSettings = () => {
         if (userPreferences) {
           // If there are stored preferences, use them
           // Deep copy to avoid reference issues, and provide defaults for any missing properties
-          settings.value = {
+          const userSettings = {
             appearance: { 
               ...defaultSettings.appearance, 
               ...userPreferences.appearance 
@@ -128,8 +162,13 @@ export const useUserSettings = () => {
             }
           };
           
+          // Update state
+          settings.value = userSettings;
+          
+          // Cache the settings
           if (import.meta.client) {
-            console.log('Settings loaded from Firestore');
+            saveToLocalStorage(settingsCacheKey, userSettings);
+            console.log('Settings loaded from Firestore and cached');
           }
         } else {
           // No preferences found, but user document exists, use defaults
@@ -176,6 +215,13 @@ export const useUserSettings = () => {
       // Update local state
       settings.value = { ...newSettings };
       
+      // Update the cache
+      if (import.meta.client && user.value) {
+        const settingsCacheKey = `${SETTINGS_CACHE_KEY_PREFIX}${user.value.uid}`;
+        saveToLocalStorage(settingsCacheKey, newSettings);
+        console.log('Settings saved to Firestore and cache updated');
+      }
+      
       return { success: true, message: 'Settings saved successfully' };
     } catch (err) {
       const errorMessage = handleDatabaseError(err);
@@ -185,6 +231,15 @@ export const useUserSettings = () => {
     } finally {
       isLoading.value = false;
     }
+  };
+
+  // Invalidate settings cache
+  const invalidateSettingsCache = () => {
+    if (!user.value || !import.meta.client) return;
+    
+    const settingsCacheKey = `${SETTINGS_CACHE_KEY_PREFIX}${user.value.uid}`;
+    removeFromLocalStorage(settingsCacheKey);
+    console.log('Settings cache invalidated');
   };
 
   // Apply settings to the application using shared utility functions
@@ -220,6 +275,11 @@ export const useUserSettings = () => {
     } else {
       // Reset to defaults when user logs out
       settings.value = { ...defaultSettings };
+      
+      // Clear cache when logging out
+      if (import.meta.client && user.value) {
+        invalidateSettingsCache();
+      }
     }
   }, { immediate: true });
 
@@ -230,6 +290,7 @@ export const useUserSettings = () => {
     loadSettings,
     saveSettings,
     applySettings,
+    invalidateSettingsCache,
     fontSizes,
     themeOptions,
     fontSizeOptions,

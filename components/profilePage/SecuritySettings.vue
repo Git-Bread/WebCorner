@@ -1,21 +1,26 @@
 <template>
   <div class="bg-background shadow-lg rounded-lg p-6 form-fade-in">
-    <h3 class="font-medium text-xl text-heading mb-4 pb-2 border-b border-border">Security</h3>
+    <h3 class="font-medium text-xl text-heading mb-4 pb-2 border-b border-border" id="security-heading">Security</h3>
     
     <div class="space-y-6">
       <!-- Password section -->
-      <div>
+      <div role="region" aria-labelledby="password-heading">
         <div class="flex justify-between items-center mb-2">
-          <h4 class="font-medium text-heading">Password</h4>
-          <button @click="togglePasswordReset" class="text-link hover:text-link-hover hover:underline text-sm flex items-center">
-            <fa :icon="['fas', passwordResetVisible ? 'chevron-up' : 'key']" class="mr-1" />
+          <h4 class="font-medium text-heading" id="password-heading">Password</h4>
+          <button 
+            @click="togglePasswordReset" 
+            class="text-link hover:text-link-hover hover:underline text-sm flex items-center"
+            :aria-expanded="passwordResetVisible"
+            aria-controls="password-reset-form"
+          >
+            <fa :icon="['fas', passwordResetVisible ? 'chevron-up' : 'key']" class="mr-1" aria-hidden="true" />
             {{ passwordResetVisible ? 'Hide' : 'Change Password' }}
           </button>
         </div>
         <p class="text-text-muted text-sm">Your password was last changed on {{ lastPasswordReset }}</p>
         
         <!-- Password reset form -->
-        <div v-if="passwordResetVisible" class="mt-4 p-4 bg-surface rounded-lg border border-border">
+        <div v-if="passwordResetVisible" id="password-reset-form" class="mt-4 p-4 bg-surface rounded-lg border border-border">
           <div class="space-y-4">
             <!-- Current Password with AuthFormField -->
             <AuthFormField id="current-password" name="currentPassword" type="password" label="Current Password" icon="lock"
@@ -38,41 +43,40 @@
               :hasError="validationAttempted && !!fieldErrors.confirmPassword" />
             
             <!-- Only show general error message if it doesn't match any specific field -->
-            <AuthErrorMessage v-if="errorMessage && validationAttempted && !hasFieldSpecificError" :message="errorMessage" />
+            <AuthErrorMessage v-if="errorMessage && validationAttempted && !hasFieldSpecificError" :message="errorMessage" role="alert" />
             
             <div class="flex justify-end space-x-3">
-              <button class="border border-border text-text px-4 py-2 text-sm rounded hover:bg-surface transition duration-200 flex items-center"
-                @click="cancelPasswordReset">
-                <fa :icon="['fas', 'times']" class="mr-2" /> Cancel
+              <button 
+                class="border border-border text-text px-4 py-2 text-sm rounded hover:bg-surface transition duration-200 flex items-center"
+                @click="cancelPasswordReset"
+                aria-label="Cancel password change"
+              >
+                <fa :icon="['fas', 'times']" class="mr-2" aria-hidden="true" /> Cancel
               </button>
-              <button class="bg-theme-primary text-background px-4 py-2 text-sm rounded hover:bg-theme-secondary transition duration-200 flex items-center"
-                @click="handleUpdatePassword" :disabled="isUpdating">
-                <span v-if="isUpdating" class="mr-2 animate-spin"><fa :icon="['fas', 'spinner']" /></span>
-                <fa v-else :icon="['fas', 'check']" class="mr-2" /> Update Password
+              <button 
+                class="bg-theme-primary text-background px-4 py-2 text-sm rounded hover:bg-theme-secondary transition duration-200 flex items-center"
+                @click="handleUpdatePassword" 
+                :disabled="isUpdating"
+                aria-label="Update password"
+              >
+                <span v-if="isUpdating" class="mr-2 animate-spin"><fa :icon="['fas', 'spinner']" aria-hidden="true" /></span>
+                <fa v-else :icon="['fas', 'check']" class="mr-2" aria-hidden="true" /> Update Password
               </button>
             </div>
           </div>
         </div>
       </div>
       
-      <!-- Two-factor authentication section - "Coming Soon" -->
-      <div>
-        <div class="flex items-center mb-2">
-          <h4 class="font-medium text-heading">Two-Factor Authentication</h4>
-          <span class="ml-3 bg-surface text-text-muted text-xs px-2 py-1 rounded border border-border">Coming Soon</span>
-        </div>
-        <p class="text-text-muted text-sm mb-3">Add an extra layer of security to your account</p>
-        <button disabled class="border border-border text-text-muted px-4 py-2 rounded text-sm transition duration-200 flex items-center opacity-70 cursor-not-allowed">
-          <fa :icon="['fas', 'shield-alt']" class="mr-2" /> Setup Two-Factor Authentication
-        </button>
-      </div>
-      
       <!-- Account deletion section -->
-      <div>
-        <h4 class="font-medium text-heading mb-2">Account Deletion</h4>
+      <div role="region" aria-labelledby="account-deletion-heading">
+        <h4 class="font-medium text-heading mb-2" id="account-deletion-heading">Account Deletion</h4>
         <p class="text-text-muted text-sm mb-3">Permanently delete your account and all your data</p>
-        <button @click="confirmDeleteAccount" class="border border-error text-error px-4 py-2 rounded text-sm hover:bg-error-light hover:bg-opacity-10 transition duration-200 flex items-center">
-          <fa :icon="['fas', 'trash-alt']" class="mr-2" /> Delete Account
+        <button 
+          @click="confirmDeleteAccount" 
+          class="border border-error text-error px-4 py-2 rounded text-sm hover:bg-error-light hover:bg-opacity-10 transition duration-200 flex items-center"
+          aria-label="Delete your account"
+        >
+          <fa :icon="['fas', 'trash-alt']" class="mr-2" aria-hidden="true" /> Delete Account
         </button>
       </div>
     </div>

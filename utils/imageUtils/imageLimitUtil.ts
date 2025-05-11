@@ -4,7 +4,7 @@ import {
   deleteObject,
   type StorageReference,
   getMetadata,
-  getDownloadURL
+  type FirebaseStorage
 } from 'firebase/storage';
 
 /**
@@ -20,7 +20,7 @@ export const MAX_USER_IMAGES = 5;
  * @returns Array of objects containing reference and creation time
  */
 export const getUserImages = async (
-  storage: any,
+  storage: FirebaseStorage,
   path: string
 ): Promise<{ ref: StorageReference, createdAt: Date }[]> => {
   try {
@@ -42,7 +42,6 @@ export const getUserImages = async (
           return { ref: itemRef, createdAt };
         } catch (error) {
           console.error(`Error getting metadata for ${itemRef.fullPath}:`, error);
-          // If we can't get metadata, use current date as fallback
           return { ref: itemRef, createdAt: new Date() };
         }
       })
@@ -64,7 +63,7 @@ export const getUserImages = async (
  * @returns Number of images deleted
  */
 export const enforceImageLimit = async (
-  storage: any,
+  storage: FirebaseStorage,
   path: string,
   maxImages: number = MAX_USER_IMAGES
 ): Promise<number> => {
@@ -111,7 +110,7 @@ export const enforceImageLimit = async (
  * @returns Boolean indicating if limit is reached
  */
 export const hasReachedImageLimit = async (
-  storage: any,
+  storage: FirebaseStorage,
   path: string,
   maxImages: number = MAX_USER_IMAGES
 ): Promise<boolean> => {

@@ -42,7 +42,57 @@ export const useServerCore = () => {
     
     return null;
   });
-    /**
+
+  /**
+   * Load only the user's server list from Firestore or cache
+   * This is an optimized version that avoids fetching the full user document when possible
+   */
+  const loadUserServerList = async (): Promise<void> => {
+    if (!user.value) return;
+    
+    isLoading.value = true;
+    console.log("Loading user server list (optimized)...");
+    
+    try {
+      // Try to get cached user data first
+      const userCacheKey = `webcorner_user_${user.value.uid}`;
+      let userData = null;
+      
+      try {
+        // Import the storage utils dynamically to avoid circular dependencies
+        const { getFromLocalStorage } = await import('~/utils/storageUtils');
+        userData = getFromLocalStorage(userCacheKey);
+        
+        if (userData && userData.servers) {
+          console.log(`Found ${userData.servers.length} servers in cached user data`);
+          userServers.value = userData.servers;
+          isLoading.value = false;
+          return;
+        }
+      } catch (error) {
+        console.error('Error accessing localStorage cache:', error);
+        // Continue with Firestore fetch if cache access fails
+      }
+      
+      // If cache miss, fetch from Firestore
+      const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
+      
+      if (userDoc.exists()) {
+        const fetchedUserData = userDoc.data();
+        const newServersList = fetchedUserData.servers || [];
+        
+        console.log(`Found ${newServersList.length} servers from Firestore`);
+        userServers.value = newServersList;
+      }
+    } catch (error) {
+      console.error('Error loading user server list:', error);
+      showToast('Failed to load your servers', 'error');
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  /**
    * Load user's servers from Firestore
    */  const loadUserServers = async (): Promise<void> => {
     if (!user.value) return;
@@ -295,7 +345,27 @@ export const useServerCore = () => {
       
       showToast('Server created successfully!', 'success');
       
-      await loadUserServers(); 
+      // Load the latest data from Firestore
+      await loadUserServers();
+      
+      // Update the localStorage cache directly to avoid a future Firestore read
+      if (user.value) {
+        try {
+          const userCacheKey = `webcorner_user_${user.value.uid}`;
+          const { getFromLocalStorage, saveToLocalStorage } = await import('~/utils/storageUtils');
+          const cachedData = getFromLocalStorage(userCacheKey);
+          if (cachedData) {
+            // Update the cached data with the new server list
+            cachedData.servers = userServers.value;
+            saveToLocalStorage(userCacheKey, cachedData);
+            console.log('Updated localStorage cache with new server data');
+          }
+        } catch (cacheError) {
+          console.error('Error updating localStorage cache after server creation:', cacheError);
+          // Non-critical error, don't stop execution
+        }
+      }
+      
       return null;
 
     } catch (error: any) {
@@ -342,7 +412,19 @@ export const useServerCore = () => {
           ...metadata,
           updatedAt: new Date()
         };
+        
+        // If current server is being updated, update the currentServer ref too
+        if (currentServer.value?.id === serverId) {
+          currentServer.value.data = {
+            ...currentServer.value.data,
+            ...metadata,
+            updatedAt: new Date()
+          };
+        }
       }
+      
+      // No need to update localStorage cache here since we're only updating server metadata,
+      // not the user's server list which is what's stored in the userDoc cache
       
       return true;
     } catch (error) {
@@ -380,6 +462,7 @@ export const useServerCore = () => {
     currentServerId,
     
     loadUserServers,
+    loadUserServerList,
     createServer,
     updateServerMetadata,
     setCurrentServer

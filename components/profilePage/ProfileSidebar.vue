@@ -4,20 +4,29 @@
     <div class="bg-background shadow-lg rounded-lg p-6 mb-6 form-fade-in">
       <div class="flex flex-col items-center">
         <!-- Profile Picture -->
-        <div class="w-36 h-36 rounded-full overflow-hidden mb-4 border-2 border-theme-primary relative group">
+        <div class="w-36 h-36 rounded-full overflow-hidden mb-4 border-2 border-theme-primary relative group" aria-label="Profile picture">
           <img :src="isEditing && tempProfileImage ? tempProfileImage : userPhotoUrl" :alt="`${userName}'s profile picture`" class="w-full h-full object-cover" />
         </div>
         
         <h2 class="text-xl font-semibold text-heading mb-1">{{ userName }}</h2>
         <p class="text-text-muted text-sm mb-4">{{ user?.email }}</p>
         
-        <button class="w-full bg-theme-primary text-background px-4 py-2 rounded text-sm hover:bg-theme-secondary transition duration-200 mb-2 flex items-center justify-center" @click="toggleEditing">
-          <fa :icon="['fas', isEditing ? 'times' : 'pen']" class="mr-2" />
+        <button 
+          class="w-full bg-theme-primary text-background px-4 py-2 rounded text-sm hover:bg-theme-secondary transition duration-200 mb-2 flex items-center justify-center" 
+          @click="toggleEditing"
+          :aria-pressed="isEditing"
+          :aria-label="isEditing ? 'Cancel profile editing' : 'Edit your profile'"
+        >
+          <fa :icon="['fas', isEditing ? 'times' : 'pen']" class="mr-2" aria-hidden="true" />
           {{ isEditing ? 'Cancel Editing' : 'Edit Profile' }}
         </button>
         
-        <NuxtLink to="/dashboard" class="w-full border border-border text-text px-4 py-2 rounded text-sm text-center hover:bg-surface transition duration-200 flex items-center justify-center">
-          <fa :icon="['fas', 'arrow-left']" class="mr-2" /> Back to Dashboard
+        <NuxtLink 
+          to="/dashboard" 
+          class="w-full border border-border text-text px-4 py-2 rounded text-sm text-center hover:bg-surface transition duration-200 flex items-center justify-center"
+          aria-label="Return to dashboard"
+        >
+          <fa :icon="['fas', 'arrow-left']" class="mr-2" aria-hidden="true" /> Back to Dashboard
         </NuxtLink>
       </div>
     </div>

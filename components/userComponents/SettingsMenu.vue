@@ -187,6 +187,7 @@ let cleanupEscHandler: (() => void) | undefined;
 
 onMounted(() => {
   // Initialize settings when component mounts
+  // No need to force refresh from Firestore - will use cache if available
   settingsManager.initialize();
 
   // Setup escape key handler

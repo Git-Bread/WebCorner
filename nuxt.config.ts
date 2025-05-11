@@ -67,6 +67,7 @@ export default defineNuxtConfig({
         'paint-brush',
         'hashtag',
         'comment',
+        'sync',
       ],
       brands: [
         'github',
