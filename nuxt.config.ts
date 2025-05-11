@@ -71,6 +71,8 @@ export default defineNuxtConfig({
         'memory',
         'bug',
         'database',
+        'terminal',
+        'code',
       ],
       brands: [
         'github',

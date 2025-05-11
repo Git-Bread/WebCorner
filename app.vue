@@ -17,12 +17,17 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+
+    <ClientOnly>
+        <DebugPanel />
+    </ClientOnly>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, watch, ref, computed } from 'vue';
 import { useUserSettings } from '~/composables/useUserSettings';
+import DebugPanel from '~/components/debug/DebugPanel.vue';
 
 // Initialize settingsLoaded to false by default to ensure spinner shows immediately
 const settingsLoaded = ref(false);

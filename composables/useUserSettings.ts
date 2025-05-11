@@ -77,13 +77,14 @@ export const defaultVisitorSettings = {
 };
 
 export const useUserSettings = () => {
-  const { firestore } = useFirebase();
-  const { user } = useAuth();
+  const { user } = useAuth()
+  const { firestore } = useFirebase()
   
-  // Reactive state for settings
-  const settings = useState<UserSettings>('userSettings', () => ({ ...defaultSettings }));
-  const isLoading = useState<boolean>('settingsLoading', () => false);
-  const error = useState<string | null>('settingsError', () => null);
+  // State management
+  const settings = useState<UserSettings>('userSettings', () => ({ ...defaultSettings }))
+  const isLoading = useState<boolean>('settingsLoading', () => false)
+  const error = useState<string | null>('settingsError', () => null)
+  const isSettingsLoading = ref(false) // Added to prevent duplicate loading
   
   // Load visitor settings from localStorage
   const loadVisitorSettings = () => {
@@ -104,6 +105,10 @@ export const useUserSettings = () => {
   const loadSettings = async (forceRefresh: boolean = false) => {
     if (!user.value) return false;
     
+    // Prevent duplicate loading
+    if (isSettingsLoading.value) return true;
+    
+    isSettingsLoading.value = true;
     isLoading.value = true;
     error.value = null;
     
@@ -193,6 +198,7 @@ export const useUserSettings = () => {
       return false;
     } finally {
       isLoading.value = false;
+      isSettingsLoading.value = false;
     }
   };
 

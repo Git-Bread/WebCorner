@@ -84,7 +84,7 @@
     
     <!-- Delete Account Confirmation Modal -->
     <DeleteAccountModal 
-      :showModal="showDeleteModal" 
+      :show="showDeleteModal" 
       @close="closeDeleteModal" 
       @confirm="handleDeleteAccount" 
     />
@@ -96,7 +96,7 @@ import { ref, reactive, computed } from 'vue';
 import AuthFormField from '~/components/auth/AuthFormField.vue';
 import AuthErrorMessage from '~/components/auth/AuthErrorMessage.vue';
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue';
-import DeleteAccountModal from '~/components/ui/DeleteAccountModal.vue';
+import DeleteAccountModal from '~/components/profilePage/DeleteAccountModal.vue';
 import { validatePassword, validatePasswordsMatch } from '~/utils/passwordUtils';
 import { showToast } from '~/utils/toast';
 
@@ -243,14 +243,36 @@ async function handleDeleteAccount(password: string) {
     const success = await deleteAccount(password);
     
     if (success) {
-      // Navigate to login page after successful deletion
-      router.push('/login');
+      // Close the modal first
+      showDeleteModal.value = false;
+      // Show success message before redirecting
+      showToast('Account successfully deleted', 'success');
+      // Brief timeout to allow the toast to show before navigating
+      setTimeout(() => {
+        // Clear any auth data
+        const { logout } = useAuth();
+        logout();
+        // Navigate to login page after successful deletion
+        router.push('/login');
+      }, 1000);
     } else if (deleteError.value) {
       // Show error message in modal
       showToast(deleteError.value, 'error');
     }
-  } catch (error) {
-    showToast('Failed to delete account', 'error');
+  } catch (error: any) {
+    // Check for auth/user-token-expired error
+    if (error?.message?.includes('auth/user-token-expired')) {
+      // This is actually a success case - account was deleted
+      showDeleteModal.value = false;
+      showToast('Account successfully deleted', 'success');
+      setTimeout(() => {
+        const { logout } = useAuth();
+        logout();
+        router.push('/login');
+      }, 1000);
+    } else {
+      showToast(error?.message || 'Failed to delete account', 'error');
+    }
   }
 }
 

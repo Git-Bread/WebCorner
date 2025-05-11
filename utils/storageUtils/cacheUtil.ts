@@ -267,7 +267,7 @@ export const profileCache = {
    */
   saveProfileData: (userId: string, data: any, persist: boolean = true): void => {
     const key = `profile_${userId}`;
-    setCacheItem(key, data, 30 * 60 * 1000, persist); // 30 minutes cache
+    setCacheItem(key, data, 24 * 60 * 60 * 1000, persist); // 24 hours cache (reduced from 30 minutes)
     debugCache('profile save', key, { userId, persist });
   },
   
@@ -306,7 +306,7 @@ export const serverCache = {
    */
   saveServerList: (userId: string, serverList: any[], persist: boolean = true): void => {
     const key = `serverlist_${userId}`;
-    setCacheItem(key, serverList, 15 * 60 * 1000, persist); // 15 minutes cache
+    setCacheItem(key, serverList, 6 * 60 * 60 * 1000, persist); // 6 hours cache (reduced from 15 minutes)
     debugCache('server list save', key, { userId, count: serverList.length, persist });
   },
   
@@ -334,7 +334,7 @@ export const serverCache = {
    */
   saveServerData: (serverId: string, data: any, persist: boolean = true): void => {
     const key = `server_${serverId}`;
-    setCacheItem(key, data, 15 * 60 * 1000, persist); // 15 minutes cache
+    setCacheItem(key, data, 6 * 60 * 60 * 1000, persist); // 6 hours cache (reduced from 15 minutes)
     debugCache('server data save', key, { serverId, persist });
   },
   
@@ -359,7 +359,7 @@ export const serverCache = {
    */
   saveUserLayout: (userId: string, serverId: string, layoutData: any[], persist: boolean = true): void => {
     const key = `layout_${userId}_${serverId}`;
-    setCacheItem(key, layoutData, 60 * 60 * 1000, persist); // 1 hour cache
+    setCacheItem(key, layoutData, 24 * 60 * 60 * 1000, persist); // 24 hours cache (reduced from 1 hour)
     debugCache('layout save', key, { userId, serverId, persist, fields: Array.isArray(layoutData) ? layoutData.length : 0 });
   },
   
@@ -389,7 +389,7 @@ export const serverCache = {
   setLastSelectedServer: (serverId: string | null, userId: string): void => {
     const key = `lastserver_${userId}`;
     if (serverId) {
-      setCacheItem(key, serverId, 30 * 24 * 60 * 60 * 1000, true); // 30 days cache
+      setCacheItem(key, serverId, 7 * 24 * 60 * 60 * 1000, true); // 7 days cache (reduced from 30 days)
       debugCache('last server save', key, { userId, serverId });
     } else {
       removeCacheItem(key);

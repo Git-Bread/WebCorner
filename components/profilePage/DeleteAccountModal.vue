@@ -1,5 +1,5 @@
 <template>
-  <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ui-overlay">
+  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ui-overlay">
     <div 
       class="bg-surface border border-border rounded-lg shadow-lg max-w-md w-full p-6 animate-fade-in"
       role="dialog"
@@ -27,28 +27,28 @@
           v-model="password"
           :errorMessage="errorMessage"
           :hasError="!!errorMessage"
-          @keydown.enter="confirmDelete"
+          @keydown.enter="handleConfirm"
         />
       </div>
       
       <div class="flex justify-end space-x-3">
         <button 
-          @click="closeModal" 
-          class="border border-border text-text px-4 py-2 text-sm rounded hover:bg-surface transition duration-200"
+          @click="handleClose" 
+          class="border border-border text-text px-4 py-2 text-sm rounded hover:bg-surface-hover transition duration-200"
           aria-label="Cancel account deletion"
         >
           Cancel
         </button>
         <button 
-          @click="confirmDelete" 
-          class="bg-error text-background px-4 py-2 text-sm rounded hover:bg-opacity-80 transition duration-200 flex items-center"
-          :disabled="isDeleting"
+          @click="handleConfirm" 
+          class="bg-error text-background px-4 py-2 text-sm rounded hover:bg-error-dark transition duration-200 flex items-center"
+          :disabled="isLoading"
           aria-label="Permanently delete account"
         >
-          <span v-if="isDeleting" class="inline-block mr-2">
+          <span v-if="isLoading" class="inline-block mr-2">
             <fa :icon="['fas', 'spinner']" class="animate-spin" aria-hidden="true" />
           </span>
-          {{ isDeleting ? 'Deleting...' : 'Delete Account' }}
+          {{ isLoading ? 'Deleting...' : 'Delete Account' }}
         </button>
       </div>
     </div>
@@ -56,46 +56,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, defineProps } from 'vue';
+import { ref } from 'vue';
 import AuthFormField from '~/components/auth/AuthFormField.vue';
 
+const emit = defineEmits(['close', 'confirm']);
+
 const props = defineProps({
-  showModal: {
+  show: {
+    type: Boolean,
+    default: false
+  },
+  isUserWithProvider: {
     type: Boolean,
     default: false
   }
 });
 
-const emit = defineEmits(['close', 'confirm']);
-
 const password = ref('');
 const errorMessage = ref('');
-const isDeleting = ref(false);
+const isLoading = ref(false);
 
-function closeModal() {
-  if (isDeleting.value) return; // Prevent closing while deleting
+function validatePassword() {
+  if (!password.value || password.value.trim() === '') {
+    errorMessage.value = 'Password is required to delete your account';
+    return false;
+  }
+  
+  errorMessage.value = '';
+  return true;
+}
+
+function handleClose() {
   password.value = '';
   errorMessage.value = '';
   emit('close');
 }
 
-async function confirmDelete() {
-  if (isDeleting.value) return;
-  
-  if (!password.value) {
-    errorMessage.value = 'Please enter your password to confirm deletion';
+function handleConfirm() {
+  if (!validatePassword()) {
     return;
   }
-  
-  isDeleting.value = true;
-  errorMessage.value = '';
   
   try {
     emit('confirm', password.value);
   } catch (error) {
     // Error handling is done at the parent component level
-  } finally {
-    // Don't reset isDeleting here - the parent component should handle this
   }
 }
 </script>

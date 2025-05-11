@@ -128,8 +128,10 @@ export const profileImageCache = {
    * @returns Cached URL or original URL
    */
   getProfileImage: (url: string): string => {
+    // Check if image is already in cache before calling getCachedImageUrl
+    const wasInCache = url && !url.startsWith('/images/') && imageCache.has(url);
     const result = getCachedImageUrl(url);
-    debugImageCache('profile get', url, { hit: result === url });
+    debugImageCache('profile get', url, { hit: wasInCache });
     return result;
   }
 };
@@ -155,8 +157,10 @@ export const serverImageCache = {
    * @returns Cached URL or original URL
    */
   getServerImage: (url: string): string => {
+    // Check if image is already in cache before calling getCachedImageUrl
+    const wasInCache = url && !url.startsWith('/images/') && imageCache.has(url);
     const result = getCachedImageUrl(url);
-    debugImageCache('server get', url, { hit: result === url });
+    debugImageCache('server get', url, { hit: wasInCache });
     return result;
   }
 };
