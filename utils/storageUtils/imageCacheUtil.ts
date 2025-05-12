@@ -40,9 +40,12 @@ const convertToEmulatorUrl = (url: string): string => {
     if (!pathMatch) return url;
     
     const bucket = pathMatch[1];
-    const path = pathMatch[2];
-    return `http://127.0.0.1:9199/v0/b/${bucket}/o/${path}${urlObj.search}`;
-  } catch {
+    const alreadyEncodedPath = pathMatch[2]; // This path is already URL-encoded from the original URL
+
+    // Construct emulator URL using the ALREADY ENCODED path
+    return `http://127.0.0.1:9199/v0/b/${bucket}/o/${alreadyEncodedPath}${urlObj.search}`;
+  } catch (error) {
+    console.error("Error converting URL to emulator format:", error, "Original URL:", url);
     return url;
   }
 };

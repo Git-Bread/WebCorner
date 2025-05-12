@@ -94,6 +94,17 @@ service cloud.firestore {
       // Server deletion is handled by Cloud Functions
       allow delete: if false;
       
+      // Server invites subcollection
+      match /invites/{inviteCode} {
+        // Only members can see server invites
+        allow read: if isServerMember(serverId);
+        
+        // Allow admins and owners to create/update/delete invites
+        allow create: if hasAdminPermission(serverId);
+        allow update: if hasAdminPermission(serverId);
+        allow delete: if hasAdminPermission(serverId);
+      }
+      
       // Server members subcollection
       match /members/{userId} {
         // Only members can see other members
@@ -205,10 +216,26 @@ service cloud.firestore {
     match /serverInvites/{inviteCode} {
       // Only server members can view invites for their server
       allow read: if isAuthenticated() && 
-                   isServerMember(resource.data.serverId);
+                   (resource.data != null && isServerMember(resource.data.serverId));
       
-      // Invitations are handled by Cloud Functions
-      allow create, update, delete: if false;
+      // Allow admins and owners to create invites directly
+      allow create: if isAuthenticated() && 
+                     request.resource.data.serverId != null &&
+                     hasAdminPermission(request.resource.data.serverId);
+      
+      // Allow admins and owners to update their own invites
+      allow update: if isAuthenticated() && 
+                     resource.data != null &&
+                     resource.data.serverId != null &&
+                     hasAdminPermission(resource.data.serverId) &&
+                     (!request.resource.data.diff(resource.data).affectedKeys()
+                       .hasAny(['serverId', 'creatorId', 'code']));
+      
+      // Allow admins and owners to delete their server's invites
+      allow delete: if isAuthenticated() && 
+                     resource.data != null &&
+                     resource.data.serverId != null &&
+                     hasAdminPermission(resource.data.serverId);
     }
     
     // Deny access to everything else

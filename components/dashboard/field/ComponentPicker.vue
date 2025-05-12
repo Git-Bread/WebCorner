@@ -84,7 +84,7 @@ const emit = defineEmits<{
 }>();
 
 // Get server permissions functionality
-const { isServerAdminOrOwner, isServerOwner } = useServerPermissions();
+const { hasRoleOrHigher } = useServerPermissions();
 
 // Track if user is admin
 const isAdmin = ref(false);
@@ -104,7 +104,7 @@ async function checkAdminStatus(): Promise<boolean> {
     
     if (effectiveServerId) {
       // First check if user is owner, which is more definitive
-      const ownerStatus = await isServerOwner(effectiveServerId);
+      const ownerStatus = await hasRoleOrHigher(effectiveServerId, 'owner');
       
       if (ownerStatus) {
         isAdmin.value = true;
@@ -112,7 +112,7 @@ async function checkAdminStatus(): Promise<boolean> {
       }
       
       // If not owner, check if admin
-      const adminStatus = await isServerAdminOrOwner(effectiveServerId);
+      const adminStatus = await hasRoleOrHigher(effectiveServerId, 'admin');
       isAdmin.value = adminStatus;
       return adminStatus;
     } else {

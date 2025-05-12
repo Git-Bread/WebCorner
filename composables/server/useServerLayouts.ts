@@ -2,10 +2,9 @@ import { ref } from 'vue';
 import { useFirebase } from '~/composables/useFirebase';
 import { useAuth } from '~/composables/useAuth';
 import { showToast } from '~/utils/toast';
-import { collection, doc, getDoc, setDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, deleteDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { shouldLog } from '~/utils/debugUtils';
-import { setCacheItem, getCacheItem, removeCacheItem, serverCache } from '~/utils/storageUtils/cacheUtil';
-import { useServerPermissions } from './useServerPermissions';
+
 
 /**
  * Interface for layout field configuration
@@ -149,25 +148,34 @@ export const useServerLayouts = () => {
     isLoadingLayout.value = true;
     
     try {
-      logDebug(`Loading layout for server: ${serverId}`);
+      logDebug(`Loading layout for server: ${serverId} and user: ${user.value.uid}`);
       
-      // Always fetch fresh from Firestore - we don't cache layouts anymore
-      const docRef = doc(firestore, 'userLayouts', `${user.value.uid}_${serverId}`);
-      const docSnapshot = await getDoc(docRef);
+      // First try to load the user-specific layout
+      const userLayoutRef = doc(firestore, 'servers', serverId, 'userLayouts', user.value.uid);
+      const userLayoutSnapshot = await getDoc(userLayoutRef);
       
-      if (docSnapshot.exists()) {
-        const data = docSnapshot.data();
-        const layout = data.layout || [];
-        
-        logDataDebug(`Loaded layout from Firestore for ${serverId}`, {
-          layoutSize: layout.length,
-          userId: user.value.uid
-        });
-        
-        return layout as T;
+      // If user has a custom layout, return it
+      if (userLayoutSnapshot.exists() && userLayoutSnapshot.data().layout) {
+        logDataDebug(`Loaded user-specific layout for ${serverId}`);
+        return userLayoutSnapshot.data().layout as T;
+      }
+      
+      // Fall back to the global server layout if no user-specific layout exists
+      const serverDocRef = doc(firestore, 'servers', serverId);
+      const serverSnapshot = await getDoc(serverDocRef);
+      
+      if (serverSnapshot.exists()) {
+        const serverData = serverSnapshot.data();
+        // Check if layout exists in the server data
+        if (serverData.layout) {
+          logDataDebug(`Falling back to global layout from server document for ${serverId}`);
+          return serverData.layout as T;
+        } else {
+          logDebug(`No layout found for server ${serverId}`);
+          return null;
+        }
       } else {
-        // No layout found
-        logDebug(`No saved layout found for server: ${serverId}`);
+        logDebug(`Server document not found: ${serverId}`);
         return null;
       }
     } catch (error) {
@@ -189,23 +197,19 @@ export const useServerLayouts = () => {
     if (!user.value || !serverId) return false;
     
     try {
-      logDebug(`Saving layout for server: ${serverId}`);
+      logDebug(`Saving layout for server: ${serverId} and user: ${user.value.uid}`);
       
-      const docRef = doc(firestore, 'userLayouts', `${user.value.uid}_${serverId}`);
+      // Save to the user-specific layout document
+      const userLayoutRef = doc(firestore, 'servers', serverId, 'userLayouts', user.value.uid);
       
-      // Save to Firestore
-      await setDoc(docRef, {
-        userId: user.value.uid,
-        serverId,
+      // Set the document with layout data and metadata
+      await setDoc(userLayoutRef, {
         layout: layoutData,
-        updatedAt: new Date()
-      });
-      
-      logDataDebug(`Saved layout to Firestore for ${serverId}`, {
-        layoutSize: Array.isArray(layoutData) ? layoutData.length : 'non-array',
+        updatedAt: new Date(),
         userId: user.value.uid
       });
       
+      logDataDebug(`Saved user-specific layout for server ${serverId}`);
       return true;
     } catch (error) {
       isError.value = true;

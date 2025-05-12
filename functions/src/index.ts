@@ -22,21 +22,31 @@ export const cleanupExpiredInvites = onSchedule({
   const now = new Date();
   
   try {
-    const invitesRef = admin.firestore().collection("serverInvites");
-    const expiredInvitesQuery = await invitesRef
-      .where("expiresAt", "<", now)
-      .get();
+    // Get all servers
+    const serversRef = admin.firestore().collection("servers");
+    const serversSnapshot = await serversRef.get();
     
-    if (expiredInvitesQuery.empty) {
-      return;
+    // Process each server's invites subcollection
+    for (const serverDoc of serversSnapshot.docs) {
+      try {
+        const invitesRef = serverDoc.ref.collection("invites");
+        const expiredInvitesQuery = await invitesRef
+          .where("expiresAt", "<", now)
+          .get();
+        
+        if (!expiredInvitesQuery.empty) {
+          const batch = admin.firestore().batch();
+          expiredInvitesQuery.forEach((doc) => {
+            batch.delete(doc.ref);
+          });
+          
+          await batch.commit();
+        }
+      } catch (serverError) {
+        functions.logger.error(`Error cleaning up expired invites for server ${serverDoc.id}:`, serverError);
+      }
     }
     
-    const batch = admin.firestore().batch();
-    expiredInvitesQuery.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-    
-    await batch.commit();
     return;
   } catch (error) {
     functions.logger.error("Error cleaning up expired invites:", error);
@@ -64,95 +74,6 @@ export const updateUserCount = onSchedule({
   } catch (error) {
     functions.logger.error('Error updating user count:', error);
     throw error;
-  }
-});
-
-/**
- * Callable function to increment a server invite use count
- * This keeps invite usage tracking secure on the server side rather than client side
- * @deprecated This function is being phased out in favor of consolidated processing in joinServerMember
- * which now accepts an optional inviteCode parameter to handle invite tracking
- */
-export const incrementInviteUsage = functions.https.onCall(async (request: CallableRequest) => {
-  if (!request.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'You must be logged in to use this function'
-    );
-  }
-  
-  try {
-    const data = request.data as { inviteCode: string };
-    const { inviteCode } = data;
-    
-    if (!inviteCode) {
-      functions.logger.error('No invite code provided');
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'The function must be called with an invite code'
-      );
-    }
-
-    const inviteRef = admin.firestore().collection('serverInvites').doc(inviteCode);
-    let inviteDoc;
-    
-    try {
-      inviteDoc = await inviteRef.get();
-      
-      if (!inviteDoc.exists) {
-        const invitesRef = admin.firestore().collection('serverInvites');
-        const matchingInvitesQuery = await invitesRef
-          .where('code', '==', inviteCode)
-          .limit(1)
-          .get();
-        
-        if (matchingInvitesQuery.empty) {
-          functions.logger.error(`Invite not found by either document ID or code field: ${inviteCode}`);
-          throw new functions.https.HttpsError(
-            'not-found',
-            'The specified invite does not exist'
-          );
-        }
-        
-        inviteDoc = matchingInvitesQuery.docs[0];
-      }
-
-      const inviteData = inviteDoc.data();
-      if (!inviteData) {
-        functions.logger.error(`Invite document exists but has no data`);
-        throw new functions.https.HttpsError(
-          'failed-precondition',
-          'Invalid invite data'
-        );
-      }
-      
-      await inviteDoc.ref.update({
-        useCount: FieldValue.increment(1)
-      });
-      
-      return { 
-        success: true,
-        message: `Successfully incremented use count for invite ${inviteCode}`
-      };
-      
-    } catch (docError) {
-      functions.logger.error('Error retrieving invite document:', docError);
-      throw new functions.https.HttpsError(
-        'internal',
-        'Error processing invite document'
-      );
-    }
-  } catch (error) {
-    functions.logger.error('Error in incrementInviteUsage:', error);
-    
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    } else {
-      throw new functions.https.HttpsError(
-        'internal',
-        'An unexpected error occurred while incrementing the invite use count'
-      );
-    }
   }
 });
 
@@ -349,7 +270,6 @@ export const deleteUserAccount = functions.https.onCall(async (request: Callable
 /**
  * Callable function to update server member count and add user to server
  * This handles all server joining operations in one secure server-side function
- * Can optionally handle invite usage tracking as well
  */
 export const joinServerMember = functions.https.onCall(async (request: CallableRequest) => {
   try {
@@ -361,25 +281,57 @@ export const joinServerMember = functions.https.onCall(async (request: CallableR
     }
 
     try {
-      const data = request.data as { serverId: string, inviteCode?: string };
-      const { serverId, inviteCode } = data;
+      const data = request.data as { serverId?: string, inviteCode?: string };
+      const { serverId: providedServerId, inviteCode } = data;
       const userId = request.auth.uid;
-
+      
+      // If we received an invite code but no server ID, find the server
+      let serverId = providedServerId;
+      
+      if (!serverId && inviteCode) {
+        functions.logger.info(`Looking up server for invite code: ${inviteCode}`);
+        
+        // Find which server this invite belongs to
+        const serversRef = admin.firestore().collection('servers');
+        const serversSnapshot = await serversRef.get();
+        
+        let foundServer = false;
+        
+        for (const serverDoc of serversSnapshot.docs) {
+          const inviteRef = serverDoc.ref.collection('invites').doc(inviteCode);
+          const inviteDoc = await inviteRef.get();
+          
+          if (inviteDoc.exists) {
+            serverId = serverDoc.id;
+            foundServer = true;
+            functions.logger.info(`Found invite ${inviteCode} in server ${serverId}`);
+            break;
+          }
+        }
+        
+        if (!foundServer) {
+          throw new functions.https.HttpsError(
+            'not-found',
+            'Invalid or expired invitation code'
+          );
+        }
+      }
+      
       if (!serverId) {
-        functions.logger.error('joinServerMember: No serverId provided');
         throw new functions.https.HttpsError(
           'invalid-argument',
-          'The function must be called with a serverId'
+          'The function must be called with either a serverId or a valid inviteCode'
         );
       }
 
+      // Check if server exists
       const serverRef = admin.firestore().collection('servers').doc(serverId);
       let serverDoc;
       
       try {
         serverDoc = await serverRef.get();
-      } catch (serverCheckError) {
-        functions.logger.error(`Error checking server:`, serverCheckError);
+      } catch (error) {
+        functions.logger.error('Error checking server:', error);
         throw new functions.https.HttpsError(
           'internal',
           'Error checking server existence'
@@ -387,19 +339,20 @@ export const joinServerMember = functions.https.onCall(async (request: CallableR
       }
 
       if (!serverDoc.exists) {
-        functions.logger.error(`joinServerMember: Server ${serverId} not found`);
         throw new functions.https.HttpsError(
           'not-found',
           'The specified server does not exist'
         );
       }
 
+      // Check if user is already a member
       const memberRef = serverRef.collection('members').doc(userId);
       let memberDoc;
+      
       try {
         memberDoc = await memberRef.get();
-      } catch (memberCheckError) {
-        functions.logger.error(`Error checking membership:`, memberCheckError);
+      } catch (error) {
+        functions.logger.error('Error checking membership:', error);
         throw new functions.https.HttpsError(
           'internal',
           'Error checking server membership'
@@ -407,163 +360,112 @@ export const joinServerMember = functions.https.onCall(async (request: CallableR
       }
 
       if (memberDoc.exists) {
-        functions.logger.error(`joinServerMember: User ${userId} is already a member of server ${serverId}`);
         throw new functions.https.HttpsError(
           'already-exists',
           'You are already a member of this server'
         );
       }
-      
-      let userDoc;
-      try {
-        const userCheckRef = admin.firestore().collection('users').doc(userId);
-        userDoc = await userCheckRef.get();
-        
-        if (!userDoc.exists) {
-          functions.logger.error(`joinServerMember: User document does not exist for ${userId}`);
-          throw new functions.https.HttpsError(
-            'failed-precondition',
-            'User account not found. Please refresh your session and try again.'
-          );
-        }
-      } catch (userCheckError) {
-        functions.logger.error(`joinServerMember: Error checking user document:`, userCheckError);
-        throw new functions.https.HttpsError(
-          'internal',
-          'Error checking user account'
-        );
-      }
 
+      // Create batch operation for atomic updates
       const batch = admin.firestore().batch();
       const timestamp = Timestamp.now();
       
-      try {
-        batch.set(memberRef, {
-          userId: userId,
-          role: 'member',
-          joinedAt: timestamp,
-          groupIds: []
-        });
+      // Add user to server members
+      batch.set(memberRef, {
+        userId: userId,
+        role: 'member',
+        joinedAt: timestamp,
+        groupIds: []
+      });
 
-        const userRef = admin.firestore().collection('users').doc(userId);
-        const serverDataToAdd = {
-          serverId: serverId,
-          joinedAt: timestamp.toMillis()
-        };
-        
+      // Add server to user's servers array
+      const userRef = admin.firestore().collection('users').doc(userId);
+      const serverData = {
+        serverId: serverId,
+        joinedAt: timestamp.toMillis()
+      };
+      
+      try {
         const userSnapshot = await userRef.get();
         const userData = userSnapshot.data() || {};
         
         if (!Array.isArray(userData.servers)) {
-          batch.set(userRef, { servers: [serverDataToAdd] }, { merge: true });
+          batch.set(userRef, { servers: [serverData] }, { merge: true });
         } else {
           batch.update(userRef, {
-            servers: FieldValue.arrayUnion(serverDataToAdd)
+            servers: FieldValue.arrayUnion(serverData)
           });
         }
+      } catch (error) {
+        functions.logger.error('Error preparing user update:', error);
+        throw new functions.https.HttpsError(
+          'internal',
+          'Error updating user data'
+        );
+      }
 
-        batch.update(serverRef, {
-          memberCount: FieldValue.increment(1)
-        });
-          // Handle invite usage increment if an invite code was provided
-        if (inviteCode) {
-          try {
-            const inviteRef = admin.firestore().collection('serverInvites').doc(inviteCode);
-            const inviteDoc = await inviteRef.get();
-            
-            // If invite exists by ID, update it
-            if (inviteDoc.exists) {
-              batch.update(inviteRef, {
-                useCount: FieldValue.increment(1)
-              });
-            } else {
-              // Try to find by code field instead
-              const invitesRef = admin.firestore().collection('serverInvites');
-              const matchingInvitesQuery = await invitesRef
-                .where('code', '==', inviteCode)
-                .limit(1)
-                .get();
-              
-              if (!matchingInvitesQuery.empty) {
-                const foundInviteDoc = matchingInvitesQuery.docs[0];
-                batch.update(foundInviteDoc.ref, {
-                  useCount: FieldValue.increment(1)
-                });
-              }
-            }
-          } catch (inviteError) {
-            // Log but don't fail the whole operation since invite tracking is non-critical
-            functions.logger.warn(`Failed to increment invite usage for ${inviteCode}:`, inviteError);
-          }
-        }
-        
-        await batch.commit();
-          const response = {
-          success: true, 
-          serverId: serverId,
-          serverName: serverDoc.data()?.name || 'Unknown server',
-          serverIcon: serverDoc.data()?.iconUrl || null,
-          joinedAt: timestamp.toMillis(),
-          invite: inviteCode ? {
-            processed: true,
-            inviteCode: inviteCode
-          } : undefined
-        };
-        
-        return response;
-
-      } catch (batchError) {
-        functions.logger.error(`Batch commit failed for user ${userId} joining server ${serverId}:`, batchError);
-        
-        if (batchError instanceof Error) {
-          functions.logger.error('Batch error message:', batchError.message);
-          functions.logger.error('Batch error stack:', batchError.stack);
+      // Increment server member count
+      batch.update(serverRef, {
+        memberCount: FieldValue.increment(1)
+      });
+      
+      // If an invite code was provided, increment its usage count
+      if (inviteCode) {
+        try {
+          const inviteRef = serverRef.collection('invites').doc(inviteCode);
+          const inviteDoc = await inviteRef.get();
           
-          if (batchError.message.includes('no document to update')) {
-            functions.logger.error('Missing document error. Check if the user document exists:', userId);
+          if (inviteDoc.exists) {
+            batch.update(inviteRef, {
+              useCount: FieldValue.increment(1)
+            });
           }
+        } catch (error) {
+          // Non-critical error, just log it
+          functions.logger.warn(`Error updating invite usage for ${inviteCode}:`, error);
         }
-        
-        throw batchError;
       }
 
-    } catch (error: unknown) {
+      // Commit all changes
+      try {
+        await batch.commit();
+      } catch (error) {
+        functions.logger.error('Error committing batch updates:', error);
+        throw new functions.https.HttpsError(
+          'internal', 
+          'Failed to update database with join information'
+        );
+      }
+      
+      functions.logger.info(`User ${userId} successfully joined server ${serverId}`);
+      
+      return { 
+        success: true, 
+        serverId: serverId,
+        serverName: serverDoc.data()?.name || 'Unknown server',
+        server_img_url: serverDoc.data()?.server_img_url || null,
+        serverIcon: serverDoc.data()?.server_img_url || null,
+        joinedAt: timestamp.toMillis(),
+        invite: inviteCode ? {
+          processed: true,
+          inviteCode: inviteCode
+        } : undefined
+      };
+    } catch (error) {
+      // Handle different types of errors
+      if (error instanceof functions.https.HttpsError) {
+        throw error;
+      }
+      
       functions.logger.error('Error in joinServerMember:', error);
-      
-      let errorMessage = 'An internal error occurred while joining the server';
-      let errorType = 'internal';
-      
-      if (error instanceof Error) {
-        functions.logger.error('Error message:', error.message);
-        functions.logger.error('Error stack:', error.stack);
-        
-        errorMessage = `Server error: ${error.message}`;
-        
-        const err = error as any;
-        if (err.code) functions.logger.error('Error code:', err.code);
-        if (err.details) functions.logger.error('Error details:', err.details);
-        if (err.customData) functions.logger.error('Error custom data:', err.customData);
-        
-        if (error.message.includes('permission') || error.message.includes('access')) {
-          errorType = 'permission-denied';
-          errorMessage = 'You don\'t have permission to join this server';
-        } else if (error.message.includes('not found')) {
-          errorType = 'not-found';
-          errorMessage = 'Server resource not found';
-        } else if (error.message.includes('already exists')) {
-          errorType = 'already-exists';
-          errorMessage = 'You are already a member of this server';
-        }
-      }
-
       throw new functions.https.HttpsError(
-        errorType as any,
-        errorMessage
+        'internal',
+        'An error occurred while joining the server'
       );
     }
   } catch (globalError) {
-    console.error("CRITICAL ERROR in joinServerMember:", globalError);
-    functions.logger.error("CRITICAL ERROR in joinServerMember:", globalError);
+    console.error("Critical error in joinServerMember:", globalError);
+    functions.logger.error("Critical error in joinServerMember:", globalError);
     throw new functions.https.HttpsError(
       'internal',
       'A critical error occurred in the server function'

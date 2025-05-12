@@ -31,17 +31,13 @@
           <div 
             :class="{'p-8': !selectedServerId, 'p-0': selectedServerId}"
           >
-            <div v-if="selectedServerId && serverData[selectedServerId]" class="h-full">
-              <!-- Field Container for customizable grid layout with full height when server selected -->
-              <fieldContainer
-                :serverId="selectedServerId"
-                :initialConfig="currentUserLayout"
-                :isLoadingLayout="isLoadingLayout"
-                @save-config="saveUserLayoutConfig"
-                class="h-full"
-              />
-            </div>
-            <DashboardContent v-else-if="!selectedServerId" :serverData="serverData" />
+            <DashboardContent 
+              ref="dashboardContentRef"
+              :serverData="serverData" 
+              :selectedServerId="selectedServerId"
+              @update:serverData="serverData = $event"
+              @save-before-navigate="handleSaveBeforeNavigate"
+            />
           </div>
         </template>
         
@@ -75,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 
 // Import components
 import ServerSidebar from '~/components/dashboard/ServerSidebar.vue';
@@ -83,14 +79,11 @@ import NoServersMessage from '~/components/dashboard/NoServersMessage.vue';
 import LoadingIndicator from '~/components/dashboard/LoadingIndicator.vue';
 import CreateServerDialog from '~/components/dashboard/CreateServerDialog.vue';
 import JoinServerDialog from '~/components/dashboard/JoinServerDialog.vue';
-import fieldContainer from '~/components/dashboard/field/fieldContainer.vue';
 import DashboardContent from '~/components/dashboard/DashboardContent.vue';
 
 // Import specific server composables
-import { useServerJoining, useServerInvitations, useServerLayouts } from '~/composables/server';
+import { useServerJoining, useServerInvitations } from '~/composables/server';
 import { useServerCore } from '~/composables/server/useServerCore';
-import type { DashboardFieldConfig } from '~/composables/server/useServerLayouts';
-import { serverCache } from '~/utils/storageUtils/cacheUtil';
 import { showToast } from '~/utils/toast';
 import { useAuth } from '~/composables/useAuth';
 
@@ -103,27 +96,70 @@ const serverCore = useServerCore();
 // Destructure the properties and methods from the server state for easier access
 const { 
   userServers, 
-  serverData, 
   isLoading, 
   isCreatingServer,
-  loadUserServers, 
   createServer, 
-  updateServerMetadata, 
   setCurrentServer, 
   loadUserServerList, 
   clearCurrentServer 
 } = serverCore;
+
+// Use reactive serverData with v-model behavior for DashboardContent
+const serverData = ref(serverCore.serverData.value);
+
+// Keep local serverData in sync with core serverData
+watch(() => serverCore.serverData.value, (newData) => {
+  serverData.value = newData;
+});
 
 // Use other composables as needed
 const { isJoiningServer, joinServer } = useServerJoining();
 const { joinServerWithInvite } = useServerInvitations();
 const { user } = useAuth();
 
-// User-specific layout management
-const { isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
+// Reference to the DashboardContent component
+const dashboardContentRef = ref<InstanceType<typeof DashboardContent> | null>(null);
 
 const selectedServerId = ref<string | null>(null);
-const currentUserLayout = ref<DashboardFieldConfig[]>([]);
+
+// Get and set the last selected server from localStorage
+const LAST_SERVER_KEY = 'webcorner_last_server';
+
+// Save the last selected server ID to localStorage
+const saveLastSelectedServer = (serverId: string | null) => {
+  if (!serverId || !user.value) return;
+  
+  try {
+    // Use user ID in the key to keep separate users' preferences distinct
+    const storageKey = `${LAST_SERVER_KEY}_${user.value.uid}`;
+    localStorage.setItem(storageKey, serverId);
+  } catch (e) {
+    // Handle any localStorage errors silently
+    console.error('Error saving last server to localStorage:', e);
+  }
+};
+
+// Get the last selected server ID from localStorage
+const getLastSelectedServer = (): string | null => {
+  if (!user.value) return null;
+  
+  try {
+    const storageKey = `${LAST_SERVER_KEY}_${user.value.uid}`;
+    return localStorage.getItem(storageKey);
+  } catch (e) {
+    // Handle any localStorage errors silently
+    console.error('Error reading last server from localStorage:', e);
+    return null;
+  }
+};
+
+// Handle the event when saving before navigation is complete
+const handleSaveBeforeNavigate = (event: { saved: boolean }) => {
+  // You can perform any additional actions here after the save is complete
+  if (event.saved) {
+    showToast('Layout saved successfully', 'success');
+  }
+};
 
 // Loading state for server selection
 const isLoadingServerSelection = ref(false);
@@ -154,16 +190,25 @@ const handleServerSelection = async (serverId: string | null) => {
   }
   
   try {
+    // Check if there are unsaved changes and save them first
+    if (dashboardContentRef.value && selectedServerId.value) {
+      dashboardContentRef.value.checkUnsavedChangesBeforeNavigate();
+    }
+    
     // Set loading state
     isLoadingServerSelection.value = true;
     
     // Update the selected server ID which triggers UI updates
     selectedServerId.value = serverId;
     
+    // Save this server as the last selected one
+    if (serverId) {
+      saveLastSelectedServer(serverId);
+    }
+    
     // When serverId is null, clear the current server in useServerCore too
     if (serverId === null) {
       await clearCurrentServer();
-      currentUserLayout.value = [];
       return; // Exit early
     }
     
@@ -178,46 +223,13 @@ const handleServerSelection = async (serverId: string | null) => {
     // We only need to pass the server ID
     await setCurrentServer(serverId);
     
-    // Now that server is selected, load the user-specific layout
-    if (user.value) {
-      const layout = await loadUserLayout<DashboardFieldConfig[]>(serverId);
-      currentUserLayout.value = layout || [];
-    }
   } catch (error) {
     console.error("Error during server selection:", error);
     showToast("Failed to load server data", "error");
     // Reset to null on error
     selectedServerId.value = null;
-    currentUserLayout.value = [];
   } finally {
     isLoadingServerSelection.value = false;
-  }
-};
-
-// Field configuration management
-interface FieldPosition {
-  row: number;
-  col: number;
-}
-
-interface FieldConfig {
-  id: string;
-  title: string;
-  componentType: string;
-  size: { width: number; height: number };
-  position: FieldPosition;
-  props?: Record<string, any>;
-  placeholder?: string;
-}
-
-// Save user-specific layout configuration
-const saveUserLayoutConfig = async (config: DashboardFieldConfig[]) => {
-  if (selectedServerId.value && user.value) {
-    const success = await saveUserLayout<DashboardFieldConfig[]>(selectedServerId.value, config);
-    if (success) {
-      // Update the current layout
-      currentUserLayout.value = config;
-    }
   }
 };
 
@@ -302,4 +314,24 @@ const handleJoinWithInvite = async (inviteCode: string) => {
     showJoinServerDialog.value = false;
   }
 };
+
+// Initialize dashboard and load last selected server
+onMounted(async () => {
+  try {
+    // First, load the user's servers
+    await loadUserServerList();
+    
+    // After servers are loaded, try to restore the last selected server
+    if (hasServers.value) {
+      const lastServerId = getLastSelectedServer();
+      
+      // Only select the server if it exists in the user's servers
+      if (lastServerId && serverData.value[lastServerId]) {
+        await handleServerSelection(lastServerId);
+      }
+    }
+  } catch (error) {
+    console.error("Error initializing dashboard:", error);
+  }
+});
 </script>

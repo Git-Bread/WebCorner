@@ -73,6 +73,7 @@ export default defineNuxtConfig({
         'database',
         'terminal',
         'code',
+        'book-open',
       ],
       brands: [
         'github',

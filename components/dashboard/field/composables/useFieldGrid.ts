@@ -20,6 +20,10 @@ export function useFieldGrid(props: {
   
   // Field configuration state - use initialConfig directly as all components now use the new format
   const fieldConfiguration = ref<FieldConfig[]>(props.initialConfig || []);
+  const originalConfiguration = ref<string>(JSON.stringify(props.initialConfig || []));
+  
+  // Unsaved changes tracking
+  const hasUnsavedChanges = ref(false);
   
   // Flag to show available spots in edit mode
   const showAvailableSpots = ref(true);
@@ -246,6 +250,9 @@ export function useFieldGrid(props: {
       position: position,
       props: {}
     });
+    
+    // Mark that we have unsaved changes
+    hasUnsavedChanges.value = true;
   };
 
   // Add a small (1x1) component picker at a specific position
@@ -259,6 +266,9 @@ export function useFieldGrid(props: {
       position: position,
       props: {}
     });
+    
+    // Mark that we have unsaved changes
+    hasUnsavedChanges.value = true;
   };
 
   // Handle component selection from the ComponentPicker
@@ -283,8 +293,8 @@ export function useFieldGrid(props: {
       // Replace the picker with the actual component
       fieldConfiguration.value.splice(pickerIndex, 1, newComponent);
       
-      // Save the layout
-      saveLayout();
+      // Mark that we have unsaved changes
+      hasUnsavedChanges.value = true;
     }
   };
 
@@ -294,8 +304,8 @@ export function useFieldGrid(props: {
       field => field.id !== id
     );
     
-    // Save the updated layout
-    saveLayout();
+    // Mark that we have unsaved changes
+    hasUnsavedChanges.value = true;
   };
 
   const removePicker = (pickerId: string) => {
@@ -313,6 +323,12 @@ export function useFieldGrid(props: {
     // Emit layout update events
     emit('update:config', fieldConfiguration.value);
     emit('save-config', fieldConfiguration.value);
+    
+    // Update the original configuration
+    originalConfiguration.value = JSON.stringify(fieldConfiguration.value);
+    
+    // Clear unsaved changes flag
+    hasUnsavedChanges.value = false;
     
     // Simulate saving delay (in a real app, this would be an async API call)
     setTimeout(() => {
@@ -334,6 +350,17 @@ export function useFieldGrid(props: {
   watch(() => props.initialConfig, (newConfig) => {
     if (newConfig) {
       fieldConfiguration.value = newConfig;
+      originalConfiguration.value = JSON.stringify(newConfig);
+      hasUnsavedChanges.value = false;
+    }
+  }, { deep: true });
+  
+  // Watch for changes to the field configuration to detect unsaved changes
+  watch(() => fieldConfiguration.value, (newConfig) => {
+    if (JSON.stringify(newConfig) !== originalConfiguration.value) {
+      hasUnsavedChanges.value = true;
+    } else {
+      hasUnsavedChanges.value = false;
     }
   }, { deep: true });
 
@@ -344,6 +371,7 @@ export function useFieldGrid(props: {
     showSaveIndicator,
     isSaveIndicatorFading,
     isSaving,
+    hasUnsavedChanges,
     gridRows,
     rowHeight,
     gridTemplateStyle,

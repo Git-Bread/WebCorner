@@ -1,10 +1,10 @@
 import { ref } from 'vue';
 import { httpsCallable } from 'firebase/functions';
-import { collection, doc, getDoc, getDocs, setDoc, query, where, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, query, where, limit, Timestamp } from 'firebase/firestore';
 import { showToast } from '~/utils/toast';
 import { shouldLog } from '~/utils/debugUtils';
 import { setCacheItem, getCacheItem, removeCacheItem } from '~/utils/storageUtils/cacheUtil';
-import { type ServerInvite } from '~/schemas/serverInviteSchemas';
+import { type ServerInvite, validateServerInvite, safeValidateServerInvite } from '~/schemas/serverInviteSchemas';
 import { useServerCore } from './useServerCore';
 import { useServerPermissions } from './useServerPermissions';
 
@@ -51,7 +51,7 @@ const SUBSYSTEM = 'invitations';
 export const useServerInvitations = () => {
   const { firestore, functions } = useFirebase();
   const { user } = useAuth();
-  const { userServers, serverData, loadUserServers, setCurrentServer, saveServerListToCache } = useServerCore();
+  const { userServers, serverData, loadUserServers, setCurrentServer } = useServerCore();
   const { hasPermission, hasRoleOrHigher } = useServerPermissions();
   
   // State
@@ -60,10 +60,8 @@ export const useServerInvitations = () => {
   const isLoadingInvites = ref(false);
   const isGeneratingInvite = ref(false);
   
-  // Cloud Function references
-  const incrementInviteUsageFunction = httpsCallable(functions, 'incrementInviteUsage');
+  // Cloud Function reference
   const joinServerMemberFunction = httpsCallable(functions, 'joinServerMember');
-  const joinWithInviteFunction = httpsCallable(functions, 'joinServerWithInvite');
   
   // PRIVATE METHODS
   
@@ -108,47 +106,85 @@ export const useServerInvitations = () => {
     userId: string,
     options: InviteCreateOptions = {}
   ): Promise<string | null> => {
+    console.log("[Invite Creation Debug] Starting createServerInvite with:", { serverId, userId, options });
     try {
       const serverRef = doc(firestore, 'servers', serverId);
       const serverDoc = await getDoc(serverRef);
       
       if (!serverDoc.exists()) {
+        console.error("[Invite Creation Debug] Server not found:", serverId);
         logDebug(`Server not found: ${serverId}`);
         return null;
       }
       
       const serverName = serverDoc.data()?.name || 'Unknown Server';
-      const invitesRef = collection(serverRef, 'invites');
+      console.log("[Invite Creation Debug] Server found:", { serverName });
       
-      // Generate a random 10-character invite code
-      const inviteCode = Math.random().toString(36).substring(2, 12);
+      // Generate a random invite code that's at least 8 characters long
+      // Using a more reliable approach with nanoid-like generation
+      const generateCode = () => {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        // Generate a code of at least 10 characters
+        for (let i = 0; i < 10; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+      };
+      
+      const inviteCode = generateCode();
+      console.log("[Invite Creation Debug] Generated invite code:", inviteCode, "Length:", inviteCode.length);
       
       // Set expiration date if specified
       const expiration = options.expiresInMs 
         ? new Date(Date.now() + options.expiresInMs) 
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Default: 7 days
       
-      // Create the invite document
-      const inviteData: Partial<ServerInvite> = {
+      // Create the invite document with all required fields
+      // Only adding maxUses if it's actually defined
+      const inviteData: Record<string, any> = {
         code: inviteCode,
         serverId,
         serverName,
         creatorId: userId,
         createdAt: new Date(),
         useCount: 0,
-        expiresAt: expiration,
-        maxUses: options.maxUses
+        expiresAt: expiration
       };
       
-      // Save the invite
+      // Only add maxUses field if it's actually defined and not null
+      if (options.maxUses !== undefined && options.maxUses !== null) {
+        inviteData.maxUses = options.maxUses;
+      }
+      
+      console.log("[Invite Creation Debug] Invite data prepared:", inviteData);
+      
+      // Validate the data against the schema before saving
+      const validationResult = safeValidateServerInvite(inviteData);
+      
+      if (!validationResult.success) {
+        console.error("[Invite Creation Debug] Validation failed:", validationResult.error);
+        logError("Schema validation failed", validationResult.error, null);
+        return null;
+      }
+      
+      console.log("[Invite Creation Debug] Validation successful");
+      
+      // Save only in server's invites subcollection
+      console.log("[Invite Creation Debug] Saving to server subcollection");
+      const invitesRef = collection(serverRef, 'invites');
       await setDoc(doc(invitesRef, inviteCode), inviteData);
+      console.log("[Invite Creation Debug] Successfully saved to server subcollection");
+      
       logDebug(`Created invitation code: ${inviteCode}`);
       
       // Invalidate the invites cache for this server
       removeCacheItem(getInviteListCacheKey(serverId));
       
+      console.log("[Invite Creation Debug] Successfully created invite:", inviteCode);
       return inviteCode;
     } catch (error) {
+      console.error("[Invite Creation Debug] Error in createServerInvite:", error);
       logError(`createServerInvite(${serverId})`, error, null);
       return null;
     }
@@ -159,37 +195,91 @@ export const useServerInvitations = () => {
    */
   const getInviteByCode = async (inviteCode: string): Promise<ServerInvite | null> => {
     try {
+      if (!inviteCode || inviteCode.trim() === '') {
+        console.log("[Invitation Debug] Empty invite code provided");
+        return null;
+      }
+
+      console.log("[Invitation Debug] Looking up invite code:", inviteCode);
+      
       // Check cache first
       const cacheKey = getInviteDetailsCacheKey(inviteCode);
       const cachedInvite = getCacheItem<ServerInvite>(cacheKey);
       
       if (cachedInvite) {
+        console.log("[Invitation Debug] Using cached invite");
         logDebug(`Using cached invite details for: ${inviteCode}`);
         return cachedInvite;
       }
       
-      // Query for the invite across all servers
-      const allServersRef = collection(firestore, 'servers');
-      const allServers = await getDocs(allServersRef);
+      // Check user's servers
+      console.log("[Invitation Debug] Checking user servers for invite");
+      const servers = Object.keys(userServers.value);
       
-      for (const serverDoc of allServers.docs) {
-        const serverId = serverDoc.id;
-        const inviteRef = doc(firestore, 'servers', serverId, 'invites', inviteCode);
-        const inviteDoc = await getDoc(inviteRef);
-        
-        if (inviteDoc.exists()) {
-          const inviteData = inviteDoc.data() as ServerInvite;
+      if (servers.length === 0) {
+        console.log("[Invitation Debug] User is not a member of any servers");
+      } else {
+        console.log(`[Invitation Debug] Checking ${servers.length} servers that user is a member of`);
+      }
+      
+      let invite: ServerInvite | null = null;
+      
+      // Try each server the user is a member of
+      for (const serverId of servers) {
+        console.log("[Invitation Debug] Checking server:", serverId);
+        try {
+          const inviteRef = doc(firestore, 'servers', serverId, 'invites', inviteCode);
+          const inviteDoc = await getDoc(inviteRef);
           
-          // Cache the invite
-          setCacheItem(cacheKey, inviteData, INVITE_CACHE_EXPIRATION, true);
-          
-          return inviteData;
+          if (inviteDoc.exists()) {
+            console.log("[Invitation Debug] Found in server:", serverId);
+            const rawData = inviteDoc.data();
+            
+            // Convert Firestore timestamps to Date objects if needed
+            const createdAt = rawData.createdAt instanceof Timestamp 
+              ? rawData.createdAt.toDate() 
+              : new Date(rawData.createdAt);
+              
+            const expiresAt = rawData.expiresAt instanceof Timestamp 
+              ? rawData.expiresAt.toDate() 
+              : new Date(rawData.expiresAt);
+            
+            invite = {
+              id: inviteDoc.id,
+              code: rawData.code,
+              serverId: rawData.serverId || serverId, // Use the serverId from the path if not in the data
+              creatorId: rawData.creatorId,
+              serverName: rawData.serverName,
+              createdAt,
+              expiresAt,
+              useCount: rawData.useCount || 0,
+              maxUses: rawData.maxUses
+            };
+            
+            break;
+          }
+        } catch (serverError) {
+          console.log("[Invitation Debug] Error checking server:", serverId, serverError);
+          // Continue to next server
         }
       }
       
-      logDebug(`Invite code not found: ${inviteCode}`);
+      // If invite was found, cache it
+      if (invite) {
+        // Cache the invite
+        setCacheItem(cacheKey, invite, INVITE_CACHE_EXPIRATION, true);
+        console.log("[Invitation Debug] Successfully found and cached invite:", invite);
+        return invite;
+      }
+      
+      // Not found in any servers
+      console.log("[Invitation Debug] Invite not found in any accessible server:", inviteCode);
+      console.log("[Invitation Debug] Note: This is expected for invites from servers you're not a member of");
+      
+      // Return null - we'll let the cloud function handle looking up the invite
       return null;
     } catch (error) {
+      console.error("[Invitation Debug] Error in getInviteByCode:", error);
       logError(`getInviteByCode(${inviteCode})`, error, null);
       return null;
     }
@@ -307,7 +397,13 @@ export const useServerInvitations = () => {
     serverId: string, 
     options: InviteCreateOptions = {}
   ): Promise<InviteCreateResult> => {
+    console.log("[Invite Creation Debug] Starting generateServerInvite for server:", serverId, options);
+    
     if (!user.value || !serverId) {
+      console.error("[Invite Creation Debug] Missing user or serverId:", {
+        hasUser: !!user.value,
+        serverId
+      });
       return { success: false, inviteCode: null, error: 'User not logged in or invalid server ID' };
     }
     
@@ -317,14 +413,19 @@ export const useServerInvitations = () => {
       logDebug(`Generating invite for server: ${serverId}`);
       
       // Check if user has permission to create invites
+      console.log("[Invite Creation Debug] Checking user permissions");
       const canCreateInvites = await hasPermission(serverId, 'canInviteMembers');
+      console.log("[Invite Creation Debug] Permission check result:", canCreateInvites);
+      
       if (!canCreateInvites) {
+        console.error("[Invite Creation Debug] User lacks permission to create invites");
         logDebug(`User does not have permission to create invites`);
         showToast('You do not have permission to create invites for this server', 'error');
         return { success: false, inviteCode: null, error: 'Permission denied' };
       }
       
       // Create the invite
+      console.log("[Invite Creation Debug] Calling createServerInvite");
       const inviteCode = await createServerInvite(
         serverId,
         user.value.uid,
@@ -332,19 +433,23 @@ export const useServerInvitations = () => {
       );
       
       if (inviteCode) {
+        console.log("[Invite Creation Debug] Invite created successfully:", inviteCode);
         logDebug(`Successfully created invite: ${inviteCode}`);
         showToast('Server invite created successfully', 'success');
         
         // Reload invites to update the list
+        console.log("[Invite Creation Debug] Reloading server invites");
         await loadServerInvites(serverId, true);
         
         return { success: true, inviteCode };
       } else {
+        console.error("[Invite Creation Debug] Failed to create invite - null returned");
         logDebug(`Failed to create invite`);
         showToast('Failed to create server invite', 'error');
         return { success: false, inviteCode: null, error: 'Failed to create invite' };
       }
     } catch (error) {
+      console.error("[Invite Creation Debug] Error in generateServerInvite:", error);
       logError(`generateServerInvite(${serverId})`, error, null);
       showToast('Failed to create server invite', 'error');
       return { success: false, inviteCode: null, error: 'Error creating invite' };
@@ -358,78 +463,57 @@ export const useServerInvitations = () => {
    */
   const joinServerWithInvite = async (inviteCode: string): Promise<InviteJoinResult> => {
     if (!user.value || !inviteCode || inviteCode.trim() === '') {
+      console.log("[Invitation Debug] Invalid input parameters:", { 
+        hasUser: !!user.value, 
+        inviteCode 
+      });
       showToast('Invalid invitation code', 'error');
       return { success: false, serverId: null, error: 'Invalid invitation code' };
     }
     
     isJoiningServer.value = true;
+    console.log("[Invitation Debug] Starting join process with code:", inviteCode);
     
     try {
-      logDebug(`Attempting to join server with invite code: ${inviteCode}`);
+      // Call the cloud function with just the invite code
+      // The server will find the correct server for this invite
+      console.log("[Invitation Debug] Calling cloud function with invite code:", inviteCode);
+      const result = await joinServerMemberFunction({ inviteCode });
       
-      // Call the Cloud Function to join the server with the invite code
-      await joinWithInviteFunction({ inviteCode });
+      // Extract the result data
+      const data = result.data as any;
+      console.log("[Invitation Debug] Join result:", data);
       
-      // Also increment the invitation use count in a non-blocking way
-      incrementInviteCount(inviteCode).catch(error => {
-        logError(`incrementInviteCount(${inviteCode})`, error, null);
-      });
-      
-      // Get the server details from the invitation
-      const invite = await getInviteByCode(inviteCode);
-      if (!invite) {
-        logError(`Could not retrieve invite details after joining`, null, null);
-        return { success: false, serverId: null, error: 'Could not retrieve invite details' };
+      if (!data.success) {
+        console.error("[Invitation Debug] Join failed");
+        showToast('Failed to join server', 'error');
+        return { success: false, serverId: null };
       }
       
-      // Reload user servers to update UI with the new server data
+      // Update the UI
       await loadUserServers();
-      logDebug(`User servers reloaded after joining server ${invite.serverId} via invite`);
-      
-      // Update server list in cache 
-      saveServerListToCache();
+      console.log("[Invitation Debug] Successfully joined server:", data.serverId);
       
       showToast('Server joined successfully!', 'success');
-      
-      // Return the success result with server ID
-      return { success: true, serverId: invite.serverId };
+      return { success: true, serverId: data.serverId };
     } catch (error: any) {
       // Extract the error message
+      console.error("[Invitation Debug] Join error:", error);
+      
       let errorMessage = 'Failed to join server with invite';
-      if (error.code === 'already-exists') {
+      
+      if (error.code === 'not-found') {
+        errorMessage = 'Invalid or expired invitation code';
+      } else if (error.code === 'already-exists') {
         errorMessage = 'You are already a member of this server';
-      } else if (error.details?.message) {
-        errorMessage = error.details.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
-      logError(`joinServerWithInvite(${inviteCode})`, error, null);
       showToast(errorMessage, 'error');
-      
       return { success: false, serverId: null, error: errorMessage };
     } finally {
       isJoiningServer.value = false;
-    }
-  };
-  
-  /**
-   * Helper function to increment the invite use count
-   * This is separated to avoid blocking the main joining process
-   */
-  const incrementInviteCount = async (inviteCode: string): Promise<void> => {    
-    try {
-      // Additional validation check
-      if (!inviteCode || inviteCode.trim() === '') {
-        return;
-      }
-      
-      logDebug(`Incrementing use count for invite: ${inviteCode}`);
-      await incrementInviteUsageFunction({ inviteCode });
-      
-      // Invalidate the invite cache
-      removeCacheItem(getInviteDetailsCacheKey(inviteCode), true);
-    } catch (error) {
-      // Non-blocking error, log but continue
-      logError(`incrementInviteCount(${inviteCode})`, error, null);
     }
   };
   
@@ -450,12 +534,13 @@ export const useServerInvitations = () => {
         return false;
       }
       
-      // Reference to the invite document
-      const inviteRef = doc(firestore, 'servers', serverId, 'invites', inviteCode);
+      // Reference to the invite document in server's collection
+      const serverInviteRef = doc(firestore, 'servers', serverId, 'invites', inviteCode);
       
-      // Get the current invite
-      const inviteDoc = await getDoc(inviteRef);
-      if (!inviteDoc.exists()) {
+      // Check if the invite exists in the server's collection
+      const serverInviteDoc = await getDoc(serverInviteRef);
+      
+      if (!serverInviteDoc.exists()) {
         showToast('Invite not found', 'error');
         return false;
       }
@@ -467,8 +552,8 @@ export const useServerInvitations = () => {
         deactivatedAt: new Date()  // Store when it was deactivated (metadata field)
       };
       
-      // Update the invite
-      await setDoc(inviteRef, updateData, { merge: true });
+      // Update the invite document
+      await setDoc(serverInviteRef, updateData, { merge: true });
       
       // Invalidate caches
       removeCacheItem(getInviteDetailsCacheKey(inviteCode), true);

@@ -210,27 +210,45 @@ const showInviteFormAndLoadInvites = async () => {
 };
 
 const createInvite = async () => {
-  if (!props.serverId) return;
+  console.log("[ServerInviteManager Debug] Starting createInvite function");
+  
+  if (!props.serverId) {
+    console.error("[ServerInviteManager Debug] No serverId provided");
+    return;
+  }
   
   isCreatingInvite.value = true;
   
   try {
+    console.log("[ServerInviteManager Debug] Creating invite with options:", {
+      serverId: props.serverId,
+      expiryOption: expiryOption.value,
+      maxUses: maxUses.value
+    });
+    
     const expiresInMs = parseInt(expiryOption.value) * 24 * 60 * 60 * 1000;
     const options = {
       expiresInMs,
       ...(maxUses.value && { maxUses: maxUses.value })
     };
     
+    console.log("[ServerInviteManager Debug] Calling generateServerInvite with options:", options);
     const result = await generateServerInvite(props.serverId, options);
+    console.log("[ServerInviteManager Debug] generateServerInvite result:", result);
     
     if (result.success && result.inviteCode) {
+      console.log("[ServerInviteManager Debug] Invite created successfully:", result.inviteCode);
       currentInviteCode.value = result.inviteCode;
       inviteCreatedAt.value = new Date();
       showInviteForm.value = false;
       
+      console.log("[ServerInviteManager Debug] Loading server invites");
       await loadServerInvites(props.serverId);
+    } else {
+      console.error("[ServerInviteManager Debug] Failed to create invite:", result.error);
     }
   } catch (error) {
+    console.error("[ServerInviteManager Debug] Error in createInvite:", error);
     showToast('Failed to create invite', 'error');
     console.error('Error creating invite:', error);
   } finally {
