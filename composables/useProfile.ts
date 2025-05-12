@@ -26,7 +26,6 @@ let profileInstance: ReturnType<typeof createProfileComposable> | null = null;
 // Track if initialization is in progress
 let initializationPromise: Promise<void> | null = null;
 
-// The actual implementation, renamed to createProfileComposable
 function createProfileComposable() {
   const { user } = useAuth()
   const { firestore, auth, storage, functions } = useFirebase()
@@ -149,13 +148,11 @@ function createProfileComposable() {
     if (!user.value) return
     
     if (isLoadingData.value) {
-      console.debug('[Profile] Already loading data, skipping redundant call');
-      return;
+      return; // Already loading, skip redundant call
     }
     
     if (dataLoaded.value && !forceRefresh) {
-      console.debug('[Profile] Data already loaded, skipping redundant call');
-      return;
+      return; // Already loaded, skip redundant call
     }
     
     isLoadingData.value = true;
@@ -517,16 +514,6 @@ function createProfileComposable() {
     }
   }
 
-  // Initialize user data - use onMounted instead of watch for initialization
-  const initializeUserData = async () => {
-    if (user.value) {
-      await loadUserData();
-    }
-  };
-
-  // Initialize the composable
-  onMounted(initializeUserData);
-
   // Set up a watcher to initialize tempProfileImage when editing starts
   watch(isEditing, (newValue) => {
     if (newValue === true) {
@@ -605,7 +592,6 @@ export const useProfile = () => {
     // Create the instance if it doesn't exist
     if (!profileInstance) {
       profileInstance = createProfileComposable();
-      console.debug('[Profile] Created new useProfile instance');
       
       // Create a promise for initialization
       if (!initializationPromise && profileInstance) {
@@ -615,7 +601,6 @@ export const useProfile = () => {
           initializationPromise = new Promise<void>(async (resolve) => {
             try {
               await profileInstance!.loadUserData();
-              console.debug('[Profile] Initial data load completed');
             } catch (error) {
               console.error('[Profile] Error in initial data load:', error);
             } finally {

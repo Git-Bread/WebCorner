@@ -13,38 +13,45 @@
       <!-- Only show headline when no server is selected -->
       <h1 v-if="!selectedServerId" class="font-bold text-3xl text-heading mb-6 p-8">Dashboard</h1>
       
-      <!-- No servers message -->
-      <NoServersMessage 
-        v-if="!isLoading && (!hasServers)"
-        @create-server="showCreateServerDialog = true"
-        @join-server="showJoinServerDialog = true"
-        class="p-8"
-      />
+      <template v-if="!isLoading && (!hasServers)">
+        <!-- No servers message -->
+        <ClientOnly>
+          <NoServersMessage 
+            @create-server="showCreateServerDialog = true"
+            @join-server="showJoinServerDialog = true"
+            class="p-8"
+          />
+        </ClientOnly>
+      </template>
       
       <!-- Server content with field container when server is selected -->
-      <div 
-        v-else-if="hasServers" 
-        :class="{'p-8': !selectedServerId, 'p-0': selectedServerId}"
-      >
-        <div v-if="selectedServerId && serverData[selectedServerId]" class="h-full">
-          <!-- Field Container for customizable grid layout with full height when server selected -->
-          <fieldContainer
-            :serverId="selectedServerId"
-            :initialConfig="currentUserLayout"
-            :isLoadingLayout="isLoadingLayout"
-            @save-config="saveUserLayoutConfig"
-            class="h-full"
-          />
+      <template v-else-if="hasServers">
+        <div 
+          :class="{'p-8': !selectedServerId, 'p-0': selectedServerId}"
+        >
+          <div v-if="selectedServerId && serverData[selectedServerId]" class="h-full">
+            <!-- Field Container for customizable grid layout with full height when server selected -->
+            <fieldContainer
+              :serverId="selectedServerId"
+              :initialConfig="currentUserLayout"
+              :isLoadingLayout="isLoadingLayout"
+              @save-config="saveUserLayoutConfig"
+              class="h-full"
+            />
+          </div>
+          <DashboardContent v-else-if="!selectedServerId" />
         </div>
-        <DashboardContent v-else-if="!selectedServerId" />
-      </div>
+      </template>
       
       <!-- Loading state -->
-      <LoadingIndicator 
-        v-else 
-        message="Loading your servers..." 
-        class="p-8"
-      />
+      <template v-else>
+        <ClientOnly>
+          <LoadingIndicator 
+            message="Loading your servers..." 
+            class="p-8"
+          />
+        </ClientOnly>
+      </template>
     </div>
   </div>
   
@@ -67,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, inject } from 'vue';
 
 // Import components
 import ServerSidebar from '~/components/dashboard/ServerSidebar.vue';
@@ -79,21 +86,47 @@ import fieldContainer from '~/components/dashboard/field/fieldContainer.vue';
 import DashboardContent from '~/components/dashboard/DashboardContent.vue';
 
 // Import specific server composables
-import { useServerCore, useServerJoining, useServerInvitations, useServerLayouts } from '~/composables/server';
+import { useServerJoining, useServerInvitations, useServerLayouts } from '~/composables/server';
+import { useServerCore } from '~/composables/server/useServerCore';
 import type { DashboardFieldConfig } from '~/composables/server/useServerLayouts';
 import { serverCache } from '~/utils/storageUtils/cacheUtil';
 
 // Define page meta with authenticated layout
 definePageMeta({ layout: 'default-authed' });
 
-// Use the specific server composables
-const { userServers, serverData, isLoading, isCreatingServer, loadUserServers, createServer, updateServerMetadata, setCurrentServer, loadUserServerList, clearCurrentServer } = useServerCore();
+// Get the server data from the provider
+// This should be the singleton instance from the layout
+const injectedData = inject<{ 
+  serverState: ReturnType<typeof useServerCore>; 
+  loadingServerData: Ref<boolean>;
+}>('userServerData');
+
+// Use the shared singleton instance, falling back to a direct call if needed
+// Due to the singleton pattern, this will reuse the same instance anyway
+const serverCore = injectedData?.serverState || useServerCore();
+const loadingServerData = injectedData?.loadingServerData;
+
+// Destructure the properties and methods from the server state for easier access
+const { 
+  userServers, 
+  serverData, 
+  isLoading, 
+  isCreatingServer,
+  loadUserServers, 
+  createServer, 
+  updateServerMetadata, 
+  setCurrentServer, 
+  loadUserServerList, 
+  clearCurrentServer 
+} = serverCore;
+
+// Use other composables as needed
 const { isJoiningServer, joinServer } = useServerJoining();
 const { joinServerWithInvite } = useServerInvitations();
 const { user } = useAuth();
 
 // User-specific layout management
-const {isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
+const { isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
 
 const selectedServerId = ref<string | null>(null);
 const currentUserLayout = ref<DashboardFieldConfig[]>([]);
@@ -255,10 +288,16 @@ const handleJoinWithInvite = async (inviteCode: string) => {
 // Watch for server selection changes
 watch(() => selectedServerId.value, async (newServerId) => {
   if (newServerId && user.value) {
-    // Ensure server data is available
-    if (!serverData.value[newServerId]) {
-      // We need to use loadUserServers here since we need the full server data
-      await loadUserServers();
+    // Only load full server data if it's not already loaded and not in the process of loading
+    if (!serverData.value[newServerId] && !isLoading.value) {
+      console.debug(`[Dashboard] Loading full data for server: ${newServerId}`);
+      
+      // Check if this server is in the user's server list first
+      if (userServers.value.some(s => s.serverId === newServerId)) {
+        // Use setCurrentServer which will fetch the specific server data if needed
+        // This avoids loading ALL servers when we only need one
+        await setCurrentServer(newServerId);
+      }
     }
     
     // Load user layout when server selection changes
@@ -274,23 +313,26 @@ watch(() => selectedServerId.value, async (newServerId) => {
   }
 });
 
-// Load servers on component mount
+// Load servers on component mount - but only if not already loaded by the layout
 onMounted(async () => {
-  // Use the optimized method to load only server list
-  await loadUserServerList();
-  
   // Get route parameters to see if a specific server is requested
   const router = useRouter();
   const route = useRoute();
   const requestedServerId = route.query.serverId as string | undefined;
   
-  // Check if we've navigated to this page directly/via refresh
-  // This helps us determine if we need to force a server data refresh
-  const isPageRefresh = !document.referrer || document.referrer.includes(window.location.host);
-  
-  // If it's a page refresh, ensure server data is loaded properly
-  if (isPageRefresh && userServers.value.length > 0) {
-    await loadUserServers(); // Force a full server data load
+  // Wait for server data to be loaded if it's currently loading
+  if (loadingServerData?.value) {
+    // If loading is in progress, wait for it to complete before proceeding
+    await new Promise<void>(resolve => {
+      const checkLoading = () => {
+        if (loadingServerData?.value) {
+          setTimeout(checkLoading, 50);
+        } else {
+          resolve();
+        }
+      };
+      checkLoading();
+    });
   }
   
   // If there's a specific server requested in the URL, select that one
@@ -306,14 +348,6 @@ onMounted(async () => {
     if (lastSelectedServerId && userServers.value.some(s => s.serverId === lastSelectedServerId)) {
       await handleServerSelection(lastSelectedServerId);
       return;
-    }
-  }
-  
-  // Make sure server data is loaded though for the list
-  if (userServers.value.length > 0) {
-    const serversWithoutData = userServers.value.filter(s => !serverData.value[s.serverId]);
-    if (serversWithoutData.length > 0) {
-      await loadUserServers();
     }
   }
 });

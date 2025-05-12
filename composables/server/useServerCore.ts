@@ -49,10 +49,13 @@ export interface CurrentServerState {
 // Subsystem name for logging
 const SUBSYSTEM = 'server-core';
 
-/**
- * Composable for core server operations like loading server data and creating new servers
- */
-export const useServerCore = () => {
+// Singleton instance that will be reused across the application
+let serverCoreInstance: ReturnType<typeof createServerCoreComposable> | null = null;
+// Track if initialization is in progress
+let initializationPromise: Promise<void> | null = null;
+
+// The actual implementation, renamed to createServerCoreComposable
+function createServerCoreComposable() {
   const { firestore } = useFirebase();
   const { user } = useAuth();
   
@@ -61,6 +64,7 @@ export const useServerCore = () => {
   const serverData = ref<Record<string, ServerData>>({});
   const isLoading = ref(false);
   const isCreatingServer = ref(false);
+  const isDataLoaded = ref(false);
   
   // Current server state
   const currentServer = ref<CurrentServerState | null>(null);
@@ -188,14 +192,12 @@ export const useServerCore = () => {
   const loadUserServers = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
     
-    // Check if we should skip this operation due to a recent attempt
-    if (serverCache.shouldSkipServerOperation(user.value.uid, 'loadUserServers', forceFresh)) {
-      logDebug("Skipping redundant server loading (circuit closed)");
+    // Skip if data is already loaded and we're not forcing a refresh
+    if (isDataLoaded.value && !forceFresh) {
       return;
     }
     
     isLoading.value = true;
-    logDebug("Loading user servers...");
     
     try {
       // Try to get cached server list first if not forcing fresh data
@@ -205,7 +207,6 @@ export const useServerCore = () => {
         cachedServerList = serverCache.getServerList(user.value.uid);
         
         if (cachedServerList && cachedServerList.length > 0) {
-          logDebug(`Found ${cachedServerList.length} servers in cached data`);
           userServers.value = cachedServerList;
           
           // Try to load server data from cache and check if we have everything
@@ -213,15 +214,12 @@ export const useServerCore = () => {
           
           // If we have all servers' data cached, we can return early
           if (cachedCount === cachedServerList.length) {
-            logDebug("All server data loaded from cache");
             isLoading.value = false;
             
-            // Record successful operation
-            serverCache.recordServerOperation(user.value.uid, 'loadUserServers', true);
+            // Mark data as loaded after successful loading
+            isDataLoaded.value = true;
             return;
           }
-          
-          logDebug("Server list loaded from cache, but need to fetch additional server details");
         }
       }
       
@@ -231,8 +229,6 @@ export const useServerCore = () => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const newServersList = userData.servers || [];
-        
-        logDebug(`Found ${newServersList.length} servers for user from Firestore`);
         
         // Check if server list has changed
         const needToUpdateList = forceFresh || 
@@ -246,10 +242,8 @@ export const useServerCore = () => {
           saveServerListToCache();
         }
         
-        // If server list is empty, record operation with special flag to prevent redundant calls
+        // If server list is empty, just return
         if (newServersList.length === 0) {
-          // Record empty server list to circuit breaker to prevent redundant empty calls
-          serverCache.recordServerOperation(user.value.uid, 'loadUserServers', false);
           isLoading.value = false;
           return;
         }
@@ -262,8 +256,6 @@ export const useServerCore = () => {
           );
           
           if (serversToFetch.length > 0) {
-            logDebug(`Need to fetch ${serversToFetch.length} server details`);
-            
             const serverPromises = serversToFetch.map((server: ServerRef) => 
               getDoc(doc(firestore, 'servers', server.serverId))
                 .then(doc => ({
@@ -311,17 +303,10 @@ export const useServerCore = () => {
           }
         }
         
-        // Record successful operation
-        serverCache.recordServerOperation(user.value.uid, 'loadUserServers', true);
-      } else {
-        // Record failed operation to prevent redundant attempts
-        serverCache.recordServerOperation(user.value.uid, 'loadUserServers', false);
+        // Mark data as loaded
+        isDataLoaded.value = true;
       }
     } catch (error) {
-      // Record failed operation to prevent redundant attempts
-      if (user.value) {
-        serverCache.recordServerOperation(user.value.uid, 'loadUserServers', false);
-      }
       logError('loadUserServers', error, null);
       showToast('Failed to load your servers', 'error');
     } finally {
@@ -336,14 +321,7 @@ export const useServerCore = () => {
   const loadUserServerList = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
     
-    // Check if we should skip this operation due to a recent attempt
-    if (serverCache.shouldSkipServerOperation(user.value.uid, 'loadUserServerList', forceFresh)) {
-      logDebug("Skipping redundant server list loading (circuit closed)");
-      return;
-    }
-    
     isLoading.value = true;
-    logDebug("Loading user server list (lightweight)...");
     
     try {
       // Try to get cached server list first if not forcing fresh data
@@ -351,12 +329,8 @@ export const useServerCore = () => {
         const cachedServerList = serverCache.getServerList(user.value.uid);
         
         if (cachedServerList && cachedServerList.length > 0) {
-          logDebug(`Found ${cachedServerList.length} servers in cached data`);
           userServers.value = cachedServerList;
           isLoading.value = false;
-          
-          // Record successful operation
-          serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', true);
           return;
         }
       }
@@ -368,29 +342,12 @@ export const useServerCore = () => {
         const userData = userDoc.data();
         const newServersList = userData.servers || [];
         
-        logDebug(`Found ${newServersList.length} servers for user from Firestore`);
         userServers.value = newServersList;
         
         // Update cache with new server list
         saveServerListToCache();
-        
-        // If the server list is empty, record it as a "failed" operation
-        // so that the circuit breaker prevents redundant calls
-        if (newServersList.length === 0) {
-          serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', false);
-        } else {
-          // Record successful operation
-          serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', true);
-        }
-      } else {
-        // Record failed operation to prevent redundant attempts
-        serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', false);
       }
     } catch (error) {
-      // Record failed operation to prevent redundant attempts
-      if (user.value) {
-        serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', false);
-      }
       logError('loadUserServerList', error, null);
       showToast('Failed to load your servers', 'error');
     } finally {
@@ -733,11 +690,6 @@ export const useServerCore = () => {
       
       // Clear all server-related caches
       serverCache.invalidateAllServerData(userId);
-      
-      // Reset circuit breakers for server loading operations
-      serverCache.resetServerOperation(userId, 'loadUserServers');
-      serverCache.resetServerOperation(userId, 'loadUserServerList');
-      
       logDebug(`Cleared all server caches for user: ${userId}`);
     } catch (error) {
       logError('clearServerCaches', error, null);
@@ -764,42 +716,34 @@ export const useServerCore = () => {
     }
   };
 
-  // On client-side mount, initialize data
-  if (process.client) {
-    onMounted(async () => {
-      // Load server list and data
-      await loadUserServers();
+  // Utility function to select initial server from the list
+  const selectInitialServer = async (): Promise<void> => {
+    if (!currentServer.value && userServers.value.length > 0 && user.value) {
+      let serverIdToSelect: string | null = null;
       
-      // If no current server is set but the user has servers
-      if (!currentServer.value && userServers.value.length > 0) {
-        let serverIdToSelect: string | null = null;
-        
-        // Try to restore the last selected server first
-        if (user.value) {
-          serverIdToSelect = serverCache.getLastSelectedServer(user.value.uid);
-          
-          // Make sure the server still exists in the user's server list
-          if (serverIdToSelect && !userServers.value.some(s => s.serverId === serverIdToSelect)) {
-            logDebug(`Last selected server ${serverIdToSelect} no longer in user's server list`);
-            serverIdToSelect = null;
-          } else if (serverIdToSelect) {
-            logDebug(`Restoring last selected server: ${serverIdToSelect}`);
-          }
-        }
-        
-        // If no last selected server or it wasn't found, default to the first one
-        if (!serverIdToSelect) {
-          serverIdToSelect = userServers.value[0].serverId;
-          logDebug(`Defaulting to first server in list: ${serverIdToSelect}`);
-        }
-        
-        // Set the selected server as current
-        if (serverIdToSelect) {
-          await setCurrentServer(serverIdToSelect);
-        }
+      // Try to restore the last selected server first
+      serverIdToSelect = serverCache.getLastSelectedServer(user.value.uid);
+      
+      // Make sure the server still exists in the user's server list
+      if (serverIdToSelect && !userServers.value.some(s => s.serverId === serverIdToSelect)) {
+        logDebug(`Last selected server ${serverIdToSelect} no longer in user's server list`);
+        serverIdToSelect = null;
+      } else if (serverIdToSelect) {
+        logDebug(`Restoring last selected server: ${serverIdToSelect}`);
       }
-    });
-  }
+      
+      // If no last selected server or it wasn't found, default to the first one
+      if (!serverIdToSelect) {
+        serverIdToSelect = userServers.value[0].serverId;
+        logDebug(`Defaulting to first server in list: ${serverIdToSelect}`);
+      }
+      
+      // Set the selected server as current
+      if (serverIdToSelect) {
+        await setCurrentServer(serverIdToSelect);
+      }
+    }
+  };
 
   return {
     // State
@@ -807,21 +751,72 @@ export const useServerCore = () => {
     serverData,
     isLoading,
     isCreatingServer,
+    isDataLoaded,
     currentServer,
+    
+    // Computed
     currentServerId,
     
-    // Core methods
+    // Methods
     loadUserServers,
+    loadUserServerList,
+    setCurrentServer,
     createServer,
     updateServerMetadata,
-    setCurrentServer,
     getServerById,
     clearServerCaches,
-    
-    // Cache methods
+    clearCurrentServer,
     saveServerDataToCache,
     saveServerListToCache,
-    loadUserServerList,
-    clearCurrentServer
+    selectInitialServer
   };
+}
+
+/**
+ * The public-facing function that ensures only one instance is used
+ */
+export const useServerCore = () => {
+  // If an instance is already created, return it immediately
+  if (serverCoreInstance) {
+    return serverCoreInstance;
+  }
+  
+  // If initialization is in progress, wait for it to complete
+  if (initializationPromise) {
+    return createServerInstance();
+  }
+  
+  return createServerInstance();
+  
+  // Helper function to create and initialize the server instance
+  function createServerInstance() {
+    // Create the instance if it doesn't exist
+    if (!serverCoreInstance) {
+      serverCoreInstance = createServerCoreComposable();
+      
+      // Create a promise for initialization
+      if (!initializationPromise && serverCoreInstance) {
+        const { user } = useAuth();
+        if (user.value) {
+          // Initialize with a proper promise to track the async operation
+          initializationPromise = new Promise<void>(async (resolve) => {
+            try {
+              await serverCoreInstance!.loadUserServerList();
+              
+              // Select initial server now that the list is loaded
+              await serverCoreInstance!.selectInitialServer();
+            } catch (error) {
+              console.error('[ServerCore] Error in initial server list load:', error);
+            } finally {
+              // Clear the promise to allow future initializations if needed
+              initializationPromise = null;
+              resolve();
+            }
+          });
+        }
+      }
+    }
+    
+    return serverCoreInstance;
+  }
 };
