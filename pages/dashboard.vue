@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 
 // Import components
 import ServerSidebar from '~/components/dashboard/ServerSidebar.vue';
@@ -139,11 +139,17 @@ const showJoinServerDialog = ref(false);
 
 /**
  * Handle server selection with proper loading sequence
- * Ensures server data is loaded before loading layouts
+ * Now just a minimal wrapper that updates UI state and loads layouts
  */
 const handleServerSelection = async (serverId: string | null) => {
   // Skip if the server is already selected (prevents unnecessary reloads)
   if (serverId === selectedServerId.value) {
+    return;
+  }
+  
+  // Skip if already loading another server selection - prevents race conditions
+  if (isLoadingServerSelection.value) {
+    console.log(`Server selection in progress, skipping request for ${serverId}`);
     return;
   }
   
@@ -161,26 +167,18 @@ const handleServerSelection = async (serverId: string | null) => {
       return; // Exit early
     }
     
-    // Check if this server exists in the user's servers first
-    if (!userServers.value.some(s => s.serverId === serverId)) {
-      console.error(`Server ${serverId} is not in user server list`);
-      showToast("Server not found in your list", "error");
-      selectedServerId.value = null;
+    // Skip if we can't find the server in the loaded data
+    if (!serverData.value[serverId]) {
+      console.log(`Server ${serverId} not found in loaded data, skipping selection`);
+      isLoadingServerSelection.value = false;
       return;
     }
     
-    // Make sure the server is set as current in useServerCore and data is loaded
+    // Server selection is now handled internally by setCurrentServer with existing data
+    // We only need to pass the server ID
     await setCurrentServer(serverId);
     
-    // Ensure server data is actually loaded
-    if (!serverData.value[serverId]) {
-      console.error(`Server data not loaded for ${serverId}`);
-      showToast("Failed to load server data", "error");
-      selectedServerId.value = null;
-      return;
-    }
-    
-    // Now that we have server data, load the user-specific layout
+    // Now that server is selected, load the user-specific layout
     if (user.value) {
       const layout = await loadUserLayout<DashboardFieldConfig[]>(serverId);
       currentUserLayout.value = layout || [];
@@ -304,32 +302,4 @@ const handleJoinWithInvite = async (inviteCode: string) => {
     showJoinServerDialog.value = false;
   }
 };
-
-// Load servers on component mount - but only if not already loaded
-onMounted(async () => {
-  // Get route parameters to see if a specific server is requested
-  const route = useRoute();
-  const requestedServerId = route.query.serverId as string | undefined;
-  
-  // Make sure user servers are loaded first
-  if (!serverCore.isDataLoaded.value) {
-    await loadUserServerList();
-  }
-  
-  // If there's a specific server requested in the URL, select that one
-  if (requestedServerId && userServers.value.some(s => s.serverId === requestedServerId)) {
-    await handleServerSelection(requestedServerId);
-    return;
-  }
-  
-  // Try to restore the last selected server from cache
-  if (user.value && userServers.value.length > 0) {
-    const lastSelectedServerId = serverCache.getLastSelectedServer(user.value.uid);
-    
-    if (lastSelectedServerId && userServers.value.some(s => s.serverId === lastSelectedServerId)) {
-      await handleServerSelection(lastSelectedServerId);
-      return;
-    }
-  }
-});
 </script>

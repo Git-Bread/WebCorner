@@ -31,13 +31,21 @@ import { ref, onMounted, provide } from 'vue';
 import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
 import { useAuth } from '~/composables/useAuth';
 import { useProfile } from '~/composables/useProfile';
+import { useServerCore } from '~/composables/server/useServerCore';
 
 // Get auth data - this is fundamental and needs to be at the layout level
-const { user, isAuthenticated } = useAuth();
+const { user, isAuthenticated, logout } = useAuth();
 
 // Get the shared profile state using the singleton pattern
 // This ensures only one instance of useProfile exists app-wide
 const profileState = useProfile();
+
+// Get server core data
+const { 
+  loadUserServerList, 
+  isLoading, 
+  isDataLoaded 
+} = useServerCore();
 
 // Loading state for profile
 const loadingProfileData = ref(false);
@@ -64,6 +72,11 @@ onMounted(async () => {
       };
       checkLoading();
     }
+  }
+
+  // Load server list on mount if needed
+  if (!isDataLoaded.value && !isLoading.value) {
+    loadUserServerList(); 
   }
 });
 

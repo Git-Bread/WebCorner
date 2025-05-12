@@ -1,7 +1,6 @@
-import { ref, computed, onMounted } from 'vue';
-import { collection, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { ref, computed } from 'vue';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { serverSchema } from '~/schemas/serverSchemas';
 import type { ServerRef } from '~/schemas/userSchemas';
 import { showToast } from '~/utils/toast';
 import { handleDatabaseError } from '~/utils/errorHandler';
@@ -146,6 +145,7 @@ function createServerCoreComposable() {
   /**
    * Load user's servers from Firestore
    * Fetches both the server list and detailed server data
+   * @param forceFresh Whether to force fresh data
    */
   const loadUserServers = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
@@ -155,6 +155,7 @@ function createServerCoreComposable() {
     try {
       // Try to get user document from cache first if not forcing fresh data
       let userData: { servers?: ServerRef[] } = {};
+      let shouldFetchFromFirestore = forceFresh;
       
       if (!forceFresh) {
         const cacheKey = getUserDocCacheKey(user.value.uid);
@@ -163,11 +164,20 @@ function createServerCoreComposable() {
         if (cachedUserDoc) {
           logDebug(`Using cached user document for ${user.value.uid}`);
           userData = cachedUserDoc;
+          
+          // Check if the cached user document actually has server data
+          // If not, we should still fetch from Firestore
+          if (!userData.servers || userData.servers.length === 0) {
+            logDebug(`Cached user document doesn't have server data, fetching from Firestore`);
+            shouldFetchFromFirestore = true;
+          }
+        } else {
+          shouldFetchFromFirestore = true;
         }
       }
       
-      // If cache miss or force fresh, fetch from Firestore
-      if (!userData) {
+      // If force fresh, cache miss, or empty cached server list, fetch from Firestore
+      if (shouldFetchFromFirestore) {
         const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
         
         if (userDoc.exists()) {
@@ -199,10 +209,12 @@ function createServerCoreComposable() {
         // Fetch all server data
         const serverPromises = newServersList.map((server: ServerRef) => 
           getDoc(doc(firestore, 'servers', server.serverId))
-            .then(doc => ({
-              serverId: server.serverId,
-              data: doc.exists() ? doc.data() : null
-            }))
+            .then(doc => {
+              return {
+                serverId: server.serverId,
+                data: doc.exists() ? doc.data() : null
+              };
+            })
             .catch(error => {
               logError(`loadServerDetails(${server.serverId})`, error, null);
               return { serverId: server.serverId, data: null };
@@ -246,6 +258,7 @@ function createServerCoreComposable() {
   /**
    * Load only the user's server list with minimal display data
    * This is a lightweight version of loadUserServers for faster initial loading
+   * @param forceFresh Whether to force fresh data
    */
   const loadUserServerList = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
@@ -303,7 +316,7 @@ function createServerCoreComposable() {
         const cacheKey = getUserDocCacheKey(user.value.uid);
         const cachedUserDoc = getCacheItem<{ servers?: ServerRef[] }>(cacheKey);
         
-        if (cachedUserDoc) {
+        if (cachedUserDoc && cachedUserDoc.servers) {
           logDebug(`Using cached user document for ${user.value.uid} in loadUserServerList`);
           
           // Process the user data for just the server list
@@ -331,7 +344,7 @@ function createServerCoreComposable() {
   };
   
   /**
-   * Set the current active server
+   * Set the current active server using already loaded data
    * @param serverId - ID of the server to set as current
    */  
   const setCurrentServer = async (serverId: string | null): Promise<void> => {
@@ -347,49 +360,19 @@ function createServerCoreComposable() {
       return; // Skip if already set to avoid unnecessary operations
     }
     
-    logDebug(`Setting current server to: ${serverId}`);
-    
-    // Check if we already have the server data loaded
-    let serverInfo = serverData.value[serverId];
-    
-    // If not in local state, we have to fetch from Firestore (no caching of full server data)
-    if (!serverInfo && user.value) {
-      logDebug(`Fetching fresh server data for ${serverId} from Firestore`);
-      try {
-        const serverDoc = await getDoc(doc(firestore, 'servers', serverId));
-        if (serverDoc.exists()) {
-          serverInfo = serverDoc.data() as ServerData;
-          logDebug(`Successfully fetched server data for ${serverId}`);
-          
-          // Update the server data in local state
-          serverData.value = {
-            ...serverData.value,
-            [serverId]: serverInfo
-          };
-          
-          // Cache the server image URL
-          if (serverInfo.server_img_url) {
-            serverImageCache.cacheServerImage(serverId, serverInfo.server_img_url);
-          }
-          
-          // Update display cache with the new data
-          saveServerDisplayDataToCache();
-        } else {
-          logDebug(`Server ${serverId} not found in Firestore`);
-          return;
-        }
-      } catch (error) {
-        logError(`setCurrentServer(${serverId})`, error, null);
-        return;
-      }
-    } else {
-      logDebug(`Using server data for ${serverId} from local state`);
+    // Check if the server data is already loaded
+    const existingServerData = serverData.value[serverId];
+    if (!existingServerData) {
+      logDebug(`Cannot set server ${serverId} as current: no data loaded`);
+      return;
     }
+    
+    logDebug(`Setting current server to: ${serverId}`);
     
     // Update the current server reference
     currentServer.value = {
       id: serverId,
-      data: serverInfo
+      data: existingServerData
     };
     
     // Save last selected server to cache
@@ -719,30 +702,9 @@ export const useServerCore = () => {
   
   // Helper function to create and initialize the server instance
   function createServerInstance() {
-    // Create the instance if it doesn't exist
     if (!serverCoreInstance) {
       serverCoreInstance = createServerCoreComposable();
-      
-      // Create a promise for initialization
-      if (!initializationPromise && serverCoreInstance) {
-        const { user } = useAuth();
-        if (user.value) {
-          // Initialize with a proper promise to track the async operation
-          initializationPromise = new Promise<void>(async (resolve) => {
-            try {
-              await serverCoreInstance!.loadUserServerList();
-            } catch (error) {
-              console.error('[ServerCore] Error in initial server list load:', error);
-            } finally {
-              // Clear the promise to allow future initializations if needed
-              initializationPromise = null;
-              resolve();
-            }
-          });
-        }
-      }
     }
-    
     return serverCoreInstance;
   }
 };

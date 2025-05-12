@@ -39,7 +39,7 @@ export const isLoggingEnabled = (): boolean => {
   if (typeof localStorage === 'undefined') return true;
   
   const loggingSetting = localStorage.getItem(LOGGING_KEY);
-  if (loggingSetting === null) return true; // Default to enabled
+  if (loggingSetting === null) return false; // Default to disabled
   
   return loggingSetting === 'true';
 };

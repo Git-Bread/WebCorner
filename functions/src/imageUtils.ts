@@ -62,13 +62,15 @@ export const moveServerImageToPermanent = async (
       cacheControl: 'public, max-age=31536000' // Cache for 1 year
     });
     
-    // Generate a public URL without authentication tokens
-    // This avoids token expiration issues and browser security blocks
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${permanentPath}`;
+    // Generate a Firebase Storage URL that will work with authentication
+    const bucketName = bucket.name;
+    const encodedPath = encodeURIComponent(permanentPath);
+    const firebaseUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media`;
     
     console.log(`Server image moved to permanent location: ${permanentPath}`);
+    console.log(`Generated Firebase URL: ${firebaseUrl}`);
     
-    return publicUrl;
+    return firebaseUrl;
   } catch (error) {
     console.error('Error moving image to permanent location:', error);
     return null;

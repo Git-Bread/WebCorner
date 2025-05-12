@@ -4,13 +4,13 @@ import {
   getDownloadURL, 
   uploadBytesResumable,
   deleteObject,
-  listAll,
-  getBlob,
+  listAll
 } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { useNuxtApp } from '#app';
 import { handleStorageError } from '../errorHandler';
 import { enforceImageLimit } from './imageLimitUtil';
+import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
 export const useImageUpload = () => {
   // Access Firebase storage via the provided composable
@@ -277,102 +277,26 @@ export const useImageUpload = () => {
  */
 export const deleteUploadedImage = async (imageUrl: string): Promise<void> => {
   try {
-    // Extract the path from the URL
-    const urlObj = new URL(imageUrl);
-    const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+    if (!imageUrl) return;
     
-    if (!pathMatch || !pathMatch[1]) {
-      console.error('Invalid Firebase Storage URL format:', imageUrl);
-      return;
+    const urlObj = new URL(imageUrl);
+    let path: string | null = null;
+    
+    // Extract path based on URL format (emulator or production)
+    if (urlObj.hostname === '127.0.0.1' || urlObj.hostname === 'localhost') {
+      const match = urlObj.pathname.match(/\/v0\/b\/[^\/]+\/o\/(.+?)(?:\?|$)/);
+      path = match && match[1] ? decodeURIComponent(match[1]) : null;
+    } else {
+      const match = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+      path = match && match[1] ? decodeURIComponent(match[1]) : null;
     }
     
-    // Decode the path component
-    const path = decodeURIComponent(pathMatch[1]);
+    if (!path) return;
     
-    // Get storage instance
     const { $storage } = useNuxtApp();
     const fileRef = storageRef($storage, path);
-    
-    // Delete the file
     await deleteObject(fileRef);
   } catch (error) {
     console.error('Error deleting image:', error);
-  }
-};
-
-/**
- * Cleans up temporary server images for a specific user
- * @param userId - The ID of the user whose temporary images should be cleaned up
- * @returns Promise resolved when cleanup is complete
- */
-export const cleanupTempServerImages = async (userId: string): Promise<void> => {
-  if (!userId) return;
-  
-  try {
-    // Get storage instance
-    const { $storage } = useNuxtApp();
-    const tempFolderRef = storageRef($storage, `temp_server_images/${userId}`);
-    
-    // List all files in the folder
-    const fileList = await listAll(tempFolderRef);
-    
-    // Delete all files in parallel
-    await Promise.all(fileList.items.map(fileRef => deleteObject(fileRef)));
-    
-    console.log(`Cleaned up ${fileList.items.length} temporary server images for user ${userId}`);
-  } catch (error) {
-    console.error('Error cleaning up temporary server images:', error);
-  }
-};
-
-/**
- * Moves a server image from temporary location to permanent server images folder
- * @param tempImageUrl - The URL of the temporary image
- * @param serverId - The ID of the server
- * @returns Promise with the new URL of the image in permanent location or null if failed
- */
-export const moveServerImageToPermanent = async (tempImageUrl: string, serverId: string): Promise<string | null> => {
-  if (!tempImageUrl || !serverId) return null;
-  
-  try {
-    // Extract path from URL
-    const urlObj = new URL(tempImageUrl);
-    const pathMatch = urlObj.pathname.match(/\/o\/(.+?)(?:\?|$)/);
-    
-    if (!pathMatch || !pathMatch[1]) {
-      console.error('Invalid Firebase Storage URL format:', tempImageUrl);
-      return tempImageUrl;
-    }
-    
-    // Decode the path component
-    const path = decodeURIComponent(pathMatch[1]);
-    
-    // Skip if not a temp image
-    if (!path.includes('temp_server_images')) {
-      return tempImageUrl;
-    }
-    
-    // Get storage instance
-    const { $storage } = useNuxtApp();
-    
-    // Get references
-    const tempRef = storageRef($storage, path);
-    const fileName = path.split('/').pop() || `${uuidv4()}.jpg`;
-    const permanentPath = `server_images/${serverId}/${fileName}`;
-    const permanentRef = storageRef($storage, permanentPath);
-    
-    // Get blob from temp location
-    const blob = await getBlob(tempRef);
-    
-    // Upload to permanent location
-    const uploadTask = await uploadBytesResumable(permanentRef, blob);
-    const newUrl = await getDownloadURL(uploadTask.ref);
-    
-    console.log(`Moved server image from ${path} to ${permanentPath}`);
-    
-    return newUrl;
-  } catch (error) {
-    console.error('Error moving server image to permanent location:', error);
-    return tempImageUrl; // Return original URL if move fails
   }
 };

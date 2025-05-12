@@ -28,6 +28,26 @@ const DEFAULT_CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes
 const imageCache = new Map<string, CachedImage>();
 
 /**
+ * Convert Firebase Storage URLs to emulator format in development
+ */
+const convertToEmulatorUrl = (url: string): string => {
+  try {
+    if (!url || !url.includes('firebasestorage.googleapis.com')) return url;
+    if (process.env.NODE_ENV !== 'development') return url;
+    
+    const urlObj = new URL(url);
+    const pathMatch = urlObj.pathname.match(/\/v0\/b\/(.+?)\/o\/(.+)/);
+    if (!pathMatch) return url;
+    
+    const bucket = pathMatch[1];
+    const path = pathMatch[2];
+    return `http://127.0.0.1:9199/v0/b/${bucket}/o/${path}${urlObj.search}`;
+  } catch {
+    return url;
+  }
+};
+
+/**
  * Gets an image URL with caching
  * @param url The original image URL
  * @param maxAge Maximum age in milliseconds before cache expires (default: 30 minutes)
@@ -49,13 +69,13 @@ export const getCachedImageUrl = (url: string, maxAge: number = DEFAULT_CACHE_EX
       age: Math.round((now - cached.timestamp) / 1000) + 's',
       maxAge: Math.round(maxAge / 1000) + 's'
     });
-    return cached.url;
+    return convertToEmulatorUrl(cached.url);
   }
   
   // Cache the new URL
   imageCache.set(url, { url, timestamp: now });
   debugImageCache('miss', url, { cached: true });
-  return url;
+  return convertToEmulatorUrl(url);
 };
 
 /**

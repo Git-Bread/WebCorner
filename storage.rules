@@ -61,8 +61,8 @@ service firebase.storage {
     
     // Server Images
     match /server_images/{serverId}/{allPaths=**} {
-      // Allow server members AND server owners to view server images
-      allow read: if isServerMember(serverId) || isServerOwner(serverId);
+      // Allow server members
+      allow read: if isServerMember(serverId);
       
       // Only server owner can upload or modify server images
       allow write: if isServerOwner(serverId)

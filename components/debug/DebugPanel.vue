@@ -113,11 +113,6 @@ function toggleDebugMode() {
   // Toggle debug state
   debugEnabled.value = !debugEnabled.value;
   
-  // In production, we directly update localStorage
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(DEBUG_KEY, debugEnabled.value ? 'true' : 'false');
-  }
-  
   if (!debugEnabled.value) {
     panelVisible.value = false;
     showToast('Debug mode disabled', 'info');
