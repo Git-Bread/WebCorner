@@ -5,7 +5,7 @@ import { serverSchema } from '~/schemas/serverSchemas';
 import type { ServerRef } from '~/schemas/userSchemas';
 import { showToast } from '~/utils/toast';
 import { handleDatabaseError } from '~/utils/errorHandler';
-import { serverCache } from '~/utils/storageUtils/cacheUtil';
+import { serverCache, setCacheItem, getCacheItem, removeCacheItem } from '~/utils/storageUtils/cacheUtil';
 import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 import { shouldLog } from '~/utils/debugUtils';
 
@@ -49,10 +49,19 @@ export interface CurrentServerState {
 // Subsystem name for logging
 const SUBSYSTEM = 'server-core';
 
+// Additional debug categories for more granular logging
+const DEBUG_CACHE = 'server-cache';
+const DEBUG_DATA = 'server-data';
+const DEBUG_SERVER = 'server-selection';
+
 // Singleton instance that will be reused across the application
 let serverCoreInstance: ReturnType<typeof createServerCoreComposable> | null = null;
 // Track if initialization is in progress
 let initializationPromise: Promise<void> | null = null;
+
+// Cache keys
+const getUserDocCacheKey = (userId: string) => `user_doc_${userId}`;
+const USER_DOC_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
 // The actual implementation, renamed to createServerCoreComposable
 function createServerCoreComposable() {
@@ -97,93 +106,42 @@ function createServerCoreComposable() {
   });
 
   /**
-   * Update server data state from cache
-   * @param forceFresh Whether to bypass cache
-   * @returns Number of servers loaded from cache
+   * Convert a server to minimal display data format
+   * @param serverId The server ID
+   * @param data The full server data
    */
-  const updateFromCache = (forceFresh = false): number => {
-    if (!user.value || userServers.value.length === 0) return 0;
-    if (forceFresh) return 0;
+  const createServerDisplayData = (serverId: string, data: ServerData | null) => {
+    if (!data) return { serverId, name: 'Unknown Server' };
+    return {
+      serverId,
+      name: data.name || 'Unnamed Server',
+      imageUrl: data.server_img_url || null
+    };
+  };
+
+  /**
+   * Save server display data to cache
+   * This serves as a minimal caching mechanism for server sidebar display
+   * @returns void
+   */
+  const saveServerDisplayDataToCache = (): void => {
+    if (!user.value || Object.keys(serverData.value).length === 0) return;
     
     try {
-      let loadedCount = 0;
+      // Create minimal display data array from all loaded servers
+      const displayData = Object.entries(serverData.value).map(
+        ([serverId, data]) => createServerDisplayData(serverId, data)
+      );
       
-      // Process each server to get its data from cache
-      for (const server of userServers.value) {
-        // Skip servers that you already have data for
-        if (serverData.value[server.serverId]) continue;
-        
-        // Try to get from cache
-        const cachedServerData = serverCache.getServerData(server.serverId);
-        if (cachedServerData) {
-          // Cache any server image URL in the image cache too
-          if (cachedServerData.server_img_url) {
-            serverImageCache.cacheServerImage(server.serverId, cachedServerData.server_img_url);
-          }
-          
-          // Update our internal state
-          serverData.value = {
-            ...serverData.value,
-            [server.serverId]: cachedServerData as ServerData
-          };
-          
-          loadedCount++;
-        }
-      }
-      
-      if (loadedCount > 0) {
-        logDebug(`Loaded data for ${loadedCount} servers from cache`);
-      }
-      
-      return loadedCount;
+      // Save to cache
+      serverCache.saveServerDisplayList(user.value.uid, displayData);
+      logDebug(`Saved minimal display data for ${displayData.length} servers to cache`);
     } catch (error) {
-      logError('updateFromCache', error, 0);
-      return 0;
+      logError('saveServerDisplayDataToCache', error, null);
     }
   };
 
   // PUBLIC API
-
-  /**
-   * Save server data to cache 
-   * This serves as a simple wrapper around serverCache.saveServerData
-   * @param serverId The ID of the server to save (or all servers if not provided)
-   * @returns void
-   */
-  const saveServerDataToCache = (serverId?: string): void => {
-    if (!user.value || Object.keys(serverData.value).length === 0) return;
-    
-    try {
-      if (serverId && serverData.value[serverId]) {
-        // Save a specific server's data
-        serverCache.saveServerData(serverId, serverData.value[serverId]);
-        logDebug(`Saved server data to cache: ${serverId}`);
-      } else {
-        // Save all servers' data
-        for (const [id, data] of Object.entries(serverData.value)) {
-          serverCache.saveServerData(id, data);
-        }
-        logDebug(`Saved ${Object.keys(serverData.value).length} servers to cache`);
-      }
-    } catch (error) {
-      logError('saveServerDataToCache', error, null);
-    }
-  };
-
-  /**
-   * Save server list to cache
-   * This serves as a simple wrapper around serverCache.saveServerList
-   */
-  const saveServerListToCache = (): void => {
-    if (!user.value || userServers.value.length === 0) return;
-    
-    try {
-      serverCache.saveServerList(user.value.uid, userServers.value);
-      logDebug(`Saved server list with ${userServers.value.length} servers to cache`);
-    } catch (error) {
-      logError('saveServerListToCache', error, null);
-    }
-  };
 
   /**
    * Load user's servers from Firestore
@@ -192,120 +150,91 @@ function createServerCoreComposable() {
   const loadUserServers = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
     
-    // Skip if data is already loaded and we're not forcing a refresh
-    if (isDataLoaded.value && !forceFresh) {
-      return;
-    }
-    
     isLoading.value = true;
     
     try {
-      // Try to get cached server list first if not forcing fresh data
-      let cachedServerList: ServerRef[] | null = null;
+      // Try to get user document from cache first if not forcing fresh data
+      let userData: { servers?: ServerRef[] } = {};
       
       if (!forceFresh) {
-        cachedServerList = serverCache.getServerList(user.value.uid);
+        const cacheKey = getUserDocCacheKey(user.value.uid);
+        const cachedUserDoc = getCacheItem(cacheKey);
         
-        if (cachedServerList && cachedServerList.length > 0) {
-          userServers.value = cachedServerList;
-          
-          // Try to load server data from cache and check if we have everything
-          const cachedCount = updateFromCache();
-          
-          // If we have all servers' data cached, we can return early
-          if (cachedCount === cachedServerList.length) {
-            isLoading.value = false;
-            
-            // Mark data as loaded after successful loading
-            isDataLoaded.value = true;
-            return;
-          }
+        if (cachedUserDoc) {
+          logDebug(`Using cached user document for ${user.value.uid}`);
+          userData = cachedUserDoc;
         }
       }
       
-      // If cache miss, force fresh, or incomplete cached data, fetch from Firestore
-      const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const newServersList = userData.servers || [];
+      // If cache miss or force fresh, fetch from Firestore
+      if (!userData) {
+        const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
         
-        // Check if server list has changed
-        const needToUpdateList = forceFresh || 
-          !cachedServerList || 
-          newServersList.length !== cachedServerList.length ||
-          JSON.stringify(newServersList) !== JSON.stringify(cachedServerList);
-        
-        if (needToUpdateList) {
-          userServers.value = newServersList;
-          // Update cache with new server list
-          saveServerListToCache();
-        }
-        
-        // If server list is empty, just return
-        if (newServersList.length === 0) {
+        if (userDoc.exists()) {
+          userData = userDoc.data() as { servers?: ServerRef[] };
+          
+          // Cache the user document
+          const cacheKey = getUserDocCacheKey(user.value.uid);
+          setCacheItem(cacheKey, userData, USER_DOC_CACHE_EXPIRY, true);
+          logDebug(`Cached user document for ${user.value.uid}`);
+        } else {
           isLoading.value = false;
           return;
         }
-        
-        // Only load server details if there are servers
-        if (newServersList.length > 0) {
-          // Determine which servers need to be fetched
-          const serversToFetch = newServersList.filter(
-            (server: ServerRef) => forceFresh || !serverData.value[server.serverId]
-          );
-          
-          if (serversToFetch.length > 0) {
-            const serverPromises = serversToFetch.map((server: ServerRef) => 
-              getDoc(doc(firestore, 'servers', server.serverId))
-                .then(doc => ({
-                  serverId: server.serverId,
-                  data: doc.exists() ? doc.data() : null
-                }))
-                .catch(error => {
-                  logError(`loadServerDetails(${server.serverId})`, error, null);
-                  return { serverId: server.serverId, data: null };
-                })
-            );
-            
-            // Wait for all server data to be fetched in parallel
-            const newServersData = await Promise.all(serverPromises);
-            logDebug(`Successfully fetched ${newServersData.filter(s => s.data).length} server details`);
-            
-            // Update server data state - preserve existing data for servers not being refreshed
-            const updatedServerData = { ...serverData.value };
-            let updatedCount = 0;
-            
-            newServersData.forEach((server: { serverId: string; data: any | null }) => {
-              if (server.data) {
-                // Cache any server image URL
-                if (server.data.server_img_url) {
-                  serverImageCache.cacheServerImage(server.serverId, server.data.server_img_url);
-                }
-                
-                updatedServerData[server.serverId] = server.data as ServerData;
-                updatedCount++;
-              }
-            });
-            
-            if (updatedCount > 0) {
-              serverData.value = updatedServerData;
-              
-              // Update cache for each new server
-              newServersData.forEach((server) => {
-                if (server.data) {
-                  serverCache.saveServerData(server.serverId, server.data);
-                }
-              });
-            }
-          } else {
-            logDebug("No new server details needed, using cached data");
-          }
-        }
-        
-        // Mark data as loaded
-        isDataLoaded.value = true;
       }
+      
+      // Process the user data
+      const newServersList = userData.servers || [];
+      userServers.value = newServersList;
+      
+      // If server list is empty, just return
+      if (newServersList.length === 0) {
+        isLoading.value = false;
+        isDataLoaded.value = true;
+        return;
+      }
+      
+      // Only load server details if there are servers
+      if (newServersList.length > 0) {
+        // Fetch all server data
+        const serverPromises = newServersList.map((server: ServerRef) => 
+          getDoc(doc(firestore, 'servers', server.serverId))
+            .then(doc => ({
+              serverId: server.serverId,
+              data: doc.exists() ? doc.data() : null
+            }))
+            .catch(error => {
+              logError(`loadServerDetails(${server.serverId})`, error, null);
+              return { serverId: server.serverId, data: null };
+            })
+        );
+        
+        // Wait for all server data to be fetched in parallel
+        const newServersData = await Promise.all(serverPromises);
+        logDebug(`Successfully fetched ${newServersData.filter(s => s.data).length} server details`);
+        
+        // Update server data state
+        const updatedServerData = { ...serverData.value };
+        
+        newServersData.forEach((server: { serverId: string; data: any | null }) => {
+          if (server.data) {
+            // Cache any server image URL in the image cache
+            if (server.data.server_img_url) {
+              serverImageCache.cacheServerImage(server.serverId, server.data.server_img_url);
+            }
+            
+            updatedServerData[server.serverId] = server.data as ServerData;
+          }
+        });
+        
+        serverData.value = updatedServerData;
+        
+        // Save minimal display data to cache after loading
+        saveServerDisplayDataToCache();
+      }
+      
+      // Mark data as loaded
+      isDataLoaded.value = true;
     } catch (error) {
       logError('loadUserServers', error, null);
       showToast('Failed to load your servers', 'error');
@@ -315,7 +244,7 @@ function createServerCoreComposable() {
   };
   
   /**
-   * Load only the user's server list without detailed server data
+   * Load only the user's server list with minimal display data
    * This is a lightweight version of loadUserServers for faster initial loading
    */
   const loadUserServerList = async (forceFresh = false): Promise<void> => {
@@ -324,29 +253,75 @@ function createServerCoreComposable() {
     isLoading.value = true;
     
     try {
-      // Try to get cached server list first if not forcing fresh data
+      // Try to get cached server display list first if not forcing fresh data
       if (!forceFresh) {
-        const cachedServerList = serverCache.getServerList(user.value.uid);
+        const cachedDisplayList = serverCache.getServerDisplayList(user.value.uid);
         
-        if (cachedServerList && cachedServerList.length > 0) {
-          userServers.value = cachedServerList;
+        if (cachedDisplayList && cachedDisplayList.length > 0) {
+          // We have cached display data for the servers
+          logDebug(`Using ${cachedDisplayList.length} servers from display cache`);
+          
+          // Convert to ServerRef format for userServers
+          const serverRefs = cachedDisplayList.map(server => ({
+            serverId: server.serverId,
+            addedAt: new Date() // We don't store this in display cache
+          }));
+          
+          userServers.value = serverRefs;
+          
+          // Pre-fill serverData with minimal info for the sidebar
+          cachedDisplayList.forEach(server => {
+            if (!serverData.value[server.serverId]) {
+              // Create a minimal ServerData object just for display
+              serverData.value[server.serverId] = {
+                id: server.serverId,
+                name: server.name,
+                server_img_url: server.imageUrl || null,
+                description: '',
+                ownerId: '',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                memberCount: 0,
+                maxMembers: 100,
+                settings: {},
+                components: {}
+              };
+            }
+            
+            // Also ensure image is cached
+            if (server.imageUrl) {
+              serverImageCache.cacheServerImage(server.serverId, server.imageUrl);
+            }
+          });
+          
+          isDataLoaded.value = true;
           isLoading.value = false;
+          return;
+        }
+        
+        // Try to get user document from cache before we call the full loadUserServers
+        const cacheKey = getUserDocCacheKey(user.value.uid);
+        const cachedUserDoc = getCacheItem<{ servers?: ServerRef[] }>(cacheKey);
+        
+        if (cachedUserDoc) {
+          logDebug(`Using cached user document for ${user.value.uid} in loadUserServerList`);
+          
+          // Process the user data for just the server list
+          const newServersList = cachedUserDoc.servers || [];
+          userServers.value = newServersList;
+          
+          // Mark data as loaded - we'll load full server data later if needed
+          isDataLoaded.value = true;
+          isLoading.value = false;
+          
+          // Save display data to cache for future use
+          saveServerDisplayDataToCache();
           return;
         }
       }
       
-      // If cache miss or force fresh, fetch from Firestore
-      const userDoc = await getDoc(doc(firestore, 'users', user.value.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const newServersList = userData.servers || [];
-        
-        userServers.value = newServersList;
-        
-        // Update cache with new server list
-        saveServerListToCache();
-      }
+      // If all cache attempts failed or force fresh, fetch full data from Firestore
+      await loadUserServers(forceFresh);
     } catch (error) {
       logError('loadUserServerList', error, null);
       showToast('Failed to load your servers', 'error');
@@ -377,48 +352,38 @@ function createServerCoreComposable() {
     // Check if we already have the server data loaded
     let serverInfo = serverData.value[serverId];
     
-    // If not, try to load it from cache first
-    if (!serverInfo) {
-      serverInfo = serverCache.getServerData(serverId) as ServerData;
-      
-      // If not in cache, fetch from Firestore
-      if (!serverInfo && user.value) {
-        logDebug(`Server data not in cache for ${serverId}, fetching from Firestore`);
-        try {
-          const serverDoc = await getDoc(doc(firestore, 'servers', serverId));
-          if (serverDoc.exists()) {
-            serverInfo = serverDoc.data() as ServerData;
-            logDebug(`Successfully fetched server data for ${serverId}`);
-            
-            // Update the server data cache
-            serverData.value = {
-              ...serverData.value,
-              [serverId]: serverInfo
-            };
-            
-            // Update cache
-            serverCache.saveServerData(serverId, serverInfo);
-          } else {
-            logDebug(`Server ${serverId} not found in Firestore`);
-            return;
+    // If not in local state, we have to fetch from Firestore (no caching of full server data)
+    if (!serverInfo && user.value) {
+      logDebug(`Fetching fresh server data for ${serverId} from Firestore`);
+      try {
+        const serverDoc = await getDoc(doc(firestore, 'servers', serverId));
+        if (serverDoc.exists()) {
+          serverInfo = serverDoc.data() as ServerData;
+          logDebug(`Successfully fetched server data for ${serverId}`);
+          
+          // Update the server data in local state
+          serverData.value = {
+            ...serverData.value,
+            [serverId]: serverInfo
+          };
+          
+          // Cache the server image URL
+          if (serverInfo.server_img_url) {
+            serverImageCache.cacheServerImage(serverId, serverInfo.server_img_url);
           }
-        } catch (error) {
-          logError(`setCurrentServer(${serverId})`, error, null);
+          
+          // Update display cache with the new data
+          saveServerDisplayDataToCache();
+        } else {
+          logDebug(`Server ${serverId} not found in Firestore`);
           return;
         }
-      } else if (serverInfo) {
-        // We got it from cache, update local state
-        serverData.value = {
-          ...serverData.value,
-          [serverId]: serverInfo
-        };
-        logDebug(`Loaded server data for ${serverId} from cache`);
-      } else {
-        logDebug(`Server ${serverId} not found in server data cache or Firestore`);
+      } catch (error) {
+        logError(`setCurrentServer(${serverId})`, error, null);
         return;
       }
     } else {
-      logDebug(`Using cached server data for ${serverId} from local state`);
+      logDebug(`Using server data for ${serverId} from local state`);
     }
     
     // Update the current server reference
@@ -482,8 +447,13 @@ function createServerCoreComposable() {
             [response.serverId]: response.serverData
           };
           
-          // Cache the server data
-          serverCache.saveServerData(response.serverId, response.serverData);
+          // Cache the server image
+          if (response.serverData.server_img_url) {
+            serverImageCache.cacheServerImage(response.serverId, response.serverData.server_img_url);
+          }
+          
+          // Update the display cache
+          saveServerDisplayDataToCache();
         }
         
         // Load the latest data from Firestore to ensure everything is in sync
@@ -522,10 +492,10 @@ function createServerCoreComposable() {
   };
 
   /**
-   * Update server metadata like settings, components, or field configuration
-   * @param serverId - The ID of the server to update
-   * @param metadata - Object containing the metadata to update
-   * @returns Promise<boolean> - Returns true on success, false on failure
+   * Update server metadata
+   * @param serverId The server ID to update
+   * @param metadata The metadata to update
+   * @returns Whether the update was successful
    */
   const updateServerMetadata = async (
     serverId: string,
@@ -568,8 +538,8 @@ function createServerCoreComposable() {
           } as ServerData;
         }
         
-        // Update the cache
-        serverCache.saveServerData(serverId, serverData.value[serverId]);
+        // Update the display data cache
+        saveServerDisplayDataToCache();
       }
       
       logDebug(`Successfully updated server metadata for: ${serverId}`);
@@ -584,7 +554,7 @@ function createServerCoreComposable() {
   
   /**
    * Get a specific server's data by ID
-   * If data is not in local state, tries cache first, then fetches from Firestore
+   * If data is not in local state, fetch from Firestore
    */
   const getServerById = async (serverId: string, forceFresh = false): Promise<ServerData | null> => {
     if (!serverId) return null;
@@ -592,26 +562,25 @@ function createServerCoreComposable() {
     // Check local state first if not forcing fresh data
     if (!forceFresh && serverData.value[serverId]) {
       logDebug(`Using cached data for server: ${serverId} from local state`);
+      
+      // Debug server data structure
+      if (shouldLog(DEBUG_DATA)) {
+        console.log(`[ServerCore Data] LOCAL STATE DATA for ${serverId}:`, JSON.stringify({
+          id: serverId,
+          name: serverData.value[serverId]?.name,
+          description: serverData.value[serverId]?.description,
+          hasComponents: !!serverData.value[serverId]?.components,
+          componentsCount: serverData.value[serverId]?.components ? Object.keys(serverData.value[serverId].components).length : 0,
+          memberCount: serverData.value[serverId]?.memberCount,
+          hasImage: !!serverData.value[serverId]?.server_img_url,
+          imageUrl: serverData.value[serverId]?.server_img_url
+        }, null, 2));
+      }
+      
       return serverData.value[serverId];
     }
     
-    // If not in local state or forcing fresh, but not forcing fresh from Firestore,
-    // try the cache first
-    if (!forceFresh) {
-      const cachedData = serverCache.getServerData(serverId) as ServerData;
-      if (cachedData) {
-        // Update local state
-        serverData.value = {
-          ...serverData.value,
-          [serverId]: cachedData
-        };
-        
-        logDebug(`Found server data in cache: ${serverId}`);
-        return cachedData;
-      }
-    }
-    
-    // If forcing fresh or not in cache, fetch from Firestore
+    // If not in local state or forcing fresh, fetch from Firestore
     logDebug(`Fetching server data from Firestore: ${serverId}`);
     
     try {
@@ -621,14 +590,34 @@ function createServerCoreComposable() {
       if (serverDoc.exists()) {
         const data = serverDoc.data() as ServerData;
         
+        // Debug Firestore server data
+        if (shouldLog(DEBUG_DATA)) {
+          console.log(`[ServerCore Data] FIRESTORE DATA for ${serverId}:`, JSON.stringify({
+            id: serverId,
+            name: data?.name,
+            description: data?.description,
+            hasComponents: !!data?.components,
+            componentsCount: data?.components ? Object.keys(data.components).length : 0,
+            memberCount: data?.memberCount,
+            hasImage: !!data?.server_img_url,
+            imageUrl: data?.server_img_url,
+            rawData: data
+          }, null, 2));
+        }
+        
         // Update local state
         serverData.value = {
           ...serverData.value,
           [serverId]: data
         };
         
-        // Update cache
-        serverCache.saveServerData(serverId, data);
+        // Update image cache if needed
+        if (data.server_img_url) {
+          serverImageCache.cacheServerImage(serverId, data.server_img_url);
+        }
+        
+        // Update display data cache
+        saveServerDisplayDataToCache();
         
         return data;
       }
@@ -656,6 +645,11 @@ function createServerCoreComposable() {
       
       // Clear all server-related caches
       serverCache.invalidateAllServerData(userId);
+      
+      // Clear user document cache
+      const cacheKey = getUserDocCacheKey(userId);
+      removeCacheItem(cacheKey, true);
+      
       logDebug(`Cleared all server caches for user: ${userId}`);
     } catch (error) {
       logError('clearServerCaches', error, null);
@@ -682,35 +676,6 @@ function createServerCoreComposable() {
     }
   };
 
-  // Utility function to select initial server from the list
-  const selectInitialServer = async (): Promise<void> => {
-    if (!currentServer.value && userServers.value.length > 0 && user.value) {
-      let serverIdToSelect: string | null = null;
-      
-      // Try to restore the last selected server first
-      serverIdToSelect = serverCache.getLastSelectedServer(user.value.uid);
-      
-      // Make sure the server still exists in the user's server list
-      if (serverIdToSelect && !userServers.value.some(s => s.serverId === serverIdToSelect)) {
-        logDebug(`Last selected server ${serverIdToSelect} no longer in user's server list`);
-        serverIdToSelect = null;
-      } else if (serverIdToSelect) {
-        logDebug(`Restoring last selected server: ${serverIdToSelect}`);
-      }
-      
-      // If no last selected server or it wasn't found, default to the first one
-      if (!serverIdToSelect) {
-        serverIdToSelect = userServers.value[0].serverId;
-        logDebug(`Defaulting to first server in list: ${serverIdToSelect}`);
-      }
-      
-      // Set the selected server as current
-      if (serverIdToSelect) {
-        await setCurrentServer(serverIdToSelect);
-      }
-    }
-  };
-
   return {
     // State
     userServers,
@@ -732,9 +697,7 @@ function createServerCoreComposable() {
     getServerById,
     clearServerCaches,
     clearCurrentServer,
-    saveServerDataToCache,
-    saveServerListToCache,
-    selectInitialServer
+    saveServerDisplayDataToCache
   };
 }
 
@@ -768,9 +731,6 @@ export const useServerCore = () => {
           initializationPromise = new Promise<void>(async (resolve) => {
             try {
               await serverCoreInstance!.loadUserServerList();
-              
-              // Select initial server now that the list is loaded
-              await serverCoreInstance!.selectInitialServer();
             } catch (error) {
               console.error('[ServerCore] Error in initial server list load:', error);
             } finally {

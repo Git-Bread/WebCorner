@@ -10,7 +10,7 @@ import {
   sendEmailVerification,
   reload
 } from 'firebase/auth'
-import { clearCache } from '~/utils/storageUtils/cacheUtil'
+import { resetAppState } from '~/utils/resetState'
 
 export const useAuth = () => {
   const { auth } = useFirebase()
@@ -25,26 +25,7 @@ export const useAuth = () => {
 
   // Helper to clear caches on auth state changes
   const clearCachesOnAuthChange = () => {
-    // Use clearCache with true parameter to properly clear both memory cache and localStorage
-    clearCache(true) // Clear memory cache AND localStorage
-    
-    // Reset Nuxt state values that might persist between sessions
-    // Profile-related state
-    useState('profile-userName').value = ''
-    useState('profile-userPhotoUrl').value = '/images/Profile_Pictures/default_profile.jpg'
-    useState('profile-data').value = { username: '', bio: '', profileImage: '' }
-    useState('profile-tempImage').value = ''
-    useState('profile-userCustomImages').value = []
-    useState('profile-isEditing').value = false
-    useState('profile-isSaving').value = false
-    useState('profile-isImageUploading').value = false
-    useState('profile-isLoadingUserImages').value = false
-    useState('profile-isLoadingData').value = false
-    useState('profile-dataLoaded').value = false
-    
-    // Server-related state
-    useState('server-current').value = null
-    useState('server-list').value = []
+    resetAppState(previousUserId.value || undefined)
   }
   
   // Initialize auth state listener only on the client side

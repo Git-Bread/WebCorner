@@ -56,7 +56,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useServerPermissions } from '~/composables/server/useServerPermissions';
-import { useServerCore } from '~/composables/server/useServerCore';
 
 // Define the component type interface
 interface ComponentType {
@@ -84,9 +83,8 @@ const emit = defineEmits<{
   'cancel': [];
 }>();
 
-// Get server permissions and core functionality
+// Get server permissions functionality
 const { isServerAdminOrOwner, isServerOwner } = useServerPermissions();
-const { currentServerId } = useServerCore();
 
 // Track if user is admin
 const isAdmin = ref(false);
@@ -97,17 +95,12 @@ onMounted(async () => {
   await checkAdminStatus();
 });
 
-// Watch for changes to currentServerId and update admin status
-watch(currentServerId, async () => {
-  await checkAdminStatus();
-}, { immediate: true });
-
 // Function to check admin status
 async function checkAdminStatus(): Promise<boolean> {
   isChecking.value = true;
   try {
-    // Use serverId prop if available, otherwise fall back to currentServerId from composable
-    const effectiveServerId = props.serverId || currentServerId.value;
+    // Use serverId prop from parent
+    const effectiveServerId = props.serverId;
     
     if (effectiveServerId) {
       // First check if user is owner, which is more definitive

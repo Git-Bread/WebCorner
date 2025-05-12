@@ -67,12 +67,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useServerCore } from '~/composables/server';
 import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
-// External props we need to keep for integration
+// Define props that receive data from parent instead of using direct composables
 const props = defineProps<{
   selectedServerId?: string | null;
+  userServers: any[];
+  serverData: Record<string, any>;
+  isLoading: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -81,30 +83,29 @@ const emit = defineEmits<{
   (e: 'join-server'): void;
 }>();
 
-// Use server composables directly
-const { userServers, serverData, isLoading } = useServerCore();
-
-// Helper functions using composable data directly
+// Helper functions using passed props data directly
 const getServerName = (serverId: string): string => {
-  if (!serverData.value[serverId]) {
-    console.warn(`Server data missing for ${serverId} in ServerList component, using fallback name`);
-    return 'Loading server...';
+  if (!props.serverData || !props.serverData[serverId]) {
+    // Instead of warning, just return a placeholder while loading
+    return 'Loading...';
   }
-  return serverData.value[serverId]?.name || 'Unknown Server';
+  return props.serverData[serverId]?.name || 'Unnamed Server';
 };
 
 const getServerInitial = (serverId: string): string => {
   const name = getServerName(serverId);
-  return name.charAt(0).toUpperCase();
+  // If still loading, provide a safe default
+  return name === 'Loading...' ? '?' : name.charAt(0).toUpperCase();
 };
 
 const getServerImageUrl = (serverId: string): string | undefined => {
-  if (!serverId || !serverData.value) return undefined;
+  if (!serverId || !props.serverData || !props.serverData[serverId]) return undefined;
   
-  const server = serverData.value[serverId];
-  if (!server) return undefined;
+  const server = props.serverData[serverId];
+  // Ensure server exists and has a valid image URL
+  if (!server?.server_img_url) return undefined;
   
-  // Use the serverImageCache utility to get cached image URL
-  return server.server_img_url ? serverImageCache.getServerImage(server.server_img_url) : undefined;
+  // Return the cached server image URL
+  return serverImageCache.getServerImage(server.server_img_url);
 };
 </script>

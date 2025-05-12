@@ -303,86 +303,40 @@ export const profileCache = {
  */
 export const serverCache = {
   /**
-   * Save server list to cache
+   * Save minimal server display data for sidebar
    * @param userId User ID
-   * @param serverList Server list data
+   * @param serverList Server list with minimal display data
    * @param persist Whether to also persist in localStorage (default: true)
    */
-  saveServerList: (userId: string, serverList: any[], persist: boolean = true): void => {
-    const key = `serverlist_${userId}`;
-    setCacheItem(key, serverList, 6 * 60 * 60 * 1000, persist); // 6 hours cache (reduced from 15 minutes)
-    debugCache('server list save', key, { userId, count: serverList.length, persist });
+  saveServerDisplayList: (userId: string, serverList: Array<{
+    serverId: string;
+    name: string;
+    imageUrl?: string | null;
+  }>, persist: boolean = true): void => {
+    const key = `server_display_${userId}`;
+    // Cache for 1 hour only - display data is lightweight but should be refreshed
+    setCacheItem(key, serverList, 60 * 60 * 1000, persist);
+    debugCache('serverCache', `saveServerDisplayList for ${userId}`, { count: serverList.length });
   },
   
   /**
-   * Get server list from cache
+   * Get minimal server display data for sidebar
    * @param userId User ID
-   * @returns Server list or null if not cached
+   * @returns Minimal server display data or null if not cached
    */
-  getServerList: (userId: string): any[] | null => {
-    const key = `serverlist_${userId}`;
-    const result = getCacheItem<any[]>(key);
-    debugCache('server list get', key, { 
-      userId, 
-      found: result !== null,
-      count: result ? result.length : 0
-    });
-    return result;
-  },
-  
-  /**
-   * Save specific server data to cache
-   * @param serverId Server ID
-   * @param data Server data
-   * @param persist Whether to also persist in localStorage (default: true)
-   */
-  saveServerData: (serverId: string, data: any, persist: boolean = true): void => {
-    const key = `server_${serverId}`;
-    setCacheItem(key, data, 6 * 60 * 60 * 1000, persist); // 6 hours cache (reduced from 15 minutes)
-    debugCache('server data save', key, { serverId, persist });
-  },
-  
-  /**
-   * Get specific server data from cache
-   * @param serverId Server ID
-   * @returns Server data or null if not cached
-   */
-  getServerData: (serverId: string): any => {
-    const key = `server_${serverId}`;
-    const result = getCacheItem(key);
-    debugCache('server data get', key, { serverId, found: result !== null });
-    return result;
-  },
-  
-  /**
-   * Save user layout for a server
-   * @param userId User ID
-   * @param serverId Server ID
-   * @param layoutData Layout configuration
-   * @param persist Whether to also persist in localStorage (default: true)
-   */
-  saveUserLayout: (userId: string, serverId: string, layoutData: any[], persist: boolean = true): void => {
-    const key = `layout_${userId}_${serverId}`;
-    setCacheItem(key, layoutData, 24 * 60 * 60 * 1000, persist); // 24 hours cache (reduced from 1 hour)
-    debugCache('layout save', key, { userId, serverId, persist, fields: Array.isArray(layoutData) ? layoutData.length : 0 });
-  },
-  
-  /**
-   * Get user layout for a server
-   * @param userId User ID
-   * @param serverId Server ID
-   * @returns Layout data or null if not cached
-   */
-  getUserLayout: (userId: string, serverId: string): any[] | null => {
-    const key = `layout_${userId}_${serverId}`;
-    const result = getCacheItem<any[]>(key);
-    debugCache('layout get', key, { 
-      userId, 
-      serverId, 
-      found: result !== null,
-      fields: Array.isArray(result) ? result.length : 0
-    });
-    return result;
+  getServerDisplayList: (userId: string): Array<{
+    serverId: string;
+    name: string;
+    imageUrl?: string | null;
+  }> | null => {
+    const key = `server_display_${userId}`;
+    const data = getCacheItem<Array<{
+      serverId: string;
+      name: string;
+      imageUrl?: string | null;
+    }>>(key);
+    debugCache('serverCache', `getServerDisplayList for ${userId}`, { found: !!data });
+    return data;
   },
   
   /**
@@ -390,15 +344,10 @@ export const serverCache = {
    * @param serverId Server ID
    * @param userId User ID
    */
-  setLastSelectedServer: (serverId: string | null, userId: string): void => {
-    const key = `lastserver_${userId}`;
-    if (serverId) {
-      setCacheItem(key, serverId, 7 * 24 * 60 * 60 * 1000, true); // 7 days cache (reduced from 30 days)
-      debugCache('last server save', key, { userId, serverId });
-    } else {
-      removeCacheItem(key);
-      debugCache('last server remove', key, { userId });
-    }
+  setLastSelectedServer: (serverId: string, userId: string): void => {
+    const key = `last_server_${userId}`;
+    setCacheItem(key, serverId, 30 * 24 * 60 * 60 * 1000, true); // 30 days
+    debugCache('serverCache', `setLastSelectedServer for ${userId}`, { serverId });
   },
   
   /**
@@ -407,10 +356,10 @@ export const serverCache = {
    * @returns Server ID or null if not cached
    */
   getLastSelectedServer: (userId: string): string | null => {
-    const key = `lastserver_${userId}`;
-    const result = getCacheItem<string>(key);
-    debugCache('last server get', key, { userId, found: result !== null });
-    return result;
+    const key = `last_server_${userId}`;
+    const data = getCacheItem<string>(key);
+    debugCache('serverCache', `getLastSelectedServer for ${userId}`, { serverId: data });
+    return data;
   },
   
   /**
@@ -418,9 +367,9 @@ export const serverCache = {
    * @param userId User ID
    */
   removeLastSelectedServer: (userId: string): void => {
-    const key = `lastserver_${userId}`;
-    removeCacheItem(key);
-    debugCache('last server remove', key, { userId });
+    const key = `last_server_${userId}`;
+    removeCacheItem(key, true);
+    debugCache('serverCache', `removeLastSelectedServer for ${userId}`);
   },
   
   /**
@@ -428,12 +377,15 @@ export const serverCache = {
    * @param userId User ID
    */
   invalidateAllServerData: (userId: string): void => {
-    // Remove server list
-    removeCacheItem(`serverlist_${userId}`);
-    debugCache('server invalidate all', `serverlist_${userId}`, { userId });
+    debugCache('serverCache', `invalidateAllServerData for ${userId}`);
     
-    // For more specific server data, we would need the server IDs
-    // This would be handled in the specific server components
+    // Remove last selected server
+    const lastServerKey = `last_server_${userId}`;
+    removeCacheItem(lastServerKey, true);
+    
+    // Remove server display list 
+    const serverDisplayKey = `server_display_${userId}`;
+    removeCacheItem(serverDisplayKey, true);
   }
 };
 
@@ -453,14 +405,14 @@ export const clearUserCaches = (previousUserId?: string): void => {
       itemsToClear.push(`profile_${previousUserId}`);
       
       // Server list
-      itemsToClear.push(`serverlist_${previousUserId}`);
+      itemsToClear.push(`user_servers_${previousUserId}`);
       
       // Last selected server
-      itemsToClear.push(`lastserver_${previousUserId}`);
+      itemsToClear.push(`last_server_${previousUserId}`);
       
       // Find and clear all layout caches for this user
       for (const [key] of memoryCache.entries()) {
-        if (key.startsWith(`layout_${previousUserId}_`)) {
+        if (key.startsWith(`user_layout_${previousUserId}_`)) {
           itemsToClear.push(key);
         }
       }
@@ -482,10 +434,10 @@ export const clearUserCaches = (previousUserId?: string): void => {
       for (const [key] of memoryCache.entries()) {
         if (
           key.startsWith('profile_') || 
-          key.startsWith('serverlist_') ||
-          key.startsWith('layout_') ||
-          key.startsWith('lastserver_') ||
-          key.startsWith('server_')
+          key.startsWith('user_servers_') ||
+          key.startsWith('user_layout_') ||
+          key.startsWith('last_server_') ||
+          key.startsWith('server_data_')
         ) {
           keysToRemove.push(key);
         }

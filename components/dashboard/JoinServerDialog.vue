@@ -6,38 +6,38 @@
       <!-- Join Method Tabs -->
       <div class="flex mb-4 border-b border-border">
         <button 
-          @click="activeTab = 'serverId'"
+          @click="form.activeTab = 'serverId'"
           class="px-4 py-2 text-text-muted hover:text-text transition-all"
-          :class="{ 'text-theme-primary border-b-2 border-theme-primary': activeTab === 'serverId' }"
+          :class="{ 'text-theme-primary border-b-2 border-theme-primary': form.activeTab === 'serverId' }"
         >
           Server ID
         </button>
         <button 
-          @click="activeTab = 'invite'"
+          @click="form.activeTab = 'invite'"
           class="px-4 py-2 text-text-muted hover:text-text transition-all"
-          :class="{ 'text-theme-primary border-b-2 border-theme-primary': activeTab === 'invite' }"
+          :class="{ 'text-theme-primary border-b-2 border-theme-primary': form.activeTab === 'invite' }"
         >
           Invitation Code
         </button>
       </div>
       
-      <form @submit.prevent="handleJoin">
+      <form @submit.prevent="handleSubmit">
         <!-- Server ID Tab -->
-        <div v-if="activeTab === 'serverId'">          
+        <div v-if="form.activeTab === 'serverId'">          
           <div class="mb-4">
             <label for="serverId" class="block text-text mb-1">Server ID</label>
             <div class="relative">
               <input
                 id="serverId"
-                v-model="serverId"
+                v-model="form.serverId"
                 type="text"
-                :disabled="isJoiningServer"
+                :disabled="isJoining"
                 class="w-full p-2 border border-border rounded-md bg-surface text-text"
-                :class="{'opacity-75': isJoiningServer}"
+                :class="{'opacity-75': isJoining}"
                 placeholder="Enter server ID"
                 required
               />
-              <div v-if="isJoiningServer && activeTab === 'serverId'" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div v-if="isJoining && form.activeTab === 'serverId'" class="absolute right-3 top-1/2 transform -translate-y-1/2">
                 <div class="w-4 h-4 border-2 border-t-transparent border-theme-primary rounded-full animate-spin"></div>
               </div>
             </div>
@@ -52,15 +52,15 @@
             <div class="relative">
               <input
                 id="inviteCode"
-                v-model="inviteCode"
+                v-model="form.inviteCode"
                 type="text"
-                :disabled="isJoiningServer"
+                :disabled="isJoining"
                 class="w-full p-2 border border-border rounded-md bg-surface text-text"
-                :class="{'opacity-75': isJoiningServer}"
+                :class="{'opacity-75': isJoining}"
                 placeholder="Enter invitation code"
                 required
               />
-              <div v-if="isJoiningServer && activeTab === 'invite'" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div v-if="isJoining && form.activeTab === 'invite'" class="absolute right-3 top-1/2 transform -translate-y-1/2">
                 <div class="w-4 h-4 border-2 border-t-transparent border-theme-primary rounded-full animate-spin"></div>
               </div>
             </div>
@@ -74,18 +74,18 @@
         <div class="flex justify-end space-x-3 mt-6">
           <button
             type="button"
-            @click="$emit('close')"
+            @click="handleClose"
             class="px-4 py-2 border border-border rounded-md text-text hover:bg-surface transition-all"
           >
             Cancel
           </button>          
           <button
             type="submit"
-            :disabled="isJoiningServer"
+            :disabled="isJoining"
             class="px-4 py-2 bg-theme-primary text-background rounded-md hover:bg-opacity-90 transition-all flex items-center justify-center min-w-[100px]"
           >
-            <span v-if="isJoiningServer" class="w-4 h-4 border-2 border-t-transparent border-background rounded-full animate-spin mr-2"></span>
-            {{ isJoiningServer ? 'Joining...' : 'Join Server' }}
+            <span v-if="isJoining" class="w-4 h-4 border-2 border-t-transparent border-background rounded-full animate-spin mr-2"></span>
+            {{ isJoining ? 'Joining...' : 'Join Server' }}
           </button>
         </div>
       </form>
@@ -94,114 +94,111 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
-import { useServerCore, useServerJoining, useServerInvitations } from '~/composables/server';
+import { ref, reactive, watch } from 'vue';
+import { useServerJoining, useServerInvitations } from '~/composables/server';
 import { showToast } from '~/utils/toast';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faTimes, faSpinner, faLink, faServer, faIdCard } from '@fortawesome/free-solid-svg-icons';
+
+library.add(faTimes, faSpinner, faLink, faServer, faIdCard);
 
 const props = defineProps<{
   isOpen: boolean;
+  isJoining: boolean;
 }>();
 
-// Use composables directly
-const { setCurrentServer, loadUserServerList } = useServerCore();
-const { joinServer, isJoiningServer: isJoiningDirectly } = useServerJoining();
-const { joinServerWithInvite } = useServerInvitations();
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'join', serverId: string): void;
+  (e: 'join-with-invite', inviteCode: string): void;
+}>();
 
-// Maintain a local isJoiningWithInvite state since it's not exposed by the composable
-const isJoiningWithInvite = ref(false);
+// Form data
+const form = reactive({
+  activeTab: 'invite', // 'invite' or 'id'
+  inviteCode: '',
+  serverId: ''
+});
 
-// Form state
-const serverId = ref('');
-const inviteCode = ref('');
-const activeTab = ref('invite'); // Default to invite code tab
-const errorMessage = ref('');
+// State tracking
+const isInviteValid = ref(false);
+const isSubmitting = ref(false);
+const errorMessage = ref<string | null>(null);
 
-// Computed property for overall joining state
-const isJoiningServer = computed(() => 
-  (activeTab.value === 'serverId' && isJoiningDirectly.value) || 
-  (activeTab.value === 'invite' && isJoiningWithInvite.value)
-);
-
-// Reset form when dialog opens/closes
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    serverId.value = '';
-    inviteCode.value = '';
-    errorMessage.value = '';
+// Watch for server ID tab input
+watch(() => form.serverId, (newValue) => {
+  // Reset error on input change
+  errorMessage.value = null;
+  
+  // Validate server ID format (must be a string with 20+ characters with optional dashes)
+  if (newValue.trim().length > 0 && !/^[a-zA-Z0-9-]{10,}$/.test(newValue)) {
+    errorMessage.value = 'Invalid server ID format';
   }
 });
 
-// Define emits
-const emit = defineEmits<{
-  (e: 'close'): void;
-}>();
+// Watch for invite code tab input
+watch(() => form.inviteCode, (newValue) => {
+  // Reset error on input change
+  errorMessage.value = null;
+  isInviteValid.value = false;
+  
+  // Validate invite code (alphanumeric with dashes, 6+ chars)
+  if (newValue.trim().length > 0 && !/^[a-zA-Z0-9-]{6,}$/.test(newValue)) {
+    errorMessage.value = 'Invalid invite code format';
+  } else if (newValue.trim().length >= 6) {
+    isInviteValid.value = true;
+  }
+});
 
-const handleJoin = async () => {
-  errorMessage.value = '';
+// Handle join with ID
+const handleJoinWithId = async () => {
+  if (!form.serverId.trim() || errorMessage.value) return;
   
   try {
-    if (activeTab.value === 'serverId') {
-      if (!serverId.value.trim()) {
-        errorMessage.value = 'Please enter a server ID';
-        return;
-      }
-      
-      // Join server directly using the ID
-      const result = await joinServer(serverId.value.trim());
-      
-      if (result && result.success && result.serverId) {
-        // Reload server list
-        await loadUserServerList();
-        
-        // Set as current server
-        await setCurrentServer(result.serverId);
-        
-        // Close dialog
-        emit('close');
-        
-        // Show success message
-        showToast('Successfully joined server!', 'success');
-      } else if (result && !result.success && result.reason) {
-        errorMessage.value = result.reason;
-      }
-    } else {
-      if (!inviteCode.value.trim()) {
-        errorMessage.value = 'Please enter an invitation code';
-        return;
-      }
-      
-      // Start the joining process
-      isJoiningWithInvite.value = true;
-      
-      try {
-        // Join server using invitation code
-        const result = await joinServerWithInvite(inviteCode.value.trim());
-        
-        if (result && result.success && result.serverId) {
-          // Reload server list
-          await loadUserServerList();
-          
-          // Set as current server
-          await setCurrentServer(result.serverId);
-          
-          // Close dialog
-          emit('close');
-          
-          // Show success message
-          showToast('Successfully joined server with invitation!', 'success');
-        } else if (result && !result.success && result.error) {
-          errorMessage.value = result.error;
-        }
-      } finally {
-        isJoiningWithInvite.value = false;
-      }
-    }
+    // Emit join event to parent
+    emit('join', form.serverId);
   } catch (error) {
-    console.error('Error joining server:', error);
-    errorMessage.value = 'An unexpected error occurred while joining the server';
-    
-    // Reset joining states
-    isJoiningWithInvite.value = false;
+    console.error('Error joining server by ID:', error);
   }
 };
+
+// Handle join with invite code
+const handleJoinWithInvite = async () => {
+  if (!form.inviteCode.trim() || !isInviteValid.value || errorMessage.value) return;
+  
+  try {
+    // Emit join-with-invite event to parent
+    emit('join-with-invite', form.inviteCode);
+  } catch (error) {
+    console.error('Error joining server with invite:', error);
+  }
+};
+
+// Handle form submission based on active tab
+const handleSubmit = () => {
+  if (props.isJoining) return; // Prevent multiple submissions
+  
+  if (form.activeTab === 'invite') {
+    handleJoinWithInvite();
+  } else {
+    handleJoinWithId();
+  }
+};
+
+// Clear form data on close
+const handleClose = () => {
+  form.inviteCode = '';
+  form.serverId = '';
+  errorMessage.value = null;
+  emit('close');
+};
+
+// Watch for dialog open/close to reset form
+watch(() => props.isOpen, (isOpen) => {
+  if (!isOpen) {
+    form.inviteCode = '';
+    form.serverId = '';
+    errorMessage.value = null;
+  }
+});
 </script>

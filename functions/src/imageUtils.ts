@@ -56,8 +56,19 @@ export const moveServerImageToPermanent = async (
     // Move the file to the permanent location
     await bucket.file(path).move(permanentPath);
     
-    // Return the new URL of the image in permanent location
-    return `https://storage.googleapis.com/${bucket.name}/${permanentPath}`;
+    // Set proper metadata for the file after moving it
+    await bucket.file(permanentPath).setMetadata({
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000' // Cache for 1 year
+    });
+    
+    // Generate a public URL without authentication tokens
+    // This avoids token expiration issues and browser security blocks
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${permanentPath}`;
+    
+    console.log(`Server image moved to permanent location: ${permanentPath}`);
+    
+    return publicUrl;
   } catch (error) {
     console.error('Error moving image to permanent location:', error);
     return null;

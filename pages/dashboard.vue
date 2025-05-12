@@ -3,6 +3,9 @@
     <!-- Server Sidebar Component -->
     <ServerSidebar 
       :selected-server-id="selectedServerId"
+      :server-data="serverData"
+      :user-servers="userServers"
+      :is-loading="isLoadingServerSelection || isLoading"
       @server-selected="handleServerSelection"
       @add-server="showCreateServerDialog = true"
       @join-server="showJoinServerDialog = true"
@@ -13,45 +16,43 @@
       <!-- Only show headline when no server is selected -->
       <h1 v-if="!selectedServerId" class="font-bold text-3xl text-heading mb-6 p-8">Dashboard</h1>
       
-      <template v-if="!isLoading && (!hasServers)">
-        <!-- No servers message -->
-        <ClientOnly>
+      <ClientOnly>
+        <template v-if="!isLoading && !isLoadingServerSelection && (!hasServers)">
+          <!-- No servers message -->
           <NoServersMessage 
             @create-server="showCreateServerDialog = true"
             @join-server="showJoinServerDialog = true"
             class="p-8"
           />
-        </ClientOnly>
-      </template>
-      
-      <!-- Server content with field container when server is selected -->
-      <template v-else-if="hasServers">
-        <div 
-          :class="{'p-8': !selectedServerId, 'p-0': selectedServerId}"
-        >
-          <div v-if="selectedServerId && serverData[selectedServerId]" class="h-full">
-            <!-- Field Container for customizable grid layout with full height when server selected -->
-            <fieldContainer
-              :serverId="selectedServerId"
-              :initialConfig="currentUserLayout"
-              :isLoadingLayout="isLoadingLayout"
-              @save-config="saveUserLayoutConfig"
-              class="h-full"
-            />
+        </template>
+        
+        <!-- Server content with field container when server is selected -->
+        <template v-else-if="hasServers">
+          <div 
+            :class="{'p-8': !selectedServerId, 'p-0': selectedServerId}"
+          >
+            <div v-if="selectedServerId && serverData[selectedServerId]" class="h-full">
+              <!-- Field Container for customizable grid layout with full height when server selected -->
+              <fieldContainer
+                :serverId="selectedServerId"
+                :initialConfig="currentUserLayout"
+                :isLoadingLayout="isLoadingLayout"
+                @save-config="saveUserLayoutConfig"
+                class="h-full"
+              />
+            </div>
+            <DashboardContent v-else-if="!selectedServerId" :serverData="serverData" />
           </div>
-          <DashboardContent v-else-if="!selectedServerId" />
-        </div>
-      </template>
-      
-      <!-- Loading state -->
-      <template v-else>
-        <ClientOnly>
+        </template>
+        
+        <!-- Loading state -->
+        <template v-else>
           <LoadingIndicator 
             message="Loading your servers..." 
             class="p-8"
           />
-        </ClientOnly>
-      </template>
+        </template>
+      </ClientOnly>
     </div>
   </div>
   
@@ -74,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, inject } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 
 // Import components
 import ServerSidebar from '~/components/dashboard/ServerSidebar.vue';
@@ -90,21 +91,14 @@ import { useServerJoining, useServerInvitations, useServerLayouts } from '~/comp
 import { useServerCore } from '~/composables/server/useServerCore';
 import type { DashboardFieldConfig } from '~/composables/server/useServerLayouts';
 import { serverCache } from '~/utils/storageUtils/cacheUtil';
+import { showToast } from '~/utils/toast';
+import { useAuth } from '~/composables/useAuth';
 
 // Define page meta with authenticated layout
 definePageMeta({ layout: 'default-authed' });
 
-// Get the server data from the provider
-// This should be the singleton instance from the layout
-const injectedData = inject<{ 
-  serverState: ReturnType<typeof useServerCore>; 
-  loadingServerData: Ref<boolean>;
-}>('userServerData');
-
-// Use the shared singleton instance, falling back to a direct call if needed
-// Due to the singleton pattern, this will reuse the same instance anyway
-const serverCore = injectedData?.serverState || useServerCore();
-const loadingServerData = injectedData?.loadingServerData;
+// Use server composables directly in the dashboard - this is the ONLY place that should use useServerCore
+const serverCore = useServerCore();
 
 // Destructure the properties and methods from the server state for easier access
 const { 
@@ -131,6 +125,9 @@ const { isLoadingLayout, loadUserLayout, saveUserLayout } = useServerLayouts();
 const selectedServerId = ref<string | null>(null);
 const currentUserLayout = ref<DashboardFieldConfig[]>([]);
 
+// Loading state for server selection
+const isLoadingServerSelection = ref(false);
+
 // Computed property to check if user has servers
 const hasServers = computed(() => {
   return userServers.value && userServers.value.length > 0;
@@ -140,39 +137,62 @@ const hasServers = computed(() => {
 const showCreateServerDialog = ref(false);
 const showJoinServerDialog = ref(false);
 
-// Handle server selection, save to localStorage, and load user layout
+/**
+ * Handle server selection with proper loading sequence
+ * Ensures server data is loaded before loading layouts
+ */
 const handleServerSelection = async (serverId: string | null) => {
   // Skip if the server is already selected (prevents unnecessary reloads)
   if (serverId === selectedServerId.value) {
     return;
   }
   
-  // Update the selected server ID which triggers UI updates
-  selectedServerId.value = serverId;
-  
-  // When serverId is null, clear the current server in useServerCore too
-  if (serverId === null) {
-    // Use the composable's clearCurrentServer method
-    await clearCurrentServer();
+  try {
+    // Set loading state
+    isLoadingServerSelection.value = true;
     
-    // Clear the layout
-    currentUserLayout.value = [];
-    return; // Exit early
-  }
-  
-  // Save to cache when user is logged in and serverId exists
-  if (user.value && serverId) {
-    // Make sure the server is set as current in useServerCore
+    // Update the selected server ID which triggers UI updates
+    selectedServerId.value = serverId;
+    
+    // When serverId is null, clear the current server in useServerCore too
+    if (serverId === null) {
+      await clearCurrentServer();
+      currentUserLayout.value = [];
+      return; // Exit early
+    }
+    
+    // Check if this server exists in the user's servers first
+    if (!userServers.value.some(s => s.serverId === serverId)) {
+      console.error(`Server ${serverId} is not in user server list`);
+      showToast("Server not found in your list", "error");
+      selectedServerId.value = null;
+      return;
+    }
+    
+    // Make sure the server is set as current in useServerCore and data is loaded
     await setCurrentServer(serverId);
     
-    // Load the user-specific layout for this server
-    const layout = await loadUserLayout<DashboardFieldConfig>(serverId);
-    if (layout) {
-      currentUserLayout.value = layout;
-    } else {
-      // If no layout is found, use an empty array
-      currentUserLayout.value = [];
+    // Ensure server data is actually loaded
+    if (!serverData.value[serverId]) {
+      console.error(`Server data not loaded for ${serverId}`);
+      showToast("Failed to load server data", "error");
+      selectedServerId.value = null;
+      return;
     }
+    
+    // Now that we have server data, load the user-specific layout
+    if (user.value) {
+      const layout = await loadUserLayout<DashboardFieldConfig[]>(serverId);
+      currentUserLayout.value = layout || [];
+    }
+  } catch (error) {
+    console.error("Error during server selection:", error);
+    showToast("Failed to load server data", "error");
+    // Reset to null on error
+    selectedServerId.value = null;
+    currentUserLayout.value = [];
+  } finally {
+    isLoadingServerSelection.value = false;
   }
 };
 
@@ -195,7 +215,7 @@ interface FieldConfig {
 // Save user-specific layout configuration
 const saveUserLayoutConfig = async (config: DashboardFieldConfig[]) => {
   if (selectedServerId.value && user.value) {
-    const success = await saveUserLayout<DashboardFieldConfig>(selectedServerId.value, config);
+    const success = await saveUserLayout<DashboardFieldConfig[]>(selectedServerId.value, config);
     if (success) {
       // Update the current layout
       currentUserLayout.value = config;
@@ -285,54 +305,15 @@ const handleJoinWithInvite = async (inviteCode: string) => {
   }
 };
 
-// Watch for server selection changes
-watch(() => selectedServerId.value, async (newServerId) => {
-  if (newServerId && user.value) {
-    // Only load full server data if it's not already loaded and not in the process of loading
-    if (!serverData.value[newServerId] && !isLoading.value) {
-      console.debug(`[Dashboard] Loading full data for server: ${newServerId}`);
-      
-      // Check if this server is in the user's server list first
-      if (userServers.value.some(s => s.serverId === newServerId)) {
-        // Use setCurrentServer which will fetch the specific server data if needed
-        // This avoids loading ALL servers when we only need one
-        await setCurrentServer(newServerId);
-      }
-    }
-    
-    // Load user layout when server selection changes
-    const layout = await loadUserLayout<DashboardFieldConfig>(newServerId);
-    if (layout) {
-      currentUserLayout.value = layout;
-    } else {
-      currentUserLayout.value = [];
-    }
-  } else {
-    // Clear current layout when no server is selected
-    currentUserLayout.value = [];
-  }
-});
-
-// Load servers on component mount - but only if not already loaded by the layout
+// Load servers on component mount - but only if not already loaded
 onMounted(async () => {
   // Get route parameters to see if a specific server is requested
-  const router = useRouter();
   const route = useRoute();
   const requestedServerId = route.query.serverId as string | undefined;
   
-  // Wait for server data to be loaded if it's currently loading
-  if (loadingServerData?.value) {
-    // If loading is in progress, wait for it to complete before proceeding
-    await new Promise<void>(resolve => {
-      const checkLoading = () => {
-        if (loadingServerData?.value) {
-          setTimeout(checkLoading, 50);
-        } else {
-          resolve();
-        }
-      };
-      checkLoading();
-    });
+  // Make sure user servers are loaded first
+  if (!serverCore.isDataLoaded.value) {
+    await loadUserServerList();
   }
   
   // If there's a specific server requested in the URL, select that one

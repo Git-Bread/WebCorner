@@ -211,8 +211,13 @@ export const deleteUserAccount = functions.https.onCall(async (request: Callable
         .get();
 
       if (!serversQuery.empty) {
+        // Track server IDs for image cleanup
+        const serverIds: string[] = [];
+        
         for (const serverDoc of serversQuery.docs) {
           const serverId = serverDoc.id;
+          serverIds.push(serverId);
+          
           functions.logger.info(`Cleaning up server ${serverId} owned by user ${userId}`);
 
           // Get all subcollections dynamically
@@ -235,6 +240,23 @@ export const deleteUserAccount = functions.https.onCall(async (request: Callable
           
           // Delete the server document itself
           batch.delete(serverDoc.ref);
+        }
+        
+        // Clean up server images for each server
+        const bucket = admin.storage().bucket();
+        for (const serverId of serverIds) {
+          try {
+            const serverImagesPrefix = `server_images/${serverId}/`;
+            const [serverImageFiles] = await bucket.getFiles({ prefix: serverImagesPrefix });
+            
+            if (serverImageFiles.length > 0) {
+              functions.logger.info(`Deleting ${serverImageFiles.length} images for server ${serverId}`);
+              const deleteServerImagesPromises = serverImageFiles.map(file => file.delete());
+              cleanupPromises.push(Promise.all(deleteServerImagesPromises));
+            }
+          } catch (serverImageError) {
+            functions.logger.error(`Error deleting images for server ${serverId}:`, serverImageError);
+          }
         }
       }
     } catch (serverError) {
@@ -601,7 +623,7 @@ export const createServer = functions.https.onCall(async (request: CallableReque
       }
       
       // Create server document with transaction to ensure atomic operations
-      const timestamp = admin.firestore.FieldValue.serverTimestamp();
+      const timestamp = Timestamp.now();
       const serverRef = admin.firestore().collection('servers').doc();
       const serverId = serverRef.id;
       
@@ -649,9 +671,9 @@ export const createServer = functions.https.onCall(async (request: CallableReque
       
       // Add server to user's servers array
       batch.update(userRef, {
-        servers: admin.firestore.FieldValue.arrayUnion({
+        servers: FieldValue.arrayUnion({
           serverId: serverId,
-          joinedAt: timestamp
+          joinedAt: timestamp.toMillis ? timestamp.toMillis() : Date.now()
         })
       });
       

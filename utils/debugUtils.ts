@@ -2,6 +2,20 @@
  * Debug utilities to control feature availability based on environment
  * 
  * Debug mode is always enabled in development environment
+ * 
+ * Subsystems registered for debugging:
+ * - 'layouts': Generic layout debugging
+ * - 'layouts-cache': Layout cache operations
+ * - 'layouts-data': Layout data structure debugging
+ * - 'server-core': Generic server core debugging
+ * - 'server-cache': Server cache operations
+ * - 'server-data': Server data structure debugging
+ * - 'server-selection': Server selection debugging
+ * 
+ * CACHING APPROACH:
+ * WebCorner uses a minimalist caching approach that only caches server display data
+ * (name and image URL) for the sidebar. All other data, including layouts and full server
+ * data, is loaded fresh from the database on demand to prevent stale data issues.
  */
 
 // Constants
