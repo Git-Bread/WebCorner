@@ -86,6 +86,12 @@ export const useUserSettings = () => {
   const error = useState<string | null>('settingsError', () => null)
   const isSettingsLoading = ref(false) // Added to prevent duplicate loading
   
+  // Add a timestamp to track last settings load time
+  const lastSettingsLoadTime = ref<number | null>(null);
+  const SETTINGS_REFRESH_THRESHOLD = 2000; // 2 seconds threshold to prevent redundant loads
+  //kind of a workaround to prevent duplicate loads, its not expensive due to caching but still due to the decentralized nature of the app
+  //several components can cause the settings to be loaded.
+  
   // Load visitor settings from localStorage
   const loadVisitorSettings = () => {
     if (import.meta.client && localStorage) {
@@ -107,6 +113,15 @@ export const useUserSettings = () => {
     
     // Prevent duplicate loading
     if (isSettingsLoading.value) return true;
+    
+    // Skip loading if settings were loaded recently, unless force refresh is requested
+    if (!forceRefresh && lastSettingsLoadTime.value && 
+        (Date.now() - lastSettingsLoadTime.value < SETTINGS_REFRESH_THRESHOLD)) {
+      if (import.meta.client) {
+        console.log('Settings were loaded recently, skipping redundant load');
+      }
+      return true;
+    }
     
     isSettingsLoading.value = true;
     isLoading.value = true;
@@ -137,6 +152,8 @@ export const useUserSettings = () => {
             }
           };
           
+          // Update last settings load time
+          lastSettingsLoadTime.value = Date.now();
           return true;
         }
       }
@@ -190,6 +207,8 @@ export const useUserSettings = () => {
         }
       }
       
+      // Update last settings load time after successful load
+      lastSettingsLoadTime.value = Date.now();
       return true;
     } catch (err) {
       const errorMessage = handleDatabaseError(err);

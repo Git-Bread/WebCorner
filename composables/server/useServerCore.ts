@@ -188,6 +188,12 @@ export const useServerCore = () => {
   const loadUserServers = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
     
+    // Check if we should skip this operation due to a recent attempt
+    if (serverCache.shouldSkipServerOperation(user.value.uid, 'loadUserServers', forceFresh)) {
+      logDebug("Skipping redundant server loading (circuit closed)");
+      return;
+    }
+    
     isLoading.value = true;
     logDebug("Loading user servers...");
     
@@ -209,6 +215,9 @@ export const useServerCore = () => {
           if (cachedCount === cachedServerList.length) {
             logDebug("All server data loaded from cache");
             isLoading.value = false;
+            
+            // Record successful operation
+            serverCache.recordServerOperation(user.value.uid, 'loadUserServers', true);
             return;
           }
           
@@ -235,6 +244,14 @@ export const useServerCore = () => {
           userServers.value = newServersList;
           // Update cache with new server list
           saveServerListToCache();
+        }
+        
+        // If server list is empty, record operation with special flag to prevent redundant calls
+        if (newServersList.length === 0) {
+          // Record empty server list to circuit breaker to prevent redundant empty calls
+          serverCache.recordServerOperation(user.value.uid, 'loadUserServers', false);
+          isLoading.value = false;
+          return;
         }
         
         // Only load server details if there are servers
@@ -293,8 +310,18 @@ export const useServerCore = () => {
             logDebug("No new server details needed, using cached data");
           }
         }
+        
+        // Record successful operation
+        serverCache.recordServerOperation(user.value.uid, 'loadUserServers', true);
+      } else {
+        // Record failed operation to prevent redundant attempts
+        serverCache.recordServerOperation(user.value.uid, 'loadUserServers', false);
       }
     } catch (error) {
+      // Record failed operation to prevent redundant attempts
+      if (user.value) {
+        serverCache.recordServerOperation(user.value.uid, 'loadUserServers', false);
+      }
       logError('loadUserServers', error, null);
       showToast('Failed to load your servers', 'error');
     } finally {
@@ -309,6 +336,12 @@ export const useServerCore = () => {
   const loadUserServerList = async (forceFresh = false): Promise<void> => {
     if (!user.value) return;
     
+    // Check if we should skip this operation due to a recent attempt
+    if (serverCache.shouldSkipServerOperation(user.value.uid, 'loadUserServerList', forceFresh)) {
+      logDebug("Skipping redundant server list loading (circuit closed)");
+      return;
+    }
+    
     isLoading.value = true;
     logDebug("Loading user server list (lightweight)...");
     
@@ -321,6 +354,9 @@ export const useServerCore = () => {
           logDebug(`Found ${cachedServerList.length} servers in cached data`);
           userServers.value = cachedServerList;
           isLoading.value = false;
+          
+          // Record successful operation
+          serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', true);
           return;
         }
       }
@@ -337,8 +373,24 @@ export const useServerCore = () => {
         
         // Update cache with new server list
         saveServerListToCache();
+        
+        // If the server list is empty, record it as a "failed" operation
+        // so that the circuit breaker prevents redundant calls
+        if (newServersList.length === 0) {
+          serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', false);
+        } else {
+          // Record successful operation
+          serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', true);
+        }
+      } else {
+        // Record failed operation to prevent redundant attempts
+        serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', false);
       }
     } catch (error) {
+      // Record failed operation to prevent redundant attempts
+      if (user.value) {
+        serverCache.recordServerOperation(user.value.uid, 'loadUserServerList', false);
+      }
       logError('loadUserServerList', error, null);
       showToast('Failed to load your servers', 'error');
     } finally {
@@ -681,6 +733,11 @@ export const useServerCore = () => {
       
       // Clear all server-related caches
       serverCache.invalidateAllServerData(userId);
+      
+      // Reset circuit breakers for server loading operations
+      serverCache.resetServerOperation(userId, 'loadUserServers');
+      serverCache.resetServerOperation(userId, 'loadUserServerList');
+      
       logDebug(`Cleared all server caches for user: ${userId}`);
     } catch (error) {
       logError('clearServerCaches', error, null);

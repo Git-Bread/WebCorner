@@ -67,6 +67,8 @@ import { isLoggingEnabled, IS_DEVELOPMENT } from '~/utils/debugUtils';
 // Constants
 const LOGGING_KEY = 'webcorner_logging_enabled';
 const DEBUG_KEY = 'webcorner_debug_enabled';
+const VISITOR_SETTINGS_KEY = 'visitorSettings';
+const ANIMATION_SETTINGS_KEY = 'animation-settings';
 
 // State
 const isDevelopment = IS_DEVELOPMENT;
@@ -139,7 +141,26 @@ function handleKeyDown(event: KeyboardEvent) {
 function clearLocalStorage() {
   try {
     const sizeBefore = getLocalStorageSize();
+    
+    // Clear application-prefixed storage
     clearAllApplicationStorage('webcorner');
+    
+    // Also clear specific keys not using the webcorner prefix
+    if (typeof localStorage !== 'undefined') {
+      // Clear visitor settings
+      localStorage.removeItem(VISITOR_SETTINGS_KEY);
+      
+      // Clear animation settings
+      localStorage.removeItem(ANIMATION_SETTINGS_KEY);
+      
+      // Clear auth-related settings
+      localStorage.removeItem('rememberMe');
+      localStorage.removeItem('lastActiveTime');
+      
+      // Clear any additional non-prefixed keys that store user preferences
+      // Add more keys here as needed
+    }
+    
     showToast(`Cleared localStorage (${Math.round((sizeBefore || 0) / 1024)}KB)`, 'success');
   } catch (error) {
     showToast('Failed to clear localStorage', 'error');
@@ -179,13 +200,29 @@ function showCacheInfo() {
       key.startsWith('webcorner')
     ).length;
     
+    // Count other important items
+    const otherItemCount = Object.keys(localStorage).filter(key => 
+      !key.startsWith('webcorner') && 
+      [VISITOR_SETTINGS_KEY, ANIMATION_SETTINGS_KEY, 'rememberMe', 'lastActiveTime'].includes(key)
+    ).length;
+    
     // Show toast with summary
-    showToast(`LocalStorage: ${Math.round((storageSize || 0) / 1024)}KB, Items: ${webcornerItemCount}`, 'info');
+    showToast(`LocalStorage: ${Math.round((storageSize || 0) / 1024)}KB, Items: ${webcornerItemCount + otherItemCount}`, 'info');
     
     // Log to console for detail
     console.group('WebCorner Cache Info');
     console.log(`LocalStorage Size: ${Math.round((storageSize || 0) / 1024)}KB`);
-    console.log(`WebCorner Items: ${webcornerItemCount}`);
+    console.log(`WebCorner Prefixed Items: ${webcornerItemCount}`);
+    console.log(`Other Important Items: ${otherItemCount}`);
+    
+    // Log specific keys
+    console.group('Important Keys');
+    console.log(`Visitor Settings: ${localStorage.getItem(VISITOR_SETTINGS_KEY) ? 'Present' : 'Not found'}`);
+    console.log(`Animation Settings: ${localStorage.getItem(ANIMATION_SETTINGS_KEY) ? 'Present' : 'Not found'}`);
+    console.log(`Remember Me: ${localStorage.getItem('rememberMe') ? 'Present' : 'Not found'}`);
+    console.log(`Last Active Time: ${localStorage.getItem('lastActiveTime') ? 'Present' : 'Not found'}`);
+    console.groupEnd();
+    
     console.groupEnd();
   } catch (error) {
     showToast('Failed to show cache info', 'error');

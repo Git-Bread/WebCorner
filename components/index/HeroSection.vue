@@ -1,7 +1,7 @@
 <template>
   <div ref="heroRootRef" class="relative min-h-screen h-auto w-full overflow-hidden">
     <div class="bg-surface absolute inset-0 z-0" aria-hidden="true">
-      <div class="absolute inset-0 particle-backdrop"></div>
+      <div class="absolute inset-0 particle-backdrop" :class="{ 'hidden': animationControl.animationsEnabled.value }"></div>
       <canvas ref="canvasRef" class="absolute inset-0 w-full h-full block" :class="{ 'hidden': !animationControl.animationsEnabled.value }"></canvas>
     </div>
 

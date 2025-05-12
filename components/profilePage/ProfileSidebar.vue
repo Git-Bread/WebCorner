@@ -5,11 +5,16 @@
       <div class="flex flex-col items-center">
         <!-- Profile Picture -->
         <div class="w-36 h-36 rounded-full overflow-hidden mb-4 border-2 border-theme-primary relative group" aria-label="Profile picture">
-          <img :src="isEditing && tempProfileImage ? tempProfileImage : userPhotoUrl" :alt="`${userName}'s profile picture`" class="w-full h-full object-cover" />
+          <img 
+            :src="isEditing && tempProfileImage ? tempProfileImage : userPhotoUrl" 
+            :alt="`${userName}'s profile picture`" 
+            class="w-full h-full object-cover"
+            loading="eager"
+          />
         </div>
         
         <h2 class="text-xl font-semibold text-heading mb-1">{{ userName }}</h2>
-        <p class="text-text-muted text-sm mb-4">{{ user?.email }}</p>
+        <p class="text-text-muted text-sm mb-4">{{ userEmail }}</p>
         
         <button 
           class="w-full bg-theme-primary text-background px-4 py-2 rounded text-sm hover:bg-theme-secondary transition duration-200 mb-2 flex items-center justify-center" 
@@ -62,38 +67,53 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { formatDate } from '~/utils/dateUtil'; // Assuming you have a date formatting utility
-import { profileImageCache } from '~/utils/storageUtils/imageCacheUtil';
+import { formatDate } from '~/utils/dateUtil';
 
-// Access auth data directly
-const { user } = useAuth();
-
-// Access profile data and functions directly
-const { 
-  userName,
-  userPhotoUrl: originalPhotoUrl,
-  isEditing,
-  profileCompletionPercentage,
-  tempProfileImage: originalTempImage
-} = useProfile();
-
-// Use cached profile images
-const userPhotoUrl = computed(() => {
-  const photoUrl = originalPhotoUrl.value;
-  return photoUrl ? profileImageCache.getProfileImage(photoUrl) : '/images/Profile_Pictures/default_profile.jpg';
+// Define props
+const props = defineProps({
+  userName: {
+    type: String,
+    required: true
+  },
+  userPhotoUrl: {
+    type: String,
+    default: '/images/Profile_Pictures/default_profile.jpg'
+  },
+  userEmail: {
+    type: String,
+    default: ''
+  },
+  isEditing: {
+    type: Boolean,
+    required: true
+  },
+  tempProfileImage: {
+    type: String,
+    default: ''
+  },
+  profileCompletionPercentage: {
+    type: Number,
+    required: true
+  },
+  creationTime: {
+    type: String,
+    default: ''
+  },
+  lastSignInTime: {
+    type: String,
+    default: ''
+  }
 });
 
-const tempProfileImage = computed(() => {
-  const tempImage = originalTempImage.value;
-  return tempImage ? profileImageCache.getProfileImage(tempImage) : null;
-});
+// Define emits
+const emit = defineEmits(['toggle-editing']);
 
 // Format creation and sign-in times
-const formattedCreationTime = computed(() => formatDate(user.value?.metadata?.creationTime));
-const formattedLastSignInTime = computed(() => formatDate(user.value?.metadata?.lastSignInTime));
+const formattedCreationTime = computed(() => formatDate(props.creationTime));
+const formattedLastSignInTime = computed(() => formatDate(props.lastSignInTime));
 
 // Toggle editing state
 function toggleEditing() {
-  isEditing.value = !isEditing.value;
+  emit('toggle-editing');
 }
 </script>

@@ -93,6 +93,11 @@ const handleLogin = async () => {
     return
   }
   
+  // Prevent multiple submissions
+  if (loading.value) {
+    return;
+  }
+  
   generalError.value = ''
   
   try {
@@ -112,17 +117,18 @@ const handleLogin = async () => {
     } else {
       showToast('Login successful! Redirecting...', 'success', 3000)
       
-      setTimeout(() => {
-        navigateTo('/dashboard')
-      }, 1000)
+      // Keep loading state active during navigation
+      navigateTo('/dashboard')
       
-      return
+      // Loading state stays active until navigation completes or timeout occurs
+      return;
     }
   } catch (error) {
     generalError.value = handleAuthError(error)
     loading.value = false
   } finally {
-    if (loadingTimeout.value) {
+    // Only clear the timeout if we've set loading to false elsewhere
+    if (!loading.value && loadingTimeout.value) {
       clearTimeout(loadingTimeout.value);
       loadingTimeout.value = null;
     }

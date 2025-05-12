@@ -21,7 +21,13 @@ interface UserDocument {
   [key: string]: any;
 }
 
-export const useProfile = () => {
+// Singleton instance that will be reused across the application
+let profileInstance: ReturnType<typeof createProfileComposable> | null = null;
+// Track if initialization is in progress
+let initializationPromise: Promise<void> | null = null;
+
+// The actual implementation, renamed to createProfileComposable
+function createProfileComposable() {
   const { user } = useAuth()
   const { firestore, auth, storage, functions } = useFirebase()
   const { uploadImage, uploadError } = useImageUpload()
@@ -31,6 +37,8 @@ export const useProfile = () => {
   const isSaving = useState('profile-isSaving', () => false)
   const isImageUploading = useState('profile-isImageUploading', () => false)
   const isLoadingUserImages = useState('profile-isLoadingUserImages', () => false)
+  const isLoadingData = useState('profile-isLoadingData', () => false)
+  const dataLoaded = useState('profile-dataLoaded', () => false)
 
   // shared data state
   const userName = useState('profile-userName', () => '')
@@ -140,6 +148,18 @@ export const useProfile = () => {
   async function loadUserData(forceRefresh: boolean = false) {
     if (!user.value) return
     
+    if (isLoadingData.value) {
+      console.debug('[Profile] Already loading data, skipping redundant call');
+      return;
+    }
+    
+    if (dataLoaded.value && !forceRefresh) {
+      console.debug('[Profile] Data already loaded, skipping redundant call');
+      return;
+    }
+    
+    isLoadingData.value = true;
+    
     try {
       // Try to get from cache first, unless forceRefresh is true
       if (!forceRefresh) {
@@ -161,6 +181,9 @@ export const useProfile = () => {
           
           // Load user's custom images
           await fetchUserCustomImages();
+          
+          // Mark as loaded
+          dataLoaded.value = true;
           return;
         }
       }
@@ -189,9 +212,14 @@ export const useProfile = () => {
         
         // Load user's custom images
         await fetchUserCustomImages();
+        
+        // Mark as loaded
+        dataLoaded.value = true;
       }
     } catch (error) {
       showToast('Failed to load user data', 'error')
+    } finally {
+      isLoadingData.value = false;
     }
   }
 
@@ -527,6 +555,8 @@ export const useProfile = () => {
     isResendingEmail,
     isImageUploading,
     isLoadingUserImages,
+    isLoadingData,
+    dataLoaded,
     userName,
     userPhotoUrl,
     profileData,
@@ -552,5 +582,52 @@ export const useProfile = () => {
     resendVerificationEmail,
     fetchUserCustomImages,
     deleteAccount,
+  }
+}
+
+// The public-facing function that ensures only one instance is used
+export const useProfile = () => {
+  // If an instance is already created, return it immediately
+  if (profileInstance) {
+    return profileInstance;
+  }
+  
+  // If initialization is in progress, log that we're waiting for it
+  if (initializationPromise) {
+    console.debug('[Profile] Waiting for existing initialization to complete');
+    return createProfileInstance();
+  }
+  
+  return createProfileInstance();
+  
+  // Helper function to create and initialize the profile instance
+  function createProfileInstance() {
+    // Create the instance if it doesn't exist
+    if (!profileInstance) {
+      profileInstance = createProfileComposable();
+      console.debug('[Profile] Created new useProfile instance');
+      
+      // Create a promise for initialization
+      if (!initializationPromise && profileInstance) {
+        const { user } = useAuth();
+        if (user.value) {
+          // Initialize with a proper promise to track the async operation
+          initializationPromise = new Promise<void>(async (resolve) => {
+            try {
+              await profileInstance!.loadUserData();
+              console.debug('[Profile] Initial data load completed');
+            } catch (error) {
+              console.error('[Profile] Error in initial data load:', error);
+            } finally {
+              // Clear the promise to allow future initializations if needed
+              initializationPromise = null;
+              resolve();
+            }
+          });
+        }
+      }
+    }
+    
+    return profileInstance;
   }
 }

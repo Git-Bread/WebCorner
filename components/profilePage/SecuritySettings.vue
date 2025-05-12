@@ -92,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, nextTick } from 'vue';
 import AuthFormField from '~/components/auth/AuthFormField.vue';
 import AuthErrorMessage from '~/components/auth/AuthErrorMessage.vue';
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue';
@@ -100,18 +100,35 @@ import DeleteAccountModal from '~/components/profilePage/DeleteAccountModal.vue'
 import { validatePassword, validatePasswordsMatch } from '~/utils/passwordUtils';
 import { showToast } from '~/utils/toast';
 
-// Use the profile composable
-const { lastPasswordReset, updatePassword, deleteAccount, isDeleting, deleteError } = useProfile();
+// Props for data coming from parent
+const props = defineProps({
+  lastPasswordReset: {
+    type: String,
+    required: true
+  },
+  isDeleting: {
+    type: Boolean,
+    required: true
+  },
+  deleteError: {
+    type: String,
+    default: ''
+  }
+});
+
+// Emit events back to parent
+const emit = defineEmits(['update-password', 'delete-account']);
+
 const router = useRouter();
 
-// Local state management (instead of using global state from the composable)
+// Local state management
 const passwordResetVisible = ref(false);
 const validationAttempted = ref(false);
 const errorMessage = ref('');
 const isUpdating = ref(false);
 const showDeleteModal = ref(false);
 
-// Use local reactive object instead of global state
+// Local reactive object for the password form
 const localPasswordData = reactive({
   currentPassword: '',
   newPassword: '',
@@ -201,83 +218,64 @@ const fieldErrors = computed(() => {
   return errors;
 });
 
-// Check if we have any field-specific errors
-const hasFieldSpecificError = computed(() => 
-  !!fieldErrors.value.currentPassword || 
-  !!fieldErrors.value.newPassword || 
-  !!fieldErrors.value.confirmPassword
-);
+// Check if we have a field-specific error
+const hasFieldSpecificError = computed(() => {
+  return Object.values(fieldErrors.value).some(error => !!error);
+});
 
-// Update password with local form data
+// Handle password update - validate locally then emit to parent
 async function handleUpdatePassword() {
   if (!validateForm()) return;
   
+  isUpdating.value = true;
+  
   try {
-    isUpdating.value = true;
+    // Emit the update password event to the parent
+    await emit('update-password', { ...localPasswordData });
     
-    // Call the composable's updatePassword with local data
-    await updatePassword({
-      currentPassword: localPasswordData.currentPassword,
-      newPassword: localPasswordData.newPassword,
-      confirmPassword: localPasswordData.confirmPassword
-    });
-    
-    // Reset form on success
+    // If we got here, it succeeded (no error thrown)
     resetForm();
     passwordResetVisible.value = false;
-  } catch (error: any) {
-    errorMessage.value = error.message || 'Failed to update password';
+    showToast('Password updated successfully', 'success');
+  } catch (error) {
+    // If the parent catches and re-throws errors, we'll catch them here
+    if (error instanceof Error) {
+      errorMessage.value = error.message;
+    } else {
+      errorMessage.value = 'Failed to update password';
+    }
   } finally {
     isUpdating.value = false;
   }
 }
 
-// Account deletion confirmation
+// Delete account flow
 function confirmDeleteAccount() {
   showDeleteModal.value = true;
 }
 
-// Handle account deletion
-async function handleDeleteAccount(password: string) {
-  try {
-    const success = await deleteAccount(password);
-    
-    if (success) {
-      // Close the modal first
-      showDeleteModal.value = false;
-      // Show success message before redirecting
-      showToast('Account successfully deleted', 'success');
-      // Brief timeout to allow the toast to show before navigating
-      setTimeout(() => {
-        // Clear any auth data
-        const { logout } = useAuth();
-        logout();
-        // Navigate to login page after successful deletion
-        router.push('/login');
-      }, 1000);
-    } else if (deleteError.value) {
-      // Show error message in modal
-      showToast(deleteError.value, 'error');
-    }
-  } catch (error: any) {
-    // Check for auth/user-token-expired error
-    if (error?.message?.includes('auth/user-token-expired')) {
-      // This is actually a success case - account was deleted
-      showDeleteModal.value = false;
-      showToast('Account successfully deleted', 'success');
-      setTimeout(() => {
-        const { logout } = useAuth();
-        logout();
-        router.push('/login');
-      }, 1000);
-    } else {
-      showToast(error?.message || 'Failed to delete account', 'error');
-    }
-  }
-}
-
-// Close delete modal
 function closeDeleteModal() {
   showDeleteModal.value = false;
+}
+
+async function handleDeleteAccount(password: string) {
+  try {
+    // Emit the delete account event to the parent
+    emit('delete-account', password);
+    
+    // Close the modal
+    showDeleteModal.value = false;
+    
+    // Show a toast message before redirecting
+    showToast('Account deleted successfully', 'success');
+    
+    // Delay before redirecting to allow the toast to be seen
+    setTimeout(() => {
+      router.push('/');
+    }, 1500);
+  } catch (error) {
+    // Handle potential errors
+    console.error('Error in handleDeleteAccount:', error);
+  }
 }
 </script>

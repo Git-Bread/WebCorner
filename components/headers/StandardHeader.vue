@@ -27,7 +27,7 @@
               <button @click="toggleMenu" type="button" class="flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-link rounded-full" aria-expanded="false">
                 <picture class="h-10 w-10 rounded-full overflow-hidden transition-transform border-2 border-border hover:border-accent-1">
                   <ClientOnly>
-                    <img :src="isEditing && tempProfileImage ? tempProfileImage : userPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
+                    <img :src="isEditing && cachedTempProfileImage ? cachedTempProfileImage : cachedUserPhotoUrl" :alt="`${userName}'s profile`" class="h-full w-full object-cover"/>
                   </ClientOnly>
                 </picture>
               </button>
@@ -58,27 +58,31 @@
 <script setup lang="ts">
 import { ClientOnly } from '#components';
 import SettingsMenu from '~/components/userComponents/SettingsMenu.vue';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { profileImageCache } from '~/utils/storageUtils/imageCacheUtil';
 
 const { user, logout, isAuthenticated } = useAuth()
-const profileState = useProfile()
 const menuOpen = ref(false)
-
 const settingsOpen = ref(false);
 
-const userName = computed(() => profileState.userName.value)
+// Get profile data from the useProfile composable
+const profileState = useProfile()
+const {
+  userName,
+  userPhotoUrl,
+  isEditing,
+  tempProfileImage
+} = profileState
 
-// Use the profileImageCache utility to get the cached profile image URL
-const userPhotoUrl = computed(() => {
-  const photoUrl = profileState.userPhotoUrl.value;
+// Used in the header directly
+const cachedUserPhotoUrl = computed(() => {
+  const photoUrl = userPhotoUrl.value;
   return photoUrl ? profileImageCache.getProfileImage(photoUrl) : '/images/Profile_Pictures/default_profile.jpg';
 })
 
-const isEditing = computed(() => profileState.isEditing.value)
-const tempProfileImage = computed(() => {
-  const tempImage = profileState.tempProfileImage.value;
+const cachedTempProfileImage = computed(() => {
+  const tempImage = tempProfileImage.value;
   return tempImage ? profileImageCache.getProfileImage(tempImage) : null;
 })
 
@@ -109,32 +113,4 @@ const handleLogout = async () => {
   }
   navigateTo('/login');
 }
-
-onMounted(() => {
-  if (user.value) {
-    // Use cached profile data if available (pass false to avoid forcing a refresh)
-    // This reduces Firestore reads by using localStorage cache when available
-    profileState.loadUserData(false)
-  }
-
-  document.addEventListener('click', (event) => {
-    const target = event.target as HTMLElement
-    if (!target.closest('.ml-3.relative')) { 
-      menuOpen.value = false
-    }
-  })
-  
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      if (settingsOpen.value) {
-        closeSettingsPanel();
-      }
-    }
-  })
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', () => {})
-  document.removeEventListener('keydown', () => {})
-})
 </script>

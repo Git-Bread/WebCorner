@@ -35,6 +35,8 @@ import useFormValidation from '~/composables/useFormValidation'
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue'
 import { defaultSettings } from '~/composables/useUserSettings'
 import { useSettingsManager } from '~/composables/useSettingsManager'
+import { serverCache } from '~/utils/storageUtils/cacheUtil'
+import { profileCache } from '~/utils/storageUtils/cacheUtil'
 
 definePageMeta({ layout: 'auth' })
 
@@ -82,6 +84,11 @@ const handleRegister = async () => {
   if (!isFormValid.value) {
     focusFirstError()
     return
+  }
+  
+  // Prevent multiple submissions
+  if (loading.value) {
+    return;
   }
   
   generalError.value = ''
@@ -145,16 +152,31 @@ const handleRegister = async () => {
       
       await setDoc(doc(firestore, 'users', uid), userData)
       
+      // Initialize caches for the new user
+      // This prevents redundant loading attempts that would all show "not found"
+      serverCache.saveServerList(uid, []); // Cache empty server list
+      profileCache.saveProfileData(uid, userData); // Cache user profile
+      
       showToast('Registration successful! Please check your email to verify your account.', 'success', 3000)
       
+      // Keep loading state active during navigation
       navigateTo('/dashboard')
+      
+      // The loading state will stay true until navigation completes or timeout occurs
+      return;
     } catch (err) {
       generalError.value = handleDatabaseError(err)
+      loading.value = false
     }
   } catch (error) {
     generalError.value = handleAuthError(error)
-  } finally {
     loading.value = false
+  } finally {
+    // Only clear the timeout if we've set loading to false elsewhere
+    if (!loading.value && loadingTimeout.value) {
+      clearTimeout(loadingTimeout.value)
+      loadingTimeout.value = null
+    }
   }
 }
 </script>

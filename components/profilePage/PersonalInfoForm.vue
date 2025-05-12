@@ -238,29 +238,66 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, computed } from 'vue';
 import { serverCache, profileCache } from '~/utils/storageUtils/cacheUtil';
 
-// Get auth data and profile composable directly
-const { user } = useAuth();
-const { 
-  profileData,
-  defaultProfileImages, // Added for access to default images separately
-  userCustomImages, // Added for access to user's custom images
-  isEditing,
-  isSaving,
-  isEmailVerified,
-  isResendingEmail,
-  isImageUploading,
-  isLoadingUserImages, // Added loading state for user images
-  saveProfile,
-  selectProfileImage,
-  uploadCustomImage,
-  resendVerificationEmail,
-} = useProfile();
+// Define props
+const props = defineProps({
+  user: {
+    type: Object,
+    required: true
+  },
+  isEditing: {
+    type: Boolean,
+    required: true
+  },
+  isEmailVerified: {
+    type: Boolean,
+    required: true
+  },
+  profileData: {
+    type: Object,
+    required: true
+  },
+  isResendingEmail: {
+    type: Boolean,
+    required: true
+  },
+  isLoadingUserImages: {
+    type: Boolean,
+    required: true
+  },
+  userCustomImages: {
+    type: Array as () => string[],
+    default: () => []
+  },
+  isImageUploading: {
+    type: Boolean,
+    required: true
+  },
+  uploadError: {
+    type: [String, Object],
+    default: null
+  },
+  isSaving: {
+    type: Boolean,
+    required: true
+  }
+});
+
+// Define emits
+const emit = defineEmits([
+  'resend-verification',
+  'select-profile-image',
+  'upload-image',
+  'save-profile'
+]);
+
+// Access default profile images
+const { defaultProfileImages } = useProfile();
 
 // For file upload
 const fileInput = ref<HTMLInputElement | null>(null);
-const uploadError = ref<string | null>(null);
 const previewImage = ref<string | null>(null);
 const maxSizeInMB = 5; // Setting to 5MB to match upload limit in useProfile.ts
 const showPreviewModal = ref(false);
@@ -284,8 +321,6 @@ function formatFileSize(bytes?: number): string {
 
 // Handle initial file selection
 function handleFileSelection(event: Event) {
-  uploadError.value = null;
-  
   const target = event.target as HTMLInputElement;
   const files = target.files;
   
@@ -300,7 +335,6 @@ function handleFileSelection(event: Event) {
   const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
   
   if (file.size > maxSizeInBytes) {
-    uploadError.value = `File size exceeds maximum allowed size of ${maxSizeInMB}MB`;
     showPreviewModal.value = true;
     return;
   }
@@ -308,7 +342,6 @@ function handleFileSelection(event: Event) {
   // Validate file type
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
   if (!allowedTypes.includes(file.type)) {
-    uploadError.value = 'Invalid file type. Allowed types: JPEG, PNG, WebP';
     showPreviewModal.value = true;
     return;
   }
@@ -328,42 +361,44 @@ function cancelPreview() {
   showPreviewModal.value = false;
   previewImage.value = null;
   selectedFile.value = null;
-  uploadError.value = null;
+}
+
+// Emit select profile image event
+function selectProfileImage(image: string) {
+  emit('select-profile-image', image);
 }
 
 // Confirm and start upload
 async function confirmUpload() {
-  if (!selectedFile.value || uploadError.value) return;
+  if (!selectedFile.value) return;
   
   try {
-    // Double-check file size before upload
-    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
-    if (selectedFile.value.size > maxSizeInBytes) {
-      uploadError.value = `File size exceeds maximum allowed size of ${maxSizeInMB}MB`;
-      return;
-    }
-    
     // Upload the image
-    await uploadCustomImage(selectedFile.value);
+    await emit('upload-image', selectedFile.value);
     
     // Close modal after successful upload
     showPreviewModal.value = false;
   } catch (error) {
-    uploadError.value = 'Failed to upload image';
+    console.error('Upload failed:', error);
   }
 }
 
 // Handle form submission
 async function handleSubmit() {
   // Save the profile data
-  await saveProfile();
+  await emit('save-profile');
   
   // Clear any preview image
   previewImage.value = '';
   
   // Force a cache refresh for other components that might be using the profile data
-  if (user.value) {
-    profileCache.invalidateProfile(user.value.uid);
+  if (props.user?.uid) {
+    profileCache.invalidateProfile(props.user.uid);
   }
+}
+
+// Emit resend verification email event
+function resendVerificationEmail() {
+  emit('resend-verification');
 }
 </script>
