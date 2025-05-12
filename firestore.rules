@@ -2,114 +2,218 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // check if user is authenticated
+    // --- Helper Functions ---
+    
+    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // check if the user is accessing their own document
+    // Check if user is accessing their own document
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // check if user is server member
-    function isServerMember(serverId) {
+    // Check if user is server owner
+    function isServerOwner(serverId) {
       return isAuthenticated() && 
-        (exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) ||
-         get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid);
+             exists(/databases/$(database)/documents/servers/$(serverId)) &&
+             get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
     }
     
-    // check if user is server owner
-    function isServerOwner(serverId) {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
+    // Check if user is an admin of the server
+    function isServerAdmin(serverId) {
+      return exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.role == 'admin';
     }
+    
+    // Check if user is a group manager
+    function isServerGroupManager(serverId) {
+      return exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.role == 'group_manager';
+    }
+    
+    // Check if user has admin permissions or higher
+    function hasAdminPermission(serverId) {
+      return isServerOwner(serverId) || isServerAdmin(serverId);
+    }
+    
+    // Check if user is a server member (has any role)
+    function isServerMember(serverId) {
+      return isAuthenticated() && 
+        (isServerOwner(serverId) || 
+         exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)));
+    }
+    
+    // Check request object contains only allowed fields
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+    
+    // --- Collection Rules ---
     
     // User profiles
     match /users/{userId} {
-      // Allow authenticated users to read and separately allow public count queries
-      allow read: if isAuthenticated();
-      allow create: if isOwner(userId);
-      // User updates to their own document
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      // Allow reading basic profile info for any authenticated user
+      allow get: if isAuthenticated();
+      
+      // Only the user can read their full profile with sensitive data
+      allow read: if isOwner(userId);
+      
+      // Allow user document creation and updates if the authenticated user is managing their own document
+      allow create, update: if isOwner(userId);
+                      
+      // Account deletion should be handled by Cloud Functions
+      allow delete: if false;
       
       // User settings subcollection
       match /settings/{document=**} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
       }
     }
     
-    //decorative counter collection
+    // Decorative counter collection
     match /counters/{counterId} {
       allow read: if true;
       allow write: if false;  // Only updateable via Cloud Functions
     }
     
-    // Cache collection for counters
-    match /counters_cache/{documentId} {
-      allow read: if true;
-      allow write: if false;  // Should only be updated via the server function
-    }
-    
     // Server collection
     match /servers/{serverId} {
-      // Anyone authenticated can read basic server info and create servers
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      // Only server members can read server info
+      allow get, list: if isServerMember(serverId);
       
-      // Only server owner can update or delete server info
-      allow update, delete: if isServerOwner(serverId);
+      // Server creation is handled by Cloud Functions
+      allow create: if false;
+      
+      // Only server owner and admin can update limited server details
+      allow update: if hasAdminPermission(serverId) && 
+                      hasOnlyAllowedFields(['name', 'description', 'settings', 'components', 'updatedAt']);
+      
+      // Server deletion is handled by Cloud Functions
+      allow delete: if false;
       
       // Server members subcollection
       match /members/{userId} {
+        // Only members can see other members
         allow read: if isServerMember(serverId);
-        // Only server owners can directly modify the members collection
-        // Cloud Functions handle member joining with admin privileges
-        allow create, update: if isServerOwner(serverId);
-        allow delete: if isServerOwner(serverId) || isOwner(userId);
+        
+        // Member management is handled by Cloud Functions
+        allow create, update, delete: if false;
       }
       
+      // User layouts subcollection (personal layouts)
       match /userLayouts/{userId} {
-        // Allow users to read, write and delete only their own layouts
+        // Users can only read, write and delete their own layouts
         allow read, write, delete: if isServerMember(serverId) && isOwner(userId);
+      }
+      
+      // Groups settings
+      match /settings/groups {
+        // Members can read group settings
+        allow read: if isServerMember(serverId);
+        
+        // Only admins and owners can modify group settings
+        allow write: if hasAdminPermission(serverId);
+      }
+      
+      // Groups collection
+      match /groups/{groupId} {
+        // All server members can read group information
+        allow read: if isServerMember(serverId);
+        
+        // Only admins can create groups
+        allow create: if hasAdminPermission(serverId);
+        
+        // Admin or group manager of this specific group can update
+        allow update: if hasAdminPermission(serverId) || 
+                      (isServerGroupManager(serverId) && 
+                       exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups != null &&
+                       getAfter(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups.hasAny([groupId]));
+        
+        // Only admins can delete groups
+        allow delete: if hasAdminPermission(serverId);
+        
+        // Group members subcollection
+        match /members/{memberId} {
+          allow read: if isServerMember(serverId);
+          // Allow admins or group managers to add/remove members from groups
+          allow create, update, delete: if hasAdminPermission(serverId) || 
+                                         (isServerGroupManager(serverId) && 
+                                          exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) &&
+                                          get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups != null &&
+                                          get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups.hasAny([groupId]));
+        }
+        
+        // Group posts subcollection
+        match /posts/{postId} {
+          allow read: if isServerMember(serverId);
+          
+          // Anyone can create posts, but must set their own userId
+          allow create: if isServerMember(serverId) && request.resource.data.userId == request.auth.uid;
+          
+          // Edit own posts or if admin/manager
+          allow update: if request.auth.uid == resource.data.userId || hasAdminPermission(serverId) ||
+                         (isServerGroupManager(serverId) && 
+                          exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) &&
+                          get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups != null &&
+                          get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups.hasAny([groupId]));
+          
+          // Delete own posts or if admin/manager
+          allow delete: if request.auth.uid == resource.data.userId || hasAdminPermission(serverId) ||
+                         (isServerGroupManager(serverId) && 
+                          exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) &&
+                          get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups != null &&
+                          get(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)).data.managedGroups.hasAny([groupId]));
+        }
       }
       
       // Channels subcollection
       match /channels/{channelId} {
+        // Only members can read channels
         allow read: if isServerMember(serverId);
-        allow create, update, delete: if isServerOwner(serverId);
+        
+        // Channel creation and management requires admin role
+        allow create, update: if hasAdminPermission(serverId);
+        allow delete: if false; // Handle via Cloud Functions to ensure proper cleanup
         
         // Messages in channels
         match /messages/{messageId} {
+          // Only members can read messages
           allow read: if isServerMember(serverId);
-          allow create: if isServerMember(serverId);
-          allow update, delete: if request.auth.uid == resource.data.userId || isServerOwner(serverId);
+          
+          // Members can create messages
+          allow create: if isServerMember(serverId) && 
+                          request.resource.data.userId == request.auth.uid &&
+                          hasOnlyAllowedFields(['userId', 'content', 'timestamp', 'attachments', 'mentions']);
+          
+          // Users can only update or delete their own messages
+          allow update: if request.auth.uid == resource.data.userId &&
+                          hasOnlyAllowedFields(['content', 'updatedAt']);
+                          
+          allow delete: if request.auth.uid == resource.data.userId;
+          
+          // Admins and owners can also delete any message for moderation
+          allow delete: if hasAdminPermission(serverId);
         }
       }
-    }
-    
-    // User servers collection (for quick access to servers a user belongs to)
-    match /user_servers/{userId} {
-      allow read: if isOwner(userId);
-      allow write: if isOwner(userId);
     }
 
     // Server invitations collection
     match /serverInvites/{inviteCode} {
-      // Anyone can read an invitation to validate it
-      allow read: if isAuthenticated();
+      // Only server members can view invites for their server
+      allow read: if isAuthenticated() && 
+                   isServerMember(resource.data.serverId);
       
-      // Only the server owner can create invitations
-      allow create: if isAuthenticated() && isServerOwner(request.resource.data.serverId);
-      
-      // For updating, only allow server owners to modify invites
-      // Cloud Functions handle invite usage tracking
-      allow update: if isAuthenticated() && isServerOwner(resource.data.serverId);
+      // Invitations are handled by Cloud Functions
+      allow create, update, delete: if false;
     }
     
     // Deny access to everything else
     match /{document=**} {
+      // Default deny, but with an exception for user creation during signup
       allow read, write: if false;
     }
   }

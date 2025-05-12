@@ -23,9 +23,9 @@ export const isLocalStorageAvailable = (): boolean => {
     const testKey = '__storage_test__';
     localStorage.setItem(testKey, testKey);
     localStorage.removeItem(testKey);
-    debugStorage('availability check', 'passed');
     return true;
   } catch (e) {
+    debugStorage('availability check', 'failed');
     return false;
   }
 };

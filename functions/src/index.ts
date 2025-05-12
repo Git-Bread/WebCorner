@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { ScheduledEvent } from "firebase-functions/v2/scheduler";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { CallableRequest } from "firebase-functions/v2/https";
+import { moveServerImageToPermanent, cleanupTempServerImages } from "./imageUtils";
 
 // Initialize the Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
@@ -541,6 +542,155 @@ export const joinServerMember = functions.https.onCall(async (request: CallableR
   } catch (globalError) {
     console.error("CRITICAL ERROR in joinServerMember:", globalError);
     functions.logger.error("CRITICAL ERROR in joinServerMember:", globalError);
+    throw new functions.https.HttpsError(
+      'internal',
+      'A critical error occurred in the server function'
+    );
+  }
+});
+
+/**
+ * Callable function to create a new server and set up all associated data
+ * This handles server creation operations in one secure server-side function
+ */
+export const createServer = functions.https.onCall(async (request: CallableRequest) => {
+  try {
+    if (!request.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'You must be logged in to create a server'
+      );
+    }
+
+    const userId = request.auth.uid;
+    
+    try {
+      const data = request.data as { 
+        name: string, 
+        description: string, 
+        server_img_url?: string, 
+        maxMembers?: number,
+        components?: Record<string, boolean>
+      };
+      
+      // Validate inputs
+      if (!data.name || data.name.trim().length === 0) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Server name is required'
+        );
+      }
+      
+      // Check if user has reached server limit
+      const userRef = admin.firestore().collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      
+      if (!userDoc.exists) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'User account not found'
+        );
+      }
+      
+      const userData = userDoc.data();
+      if (userData && Array.isArray(userData.servers) && userData.servers.length >= 3) {
+        throw new functions.https.HttpsError(
+          'resource-exhausted',
+          'Maximum server limit reached. You can only create up to 3 servers.'
+        );
+      }
+      
+      // Create server document with transaction to ensure atomic operations
+      const timestamp = admin.firestore.FieldValue.serverTimestamp();
+      const serverRef = admin.firestore().collection('servers').doc();
+      const serverId = serverRef.id;
+      
+      // Handle image upload if provided
+      let finalImageUrl: string | null = data.server_img_url || null;
+      
+      // If the image is a temporary image, move it to permanent location
+      if (finalImageUrl && finalImageUrl.includes('temp_server_images')) {
+        try {
+          // Use the server-side utility function
+          finalImageUrl = await moveServerImageToPermanent(finalImageUrl, serverId);
+          
+          // Clean up any other temporary files for this user
+          await cleanupTempServerImages(userId);
+        } catch (imageError) {
+          functions.logger.error('Error processing server image:', imageError);
+          // Continue server creation even if image processing fails
+          finalImageUrl = null;
+        }
+      }
+      
+      // Initialize server data
+      const serverData = {
+        name: data.name.trim(),
+        description: data.description || '',
+        server_img_url: finalImageUrl,
+        ownerId: userId,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        memberCount: 1, // Start with owner as the first member
+        maxMembers: data.maxMembers || 100,
+        settings: {},
+        components: data.components || {
+          news: true,
+          groups: true,
+          chat: true
+        }
+      };
+      
+      // Create batch for all operations
+      const batch = admin.firestore().batch();
+      
+      // Add server document
+      batch.set(serverRef, serverData);
+      
+      // Add server to user's servers array
+      batch.update(userRef, {
+        servers: admin.firestore.FieldValue.arrayUnion({
+          serverId: serverId,
+          joinedAt: timestamp
+        })
+      });
+      
+      // Create owner member record
+      const memberRef = admin.firestore().collection('servers').doc(serverId).collection('members').doc(userId);
+      batch.set(memberRef, {
+        userId: userId,
+        role: 'owner',
+        joinedAt: timestamp,
+        groupIds: [] 
+      });
+      
+      // Commit all changes
+      await batch.commit();
+      
+      // Return success with the new server ID
+      return {
+        success: true,
+        serverId: serverId,
+        serverData: {
+          ...serverData,
+          id: serverId
+        }
+      };
+    } catch (error: unknown) {
+      functions.logger.error('Error in createServer:', error);
+      
+      if (error instanceof functions.https.HttpsError) {
+        throw error;
+      } else {
+        throw new functions.https.HttpsError(
+          'internal',
+          'An unexpected error occurred while creating your server'
+        );
+      }
+    }
+  } catch (globalError) {
+    console.error("CRITICAL ERROR in createServer:", globalError);
+    functions.logger.error("CRITICAL ERROR in createServer:", globalError);
     throw new functions.https.HttpsError(
       'internal',
       'A critical error occurred in the server function'

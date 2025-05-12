@@ -1,7 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper functions for content validation
+    // --- Helper Functions ---
+
+    // Content validation helper functions
     function isImageType(contentType) {
       return contentType.matches('image/.*');
     }
@@ -10,57 +12,76 @@ service firebase.storage {
       return request.resource.size < maxSizeMB * 1024 * 1024;
     }
 
-    // Helper function to check server ownership by fetching from Firestore
+    // Direct helper functions without chaining
+    function isUser(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Server membership helper function - checks if user is a member
+    function isServerMember(serverId) {
+      return request.auth != null && 
+             exists(/databases/(default)/documents/servers/$(serverId)/members/$(request.auth.uid));
+    }
+    
+    // Server ownership helper function
     function isServerOwner(serverId) {
       return request.auth != null && 
              firestore.get(/databases/(default)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
     }
 
-    // Profile Images
+    // --- Access Rules ---
+
+    // Profile Images - Everyone can view, only owner can modify
     match /profile_pictures/{userId}/{fileName} {
-      allow read: if true;  // Allow read access to all users
-      allow write: if request.auth != null 
-        && request.auth.uid == userId
-        && isImageType(request.resource.contentType)
-        && isFileSizeUnder(5);  // Limit to 5MB image uploads
-      allow delete: if request.auth != null
-                    && request.auth.uid == userId;  // Allow users to delete their own profile images
-    }
-    
-    // Temporary server images (stored before server creation)
-    match /temp_server_images/{userId}/{fileName} {
-      allow read: if true;  // Allow read access to all users
-      allow write: if request.auth != null 
-                   && request.auth.uid == userId
-                   && isImageType(request.resource.contentType)
-                   && isFileSizeUnder(5);  // Limit to 5MB image uploads
-      allow delete: if request.auth != null
-                    && request.auth.uid == userId;  // Only allow users to delete their own temp images
-    }
-    
-    // Server Images - Updated to support server-specific folders
-    match /server_images/{serverId}/{fileName} {
-      // Only allow server owner to read images
-      allow read: if isServerOwner(serverId);
+      // Public reading of profile images
+      allow read: if true;
       
-      // Only allow server owner to write images (still checking type and size)
+      // Only the owner can upload their own profile image
+      allow write: if isUser(userId)
+                   && isImageType(request.resource.contentType)
+                   && isFileSizeUnder(5);  // Limit to 5MB
+                   
+      // Only the owner can delete their own profile images
+      allow delete: if isUser(userId);
+    }
+    
+    // Temporary server images - Used before server creation
+    match /temp_server_images/{userId}/{fileName} {
+      // Only the owner can read their own temporary images
+      allow read: if isUser(userId);
+      
+      // Only the owner can upload their own temporary images
+      allow write: if isUser(userId)
+                   && isImageType(request.resource.contentType)
+                   && isFileSizeUnder(5);  // Limit to 5MB
+                   
+      // Only the owner can delete their own temporary images
+      allow delete: if isUser(userId);
+    }
+    
+    // Server Images
+    match /server_images/{serverId}/{allPaths=**} {
+      // Only server members can view server images
+      allow read: if isServerMember(serverId);
+      
+      // Only server owner can upload or modify server images
       allow write: if isServerOwner(serverId)
                    && isImageType(request.resource.contentType)
-                   && isFileSizeUnder(5);  // Limit to 5MB image uploads
+                   && isFileSizeUnder(5);  // Limit to 5MB
                    
-      // Only allow server owner to delete images
+      // Only server owner can delete server images
       allow delete: if isServerOwner(serverId);
     }
     
-    // User documents - private files
-    match /user_documents/{userId}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // User documents - Personal files
+    match /user_documents/{userId}/{allPaths=**} {
+      // Only the user can access their documents
+      allow read, write, delete: if isUser(userId);
     }
     
-    // For all other files, require authentication
+    // Deny access to all other paths by default
     match /{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if false;  // By default, restrict writes unless explicitly allowed
+      allow read, write, delete: if false;
     }
   }
 }

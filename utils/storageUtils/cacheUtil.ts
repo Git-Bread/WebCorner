@@ -5,8 +5,9 @@
  * localStorage persistence for hybrid caching strategies.
  */
 
-import { saveToLocalStorage, getFromLocalStorage, removeFromLocalStorage } from './localStorageUtil';
+import { saveToLocalStorage, getFromLocalStorage, removeFromLocalStorage, clearLocalStorageByPrefix } from './localStorageUtil';
 import { shouldLog } from '../debugUtils';
+import { clearImageCache } from './imageCacheUtil';
 
 // Debug logger for cache operations
 const debugCache = (operation: string, key: string, details?: any): void => {
@@ -217,11 +218,14 @@ export const clearCache = (clearLocalStorage: boolean = false): void => {
     
     // Also clear localStorage cache if requested
     if (clearLocalStorage) {
-      // Import from localStorageUtil to avoid circular dependencies
-      const { clearLocalStorageByPrefix } = require('./localStorageUtil');
+      // Use the properly imported function
       clearLocalStorageByPrefix(APP_PREFIX);
       debugCache('clear', 'all localStorage cache', { prefix: APP_PREFIX });
     }
+    
+    // Also clear the image cache
+    clearImageCache();
+    
   } catch (error) {
     if (shouldLog('cache')) console.error('Error clearing cache:', error);
   }
@@ -430,5 +434,74 @@ export const serverCache = {
     
     // For more specific server data, we would need the server IDs
     // This would be handled in the specific server components
+  }
+};
+
+/**
+ * Clear all user-specific caches
+ * For use during login, logout, and registration to prevent stale data
+ * @param previousUserId Optional previous user ID to clear (for logout scenarios)
+ */
+export const clearUserCaches = (previousUserId?: string): void => {
+  try {
+    // Clear general profile and server data
+    const itemsToClear = [];
+    
+    // If we have a specific user ID, clear their caches
+    if (previousUserId) {
+      // Profile data
+      itemsToClear.push(`profile_${previousUserId}`);
+      
+      // Server list
+      itemsToClear.push(`serverlist_${previousUserId}`);
+      
+      // Last selected server
+      itemsToClear.push(`lastserver_${previousUserId}`);
+      
+      // Find and clear all layout caches for this user
+      for (const [key] of memoryCache.entries()) {
+        if (key.startsWith(`layout_${previousUserId}_`)) {
+          itemsToClear.push(key);
+        }
+      }
+      
+      // Clear all the identified keys
+      itemsToClear.forEach(key => removeCacheItem(key));
+      
+      // Also clear server cache data
+      serverCache.invalidateAllServerData(previousUserId);
+      
+      debugCache('clear user caches', `for user ${previousUserId}`, { 
+        itemsCleared: itemsToClear.length
+      });
+    } else {
+      // Clear all user-related caches when no specific user is provided
+      // This is more aggressive but ensures all user data is reset
+      const keysToRemove = [];
+      
+      for (const [key] of memoryCache.entries()) {
+        if (
+          key.startsWith('profile_') || 
+          key.startsWith('serverlist_') ||
+          key.startsWith('layout_') ||
+          key.startsWith('lastserver_') ||
+          key.startsWith('server_')
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => removeCacheItem(key));
+      
+      debugCache('clear all user caches', 'no specific user', { 
+        itemsCleared: keysToRemove.length
+      });
+    }
+    
+    // Also clear the image cache
+    clearImageCache();
+    
+  } catch (error) {
+    if (shouldLog('cache')) console.error('Error clearing user caches:', error);
   }
 };

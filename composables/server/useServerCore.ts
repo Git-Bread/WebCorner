@@ -1,10 +1,10 @@
 import { ref, computed, onMounted } from 'vue';
-import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { serverSchema } from '~/schemas/serverSchemas';
 import type { ServerRef } from '~/schemas/userSchemas';
 import { showToast } from '~/utils/toast';
-import { cleanupTempServerImages, moveServerImageToPermanent } from '~/utils/imageUtils/imageUploadUtils';
-import { handleDatabaseError, handleStorageError } from '~/utils/errorHandler';
+import { handleDatabaseError } from '~/utils/errorHandler';
 import { serverCache } from '~/utils/storageUtils/cacheUtil';
 import { serverImageCache } from '~/utils/storageUtils/imageCacheUtil';
 import { shouldLog } from '~/utils/debugUtils';
@@ -56,7 +56,7 @@ let initializationPromise: Promise<void> | null = null;
 
 // The actual implementation, renamed to createServerCoreComposable
 function createServerCoreComposable() {
-  const { firestore } = useFirebase();
+  const { firestore, functions } = useFirebase();
   const { user } = useAuth();
   
   // State
@@ -452,104 +452,70 @@ function createServerCoreComposable() {
     }
 
     isCreatingServer.value = true;
-    const tempImageUrl = serverInfo.server_img_url;
-    let serverRef;
     logDebug("Creating new server...");
 
     try {
-      // Create server data
-      const now = new Date();
+      // Use the Cloud Function to create the server
+      const createServerFunction = httpsCallable(functions, 'createServer');
       
-      // Create server document reference
-      serverRef = doc(collection(firestore, 'servers'));
-      
-      // Prepare initial server data without the image URL
-      const initialServerData = {
+      const result = await createServerFunction({
         name: serverInfo.name,
         description: serverInfo.description || '',
-        server_img_url: null, // Set to null initially
-        ownerId: user.value.uid,
-        createdAt: now,
-        updatedAt: now,
-        memberCount: 1, // Start with owner as the first member
+        server_img_url: serverInfo.server_img_url || null,
         maxMembers: serverInfo.maxMembers || 100,
-        settings: {},
         components: serverInfo.components || {
           news: true,
           groups: true,
           chat: true
         }
-      };
+      });
       
-      // Validate initial server data
-      const validationResult = serverSchema.safeParse(initialServerData);
+      const response = result.data as any;
       
-      if (!validationResult.success) {
-        logError('serverValidation', validationResult.error, null);
-        return 'Server information is invalid. Please check the fields.';
-      }
-
-      await setDoc(serverRef, initialServerData);
-      logDebug(`Created server document with ID: ${serverRef.id}`);
-      
-      // --- Image Handling - AFTER initial doc creation ---
-      let finalImageUrl: string | null = null;
-      if (tempImageUrl && tempImageUrl.includes('temp_server_images')) {
-        logDebug(`Moving temporary image to permanent location: ${tempImageUrl}`);
-        try {
-          const movedImageUrl = await moveServerImageToPermanent(tempImageUrl, serverRef.id);
-          if (movedImageUrl) {
-            finalImageUrl = movedImageUrl;
-            // Update the server document with the permanent image URL
-            await updateDoc(serverRef, { 
-              server_img_url: finalImageUrl,
-              updatedAt: new Date() // Update timestamp
-            });
-            logDebug(`Updated server with permanent image URL: ${finalImageUrl}`);
-            
-            // Clean up *all* temp images for the user after successful move and update
-            await cleanupTempServerImages(user.value.uid); 
-          } else {
-            logDebug(`moveServerImageToPermanent returned null for server ${serverRef.id}`);
-            showToast('Server created, but failed to finalize server image.', 'warning');
-          }
-        } catch (imageError) {
-          // Use handleStorageError for user message
-          const userMessage = handleStorageError(imageError);
-          logError(`serverImageHandling(${serverRef.id})`, imageError, null);
-          showToast(`Server created, but image setup failed: ${userMessage}`, 'warning');
-          // Continue server creation even if image fails
+      if (response.success && response.serverId) {
+        logDebug(`Server created successfully with ID: ${response.serverId}`);
+        
+        // If the server creation returned server data, update local state
+        if (response.serverData) {
+          serverData.value = {
+            ...serverData.value,
+            [response.serverId]: response.serverData
+          };
+          
+          // Cache the server data
+          serverCache.saveServerData(response.serverId, response.serverData);
         }
+        
+        // Load the latest data from Firestore to ensure everything is in sync
+        await loadUserServers(true);
+        
+        showToast('Server created successfully!', 'success');
+        return response.serverId;
+      } else {
+        const errorMessage = response.message || 'Failed to create server';
+        logDebug(`Server creation failed: ${errorMessage}`);
+        showToast(errorMessage, 'error');
+        return `Failed to create server: ${errorMessage}`;
       }
-
-      // Add reference to user's servers array
-      await updateDoc(doc(firestore, 'users', user.value.uid), {
-        servers: arrayUnion({
-          serverId: serverRef.id,
-          joinedAt: now
-        })
-      });
-      logDebug(`Added server to user's server list`);
-      
-      // Create owner member record
-      await setDoc(doc(firestore, 'servers', serverRef.id, 'members', user.value.uid), {
-        userId: user.value.uid,
-        role: 'owner',
-        joinedAt: now,
-        groupIds: [] 
-      });
-      logDebug(`Created owner member record for user: ${user.value.uid}`);
-      
-      showToast('Server created successfully!', 'success');
-      
-      // Load the latest data from Firestore
-      await loadUserServers(true);
-      
-      return serverRef.id;
     } catch (error: any) {
-      const userMessage = handleDatabaseError(error); 
+      let errorMessage = 'Unknown error occurred';
+      
+      // Extract error message from Firebase callable response
+      if (error.code === 'functions/invalid-argument') {
+        errorMessage = error.message || 'Invalid server information';
+      } else if (error.code === 'functions/resource-exhausted') {
+        errorMessage = 'Maximum server limit reached';
+      } else if (error.code === 'functions/permission-denied') {
+        errorMessage = 'You do not have permission to create a server';
+      } else if (error.details) {
+        errorMessage = error.details.message || 'Server creation failed';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       logError('createServer', error, null);
-      return `Failed to create server: ${userMessage}`; 
+      showToast(errorMessage, 'error');
+      return `Failed to create server: ${errorMessage}`;
     } finally {
       isCreatingServer.value = false;
     }

@@ -10,6 +10,7 @@ import {
   sendEmailVerification,
   reload
 } from 'firebase/auth'
+import { clearCache } from '~/utils/storageUtils/cacheUtil'
 
 export const useAuth = () => {
   const { auth } = useFirebase()
@@ -17,9 +18,34 @@ export const useAuth = () => {
   const isLoading = useState<boolean>('auth-loading', () => true)
   const isAuthenticated = computed(() => !!user.value)
   const authInitialized = useState<boolean>('auth-initialized', () => false)
+  const previousUserId = useState<string | null>('previous-user-id', () => null)
   
   // Inactivity timeout (3 days in milliseconds)
   const INACTIVITY_TIMEOUT = 3 * 24 * 60 * 60 * 1000
+
+  // Helper to clear caches on auth state changes
+  const clearCachesOnAuthChange = () => {
+    // Use clearCache with true parameter to properly clear both memory cache and localStorage
+    clearCache(true) // Clear memory cache AND localStorage
+    
+    // Reset Nuxt state values that might persist between sessions
+    // Profile-related state
+    useState('profile-userName').value = ''
+    useState('profile-userPhotoUrl').value = '/images/Profile_Pictures/default_profile.jpg'
+    useState('profile-data').value = { username: '', bio: '', profileImage: '' }
+    useState('profile-tempImage').value = ''
+    useState('profile-userCustomImages').value = []
+    useState('profile-isEditing').value = false
+    useState('profile-isSaving').value = false
+    useState('profile-isImageUploading').value = false
+    useState('profile-isLoadingUserImages').value = false
+    useState('profile-isLoadingData').value = false
+    useState('profile-dataLoaded').value = false
+    
+    // Server-related state
+    useState('server-current').value = null
+    useState('server-list').value = []
+  }
   
   // Initialize auth state listener only on the client side
   if (import.meta.client) {
@@ -28,7 +54,22 @@ export const useAuth = () => {
       isLoading.value = true
       
       const unsubscribe = onAuthStateChanged(auth, (newUser) => {
+        // Save the previous user ID before updating
+        if (user.value && user.value.uid !== newUser?.uid) {
+          previousUserId.value = user.value.uid
+        }
+        
+        // Record if this is a user change or logout
+        const isUserChange = user.value?.uid !== newUser?.uid && user.value !== null && newUser !== null
+        const isLogout = user.value !== null && newUser === null
+        
+        // Update user state
         user.value = newUser
+        
+        // Clear caches on user change or logout
+        if (isUserChange || isLogout) {
+          clearCachesOnAuthChange()
+        }
         
         // If user logged in and "Remember Me" was checked, update last activity timestamp
         if (newUser && localStorage.getItem('rememberMe') === 'true') {
@@ -62,6 +103,9 @@ export const useAuth = () => {
   // Internal helper for direct signOut (used by checkInactivity)
   const performSignOut = async () => {
     try {
+      // Clear caches before signing out
+      clearCachesOnAuthChange()
+      
       await signOut(auth)
       localStorage.removeItem('lastActiveTime')
       localStorage.removeItem('rememberMe')
@@ -131,6 +175,9 @@ export const useAuth = () => {
     // Use the authAction wrapper for each operation
     login: (email: string, password: string, rememberMe: boolean = false) => 
       authAction(async () => {
+        // Clear caches before login
+        clearCachesOnAuthChange()
+        
         // Set persistence based on "Remember Me" checkbox
         const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence
         await setPersistence(auth, persistenceType)
@@ -149,6 +196,9 @@ export const useAuth = () => {
       }),
       
     register: (email: string, password: string) => authAction(async () => {
+      // Clear caches before registration
+      clearCachesOnAuthChange()
+      
       // Create the user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       
@@ -161,6 +211,9 @@ export const useAuth = () => {
     }),
     
     logout: () => authAction(async () => {
+      // Clear caches before logout
+      clearCachesOnAuthChange()
+      
       await signOut(auth)
       localStorage.removeItem('lastActiveTime')
       localStorage.removeItem('rememberMe')

@@ -35,8 +35,6 @@ import useFormValidation from '~/composables/useFormValidation'
 import PasswordStrengthIndicator from '~/components/auth/PasswordStrengthIndicator.vue'
 import { defaultSettings } from '~/composables/useUserSettings'
 import { useSettingsManager } from '~/composables/useSettingsManager'
-import { serverCache } from '~/utils/storageUtils/cacheUtil'
-import { profileCache } from '~/utils/storageUtils/cacheUtil'
 
 definePageMeta({ layout: 'auth' })
 
@@ -151,11 +149,7 @@ const handleRegister = async () => {
       }
       
       await setDoc(doc(firestore, 'users', uid), userData)
-      
-      // Initialize caches for the new user
-      // This prevents redundant loading attempts that would all show "not found"
-      serverCache.saveServerList(uid, []); // Cache empty server list
-      profileCache.saveProfileData(uid, userData); // Cache user profile
+    
       
       showToast('Registration successful! Please check your email to verify your account.', 'success', 3000)
       
