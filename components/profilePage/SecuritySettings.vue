@@ -117,7 +117,7 @@ const props = defineProps({
 });
 
 // Emit events back to parent
-const emit = defineEmits(['update-password', 'delete-account']);
+const emit = defineEmits(['update-password', 'delete-account', 'reset-delete-state']);
 
 const router = useRouter();
 
@@ -256,26 +256,17 @@ function confirmDeleteAccount() {
 
 function closeDeleteModal() {
   showDeleteModal.value = false;
+  
+  // The modal has its own internal state management,
+  // but we should ensure the parent state is reset here as well
+  // if there was an error in the delete process
+  if (props.isDeleting && props.deleteError) {
+    emit('reset-delete-state');
+  }
 }
 
-async function handleDeleteAccount(password: string) {
-  try {
-    // Emit the delete account event to the parent
-    emit('delete-account', password);
-    
-    // Close the modal
-    showDeleteModal.value = false;
-    
-    // Show a toast message before redirecting
-    showToast('Account deleted successfully', 'success');
-    
-    // Delay before redirecting to allow the toast to be seen
-    setTimeout(() => {
-      router.push('/');
-    }, 1500);
-  } catch (error) {
-    // Handle potential errors
-    console.error('Error in handleDeleteAccount:', error);
-  }
+function handleDeleteAccount(password: string) {
+  emit('delete-account', password);
+  showDeleteModal.value = false;
 }
 </script>

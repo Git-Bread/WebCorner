@@ -116,6 +116,7 @@ function validatePassword() {
 function handleClose() {
   password.value = '';
   errorMessage.value = '';
+  isLoading.value = false;
   emit('close');
 }
 
@@ -124,22 +125,10 @@ function handleConfirm() {
     return;
   }
   
-  // Check for auth state - this helps with new user cases
-  const { user } = useAuth();
-  if (!user.value) {
-    errorMessage.value = 'Authentication error. Please try refreshing the page.';
-    return;
-  }
-  
   isLoading.value = true;
   
-  try {
-    emit('confirm', password.value);
-  } catch (error) {
-    // Error handling is done at the parent component level
-    isLoading.value = false;
-    errorMessage.value = 'An unexpected error occurred';
-  }
+  // Simply emit the event with the password
+  emit('confirm', password.value);
 }
 </script>
 

@@ -49,6 +49,7 @@
             :deleteError="deleteError || ''"
             @update-password="updatePassword"
             @delete-account="deleteAccount"
+            @reset-delete-state="resetDeleteState"
           />
         </div>
       </div>
@@ -150,5 +151,11 @@ function handleImageUpload(event: Event) {
 // Toggle editing state
 function toggleEditing() {
   isEditing.value = !isEditing.value;
+}
+
+// Reset delete state
+function resetDeleteState() {
+  isDeleting.value = false;
+  deleteError.value = '';
 }
 </script> 

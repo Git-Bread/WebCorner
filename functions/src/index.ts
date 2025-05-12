@@ -242,6 +242,9 @@ export const deleteUserAccount = functions.https.onCall(async (request: Callable
 
     // 2. Remove user from servers they're a member of
     if (userData && Array.isArray(userData.servers)) {
+      // Create a separate batch for updates
+      const updateBatch = admin.firestore().batch();
+      
       for (const serverMembership of userData.servers) {
         const serverId = serverMembership.serverId;
         if (!serverId) continue;
@@ -253,8 +256,8 @@ export const deleteUserAccount = functions.https.onCall(async (request: Callable
           // Delete user from server's member list
           batch.delete(memberRef);
           
-          // Decrement server's member count
-          batch.update(serverRef, {
+          // Decrement server's member count in a separate batch
+          updateBatch.update(serverRef, {
             memberCount: FieldValue.increment(-1)
           });
           
@@ -262,6 +265,15 @@ export const deleteUserAccount = functions.https.onCall(async (request: Callable
         } catch (membershipError) {
           functions.logger.error(`Error removing user ${userId} from server ${serverId}:`, membershipError);
         }
+      }
+      
+      // Commit the updates first
+      try {
+        await updateBatch.commit();
+        functions.logger.info(`Successfully updated server member counts for user ${userId}`);
+      } catch (updateError) {
+        functions.logger.error(`Error updating server member counts: ${updateError}`);
+        // Continue with deletion even if updates fail
       }
     }
 
