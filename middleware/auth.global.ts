@@ -12,9 +12,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
   
   if (isAuthenticated.value) {
-    // forcefull refresh since index is too heavy and wont unload properly with navigateTo
-    // this is mostly a workaround for the fact that the page is to heavy for spa navigation and logic
-    // could be solved by killing a few animations or similar, but i dont wanna.
+    // Forceful refresh since index is too heavy and won't unload properly with navigateTo
+    // This is mostly a workaround for the fact that the page is too heavy for SPA navigation and logic
+    // Alternative solution would be reducing animations for performance
     if (to.path === '/') {
       window.location.href = '/dashboard'
       return abortNavigation()

@@ -399,7 +399,7 @@ export const clearUserCaches = (previousUserId?: string): void => {
     // Clear general profile and server data
     const itemsToClear = [];
     
-    // If we have a specific user ID, clear their caches
+    // For specific user ID, clear their caches
     if (previousUserId) {
       // Profile data
       itemsToClear.push(`profile_${previousUserId}`);

@@ -2,14 +2,18 @@
   "name": "functions",
   "scripts": {
     "clean": "rimraf lib/",
-    "build": "npm run clean && tsc",
+    "prebuild": "npm run clean",
+    "build": "tsc --diagnostics --listEmittedFiles",
     "build:watch": "tsc --watch",
-    "serve": "npm run build && firebase emulators:start --only functions",
-    "shell": "npm run build && firebase functions:shell",
+    "preserver": "npm run build",
+    "serve": "firebase emulators:start --only functions",
+    "preshell": "npm run build",
+    "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "npm run build && node lib/test-cleanup.js"
+    "pretest": "npm run build",
+    "test": "node lib/test-cleanup.js"
   },
   "engines": {
     "node": "20"

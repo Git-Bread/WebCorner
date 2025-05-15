@@ -209,18 +209,17 @@ const handleServerSelection = async (serverId: string | null) => {
     // When serverId is null, clear the current server in useServerCore too
     if (serverId === null) {
       await clearCurrentServer();
-      return; // Exit early
+      return;
     }
     
-    // Skip if we can't find the server in the loaded data
+    // Skip if server doesn't exist in loaded data
     if (!serverData.value[serverId]) {
       console.log(`Server ${serverId} not found in loaded data, skipping selection`);
       isLoadingServerSelection.value = false;
       return;
     }
     
-    // Server selection is now handled internally by setCurrentServer with existing data
-    // We only need to pass the server ID
+    // Pass server ID to context manager
     await setCurrentServer(serverId);
     
   } catch (error) {
@@ -242,7 +241,7 @@ const handleCreateServer = async (serverInfo: {
   components: Record<string, boolean>;
 }) => {
   try {
-    // We keep the dialog open during creation to show the loading state
+    // Keep dialog open during creation to show loading state
     // The isCreatingServer state is already passed to the dialog via the isCreating prop
     
     const newServerId = await createServer(serverInfo);
@@ -271,7 +270,7 @@ const handleCreateServer = async (serverInfo: {
 // Handle joining a server directly with server ID
 const handleJoinServer = async (serverId: string) => {
   try {
-    // We'll keep the dialog open to show the loading state
+    // Keep dialog open to show the loading state
     // The dialog already shows the loading state through isJoiningServer
     
     const result = await joinServer(serverId);
@@ -280,7 +279,7 @@ const handleJoinServer = async (serverId: string) => {
     showJoinServerDialog.value = false;
     
     if (result && result.success && result.serverId) {
-      // First ensure we wait for server data to be fully loaded
+      // Ensure server data is fully loaded
       await loadUserServerList();
       
       // Then select the newly joined server - this loads the layout
@@ -294,7 +293,7 @@ const handleJoinServer = async (serverId: string) => {
 // Handle joining a server with an invitation code
 const handleJoinWithInvite = async (inviteCode: string) => {
   try {
-    // We'll keep the dialog open to show the loading state
+    // Keep dialog open to show the loading state
     // The dialog already shows the loading state through isJoiningServer
     
     const result = await joinServerWithInvite(inviteCode);
@@ -303,7 +302,7 @@ const handleJoinWithInvite = async (inviteCode: string) => {
     showJoinServerDialog.value = false;
     
     if (result && result.success && result.serverId) {
-      // First ensure we wait for server data to be fully loaded
+      // Ensure server data is fully loaded
       await loadUserServerList();
       
       // Then select the newly joined server - this loads the layout

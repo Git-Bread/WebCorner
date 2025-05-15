@@ -166,7 +166,7 @@ const handleRegister = async () => {
     generalError.value = handleAuthError(error)
     loading.value = false
   } finally {
-    // Only clear the timeout if we've set loading to false elsewhere
+    // Clear timeout if loading state has been set to false
     if (!loading.value && loadingTimeout.value) {
       clearTimeout(loadingTimeout.value)
       loadingTimeout.value = null

@@ -557,7 +557,7 @@ export const useProfile = () => {
     return profileInstance;
   }
   
-  // If initialization is in progress, log that we're waiting for it
+  // If initialization is already in progress, wait for it to complete
   if (initializationPromise) {
     console.debug('[Profile] Waiting for existing initialization to complete');
     return createProfileInstance();
